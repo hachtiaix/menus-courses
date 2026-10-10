@@ -1,0 +1,22 @@
+# Chargée par configuration.yaml : « automation sauvegarde_courses: !include sauvegardes-courses/automation.yaml »
+- id: sauvegarde_courses
+  alias: Sauvegarde Menus & Courses
+  description: Récupère chaque nuit les données de l'app, avant la sauvegarde Home Assistant de 5 h.
+  triggers:
+    - trigger: time
+      at: "04:30:00"
+  actions:
+    - action: shell_command.sauvegarde_courses
+      response_variable: resultat
+      continue_on_error: true
+    - if:
+        - condition: template
+          value_template: "{{ resultat is not defined or resultat.returncode != 0 }}"
+      then:
+        - action: persistent_notification.create
+          data:
+            title: Sauvegarde Menus & Courses en échec
+            message: >-
+              {{ (resultat.stderr if resultat is defined else 'commande non exécutée')
+                 | default('erreur inconnue', true) | truncate(500) }}
+  mode: single
