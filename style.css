@@ -31,3 +31,38 @@ input[type=text]{flex:1;font-size:17px;padding:11px;border:1px solid var(--line)
 select,textarea{font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
 textarea{width:100%}.acts{display:flex;gap:8px;margin-top:10px}.acts .btn{flex:1;padding:12px}
 .slot input[type=text]{min-width:0}
+
+/* v2 */
+:root{--r:16px;--shadow:0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05)}
+body{font-size:17px;line-height:1.35}
+header{backdrop-filter:blur(12px);background:color-mix(in srgb,var(--bg) 88%,transparent)}
+h1{font-size:26px;letter-spacing:-.4px}
+.card{border-radius:var(--r);box-shadow:var(--shadow);padding:2px 16px}
+.row{min-height:52px}
+.row.done{opacity:.6}
+.row input[type=checkbox]{width:26px;height:26px;flex:none}
+#add input[type=text],form input[type=text]{height:48px;border-radius:14px}
+.btn{height:48px;min-width:48px;border-radius:14px;font-weight:600}
+.btn.sec{height:auto;min-height:44px;border-radius:12px}
+nav{padding-top:6px;box-shadow:0 -4px 16px rgba(0,0,0,.05)}
+nav button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;padding:4px 2px}
+nav i{font-style:normal;font-size:22px;position:relative}
+nav i b{position:absolute;top:-4px;right:-12px;background:var(--accent);color:#fff;font-size:11px;border-radius:9px;min-width:17px;height:17px;line-height:17px;text-align:center}
+.wk{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:600;margin-bottom:6px}
+.wk .btn{width:48px;padding:0}
+section.day{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:12px 14px;margin:12px 0}
+section.day.today{outline:2px solid var(--accent)}
+section.day h3{margin:0 0 6px;font-size:17px;text-transform:capitalize}
+section.day h3 small{color:var(--mut);font-weight:500;margin-left:4px}
+.slot{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
+.slot span{width:48px;font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+.slot input[type=text]{flex:1;min-width:140px;height:44px}
+.pill{border:0;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);border-radius:20px;padding:8px 12px;font-size:14px;font-weight:600;white-space:nowrap}
+.sheet{border-radius:22px 22px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
+.serv{display:flex;align-items:center;gap:12px;margin:8px 0}
+.serv b{min-width:28px;text-align:center;font-size:22px}
+.serv .btn{width:48px;padding:0;margin:0;font-size:22px}
+.ing-row{display:grid;grid-template-columns:26px 1fr auto;gap:10px}
+.ing-row select{height:42px;max-width:110px}
+.sheet .row input.ing{height:42px}
