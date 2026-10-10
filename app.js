@@ -81,7 +81,7 @@ function renderList(id){
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v12";
+const BASE=4,VERSION="v13";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -180,6 +180,7 @@ function renderSettings(){
   const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
   $("#view").innerHTML=`<h2 class="sec">Synchronisation</h2>
    <div class="card"><div class="row"><span class="t">Code de cet appareil<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"} · ${STATE[status]}</small></span><button class="btn sec" id="setcode">Saisir</button></div>
+   ${code?`<div class="row"><span class="t">Copier le code<br><small class="mut">Pour le coller sur un autre appareil</small></span><button class="btn sec" id="cpcode">Copier</button></div>`:""}
    ${status==="ok"?`<div class="row"><span class="t">Changer le code du foyer<br><small class="mut">Les autres appareils devront saisir le nouveau</small></span><button class="btn sec" id="rencode">Changer</button></div>`:""}</div>
    ${status==="unk"?`<p class="warn">Ce code ne correspond à aucun foyer. Vérifiez-le (majuscules, espaces) ou demandez-le à un autre membre du foyer.</p>`:""}
    <h2 class="sec">Recettes <small>(quantités pour ${BASE} personnes)</small></h2>
@@ -193,6 +194,7 @@ function renderSettings(){
     return c===null?null:c.trim();
   };
   // Rejoindre un foyer existant : ne change que cet appareil.
+  const cp=$("#cpcode");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(code);cp.textContent="Copié ✓"}catch(_){alert("Copie impossible sur cet appareil.")}};
   $("#setcode").onclick=()=>{
     const c=askCode("Code du foyer (le même que sur les autres appareils) :",code);
     if(c!==null){code=LS.code=c;dirty=true;save();sync();render()}
