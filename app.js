@@ -44,10 +44,12 @@ async function sync(){
   try{
     const r=await rpc("get_household",{p_code:code});
     if(!r.ok)throw 0;
+    const before=JSON.stringify(S);
     const remote=await r.json(); if(remote)merge(remote);
+    const changed=JSON.stringify(S)!==before;
     const w=await rpc("put_household",{p_code:code,p_data:S});
     if(!w.ok){const e=await w.json().catch(()=>({}));throw e.message==="code inconnu"?"unk":0}
-    dirty=false;save();setStatus("ok");safeRender();
+    dirty=false;save();setStatus("ok");if(changed)safeRender();
   }catch(e){setStatus(e==="unk"?"unk":"err")}
   syncing=false;if(again){again=false;sync()}
 }
@@ -59,9 +61,9 @@ let pendingRender=false;
 function safeRender(){
   const a=document.activeElement;
   if(a&&a.matches("input,textarea,select")){pendingRender=true;return}
-  render();
+  const y=scrollY;render();if(Math.abs(scrollY-y)>2)scrollTo(0,y);
 }
-document.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!document.activeElement.matches("input,textarea,select")){pendingRender=false;render()}},250));
+document.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!document.activeElement.matches("input,textarea,select")){pendingRender=false;safeRender()}},250));
 function setStatus(c){
   const changed=c!==status;status=c;
   $("#status").className=c;$("#status").title=STATE[c];
@@ -89,7 +91,7 @@ function renderList(id){
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v14";
+const BASE=4,VERSION="v15";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
