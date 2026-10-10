@@ -31,11 +31,12 @@ async function sync(){
 function setStatus(c){$("#status").className=c;$("#status").title=c==="ok"?"Synchronisé":c==="err"?"Hors ligne (modifs conservées)":"Synchro désactivée"}
 
 const listSort=(a,b)=>{const i=ORDER.indexOf(a.id),j=ORDER.indexOf(b.id);return (i<0?99:i)-(j<0?99:j)||a.name.localeCompare(b.name)};
+const SHORT={auchan:"Auchan",lidl:"Lidl",drive:"Drive",boucherie:"Boucherie",fermiers:"Fermiers"},ICON={drive:"🚗",boucherie:"🥩",fermiers:"🥕"};
 const live=o=>Object.values(o).filter(x=>!x.deleted);
 function render(){
   const lists=live(S.lists).sort(listSort);
-  $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}"><i>🛒${c?`<b>${c}</b>`:""}</i>${esc(l.name)}</button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}"><i>📅</i>Menus</button>`;
-  if(tab==="menus")renderMenus();else renderList(S.lists[tab]?tab:"auchan");
+  $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}"><i>${ICON[l.id]||"🛒"}${c?`<b>${c}</b>`:""}</i>${esc(SHORT[l.id]||l.name)}</button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}"><i>📅</i>Menus</button>`;
+  if(tab==="settings")renderSettings();else if(tab==="menus")renderMenus();else renderList(S.lists[tab]?tab:"auchan");
 }
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function renderList(id){
@@ -68,8 +69,9 @@ function renderMenus(){
   let h=`<div class="wk"><button class="btn sec" id="pv">‹</button><div>${f(m)} – ${f(end)}</div><button class="btn sec" id="nx">›</button></div>`;
   for(let n=0;n<7;n++){
     const d=new Date(m);d.setDate(m.getDate()+n);const k=d.toISOString().slice(0,10);
-    h+=`<section class="day ${k===today?"today":""}"><h3>${d.toLocaleDateString("fr-FR",{weekday:"long"})} <small>${d.getDate()}</small></h3>`+
-      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const e=S.meals[k+"-"+s]||{};return `<div class="slot"><span>${l}</span><input type="text" data-m="${k}-${s}" list="recipes" placeholder="Choisir un plat…" value="${esc(e.text||"")}">${e.text?`<button class="pill" data-i="${k}-${s}" title="Ingrédients">🛒 ${e.servings||BASE} pers.</button>`:""}</div>`}).join("")+`</section>`;
+    const wd=d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".","");
+    h+=`<section class="day ${k===today?"today":""}"><div class="dh"><b>${wd}</b><small>${d.getDate()}</small></div><div class="slots">`+
+      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const e=S.meals[k+"-"+s]||{};return `<div class="slot"><span>${l}</span><input type="text" data-m="${k}-${s}" list="recipes" placeholder="Choisir un plat…" value="${esc(e.text||"")}">${e.text?`<button class="pill" data-i="${k}-${s}" title="Ingrédients pour ${e.servings||BASE} personnes">🛒 ${e.servings||BASE}</button>`:""}</div>`}).join("")+`</div></section>`;
   }
   h+=`<datalist id="recipes">${live(S.recipes).map(r=>`<option value="${esc(r.name)}">`).join("")}</datalist>`;
   $("#view").innerHTML=h;
@@ -116,10 +118,43 @@ function ingredientsDialog(name,mealKey){
   };
 }
 $("#tabs").onclick=e=>{const t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t){tab=LS.tab=t;render();scrollTo(0,0)}};
-$("#cfg").onclick=()=>{
-  const c=prompt("Code du foyer (identique sur tous les appareils, gardez-le secret) :",code);
-  if(c!==null){code=LS.code=c.trim();sync()}
-};
+$("#cfg").onclick=()=>{tab=LS.tab="settings";render();scrollTo(0,0)};
+function renderSettings(){
+  $("#title").textContent="Réglages";
+  const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
+  $("#view").innerHTML=`<h2 class="sec">Synchronisation</h2>
+   <div class="card"><div class="row"><span class="t">Code du foyer<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"}</small></span><button class="btn sec" id="chgcode">Modifier</button></div></div>
+   <h2 class="sec">Recettes <small>(quantités pour ${BASE} personnes)</small></h2>
+   <div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
+   <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`;
+  $("#chgcode").onclick=()=>{const c=prompt("Code du foyer (identique sur tous les appareils, gardez-le secret) :",code);if(c!==null){code=LS.code=c.trim();sync();render()}};
+  $("#newr").onclick=()=>recipeEditor(null);
+  document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>recipeEditor(S.recipes[el.dataset.r]));
+}
+function recipeEditor(r){
+  const lists=live(S.lists).sort(listSort);
+  const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(SHORT[l.id]||l.name)}</option>`).join("");
+  const rowH=i=>`<div class="ed-row"><input type="text" class="ing" value="${esc(i.t)}" placeholder="400 g de pâtes"><select>${opts(i.store||"auchan")}</select><button class="x">×</button></div>`;
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${r?"Modifier la recette":"Nouvelle recette"}</h2>
+   <input type="text" id="rn" placeholder="Nom du plat" value="${esc(r?r.name:"")}" style="width:100%;margin-bottom:10px">
+   <p class="mut">Ingrédients pour ${BASE} personnes, avec la quantité en premier. Le magasin est celui proposé par défaut.</p>
+   <div id="eds">${(r?r.ingredients:[{t:""},{t:""},{t:""}]).map(rowH).join("")}</div>
+   <button class="btn sec" id="more">+ Ingrédient</button>
+   <div class="acts">${r?`<button class="btn sec danger" id="del">Supprimer</button>`:""}<button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();
+  ov.onclick=e=>{if(e.target===ov)close();const x=e.target.closest(".x");if(x)x.parentNode.remove()};
+  $("#no").onclick=close;
+  $("#more").onclick=()=>{$("#eds").insertAdjacentHTML("beforeend",rowH({t:""}));$("#eds").lastChild.querySelector(".ing").focus()};
+  if(r)$("#del").onclick=()=>{if(confirm("Supprimer cette recette ?")){touch("recipes",{...r,deleted:true});close();render()}};
+  $("#ok").onclick=()=>{
+    const name=$("#rn").value.trim();
+    const ings=[...ov.querySelectorAll(".ed-row")].map(el=>({t:el.querySelector(".ing").value.trim(),store:el.querySelector("select").value})).filter(x=>x.t);
+    if(!name){$("#rn").focus();return}
+    touch("recipes",{id:r?r.id:uid(),name,ingredients:ings});close();render();
+  };
+}
 addEventListener("online",sync);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});
 setInterval(()=>{if(!document.hidden)sync()},20000);
