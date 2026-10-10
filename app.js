@@ -46,12 +46,19 @@ async function sync(){
     if(!r.ok)throw 0;
     const remote=await r.json(); if(remote)merge(remote);
     const w=await rpc("put_household",{p_code:code,p_data:S});
-    if(!w.ok)throw 0;
+    if(!w.ok){const e=await w.json().catch(()=>({}));throw e.message==="code inconnu"?"unk":0}
     dirty=false;save();setStatus("ok");render();
-  }catch(e){setStatus("err")}
+  }catch(e){setStatus(e==="unk"?"unk":"err")}
   syncing=false;if(again){again=false;sync()}
 }
-function setStatus(c){$("#status").className=c;$("#status").title=c==="ok"?"Synchronisé":c==="err"?"Hors ligne (modifs conservées)":"Synchro désactivée"}
+const STATE={ok:"Synchronisé",err:"Hors ligne (modifs conservées)",unk:"Code inconnu",
+  "":"Synchro désactivée"};
+let status="";
+function setStatus(c){
+  const changed=c!==status;status=c;
+  $("#status").className=c;$("#status").title=STATE[c];
+  if(changed&&tab==="settings")render();
+}
 
 const listSort=(a,b)=>{const i=ORDER.indexOf(a.id),j=ORDER.indexOf(b.id);return (i<0?99:i)-(j<0?99:j)||a.name.localeCompare(b.name)};
 const SHORT={auchan:"Auchan",lidl:"Lidl",drive:"Drive",boucherie:"Boucherie",fermiers:"Fermiers"},ICON={drive:"🚗",boucherie:"🥩",fermiers:"🥕"};
@@ -74,7 +81,7 @@ function renderList(id){
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v11";
+const BASE=4,VERSION="v12";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -172,16 +179,32 @@ function renderSettings(){
   $("#title").textContent="Réglages";
   const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
   $("#view").innerHTML=`<h2 class="sec">Synchronisation</h2>
-   <div class="card"><div class="row"><span class="t">Code du foyer<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"}</small></span><button class="btn sec" id="chgcode">Modifier</button></div></div>
+   <div class="card"><div class="row"><span class="t">Code de cet appareil<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"} · ${STATE[status]}</small></span><button class="btn sec" id="setcode">Saisir</button></div>
+   ${status==="ok"?`<div class="row"><span class="t">Changer le code du foyer<br><small class="mut">Les autres appareils devront saisir le nouveau</small></span><button class="btn sec" id="rencode">Changer</button></div>`:""}</div>
+   ${status==="unk"?`<p class="warn">Ce code ne correspond à aucun foyer. Vérifiez-le (majuscules, espaces) ou demandez-le à un autre membre du foyer.</p>`:""}
    <h2 class="sec">Recettes <small>(quantités pour ${BASE} personnes)</small></h2>
    <div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>
    <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`;
   $("#upd").onclick=async e=>{e.preventDefault();try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(_){}location.reload()};
-  $("#chgcode").onclick=()=>{
-    let c=prompt(`Code du foyer, au moins ${MIN_CODE} caractères (identique sur tous les appareils, gardez-le secret) :`,code);
+  const askCode=(msg,def)=>{
+    let c=prompt(msg,def);
     while(c!==null&&c.trim().length<MIN_CODE)c=prompt(`Trop court : au moins ${MIN_CODE} caractères. Par exemple trois mots et un nombre.`,c.trim());
-    if(c!==null){code=LS.code=c.trim();dirty=true;save();sync();render()}
+    return c===null?null:c.trim();
+  };
+  // Rejoindre un foyer existant : ne change que cet appareil.
+  $("#setcode").onclick=()=>{
+    const c=askCode("Code du foyer (le même que sur les autres appareils) :",code);
+    if(c!==null){code=LS.code=c;dirty=true;save();sync();render()}
+  };
+  // Renommer le foyer côté serveur : il faut que le code actuel soit valide.
+  const ren=$("#rencode");if(ren)ren.onclick=async()=>{
+    const n=askCode(`Nouveau code du foyer, au moins ${MIN_CODE} caractères. Gardez-le secret :`,"");
+    if(!n||n===code)return;
+    const r=await rpc("change_household_code",{p_old:code,p_new:n}).catch(()=>null);
+    if(r&&r.ok){code=LS.code=n;sync();render();alert("Code changé. Sur les autres appareils : ⚙︎ → Saisir, puis le nouveau code.");return}
+    const e=r?await r.json().catch(()=>({})):{};
+    alert(e.message==="code deja utilise"?"Ce code est déjà pris, choisissez-en un autre.":"Impossible de changer le code pour l'instant (hors ligne ?).");
   };
   $("#newr").onclick=()=>recipeEditor(null);
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>recipeEditor(S.recipes[el.dataset.r]));

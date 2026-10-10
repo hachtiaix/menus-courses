@@ -103,3 +103,5 @@ h2.sec small{text-transform:none;letter-spacing:0;font-weight:400}
 .sug{margin-left:40px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
 .sug button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;font-size:16px;color:var(--fg)}
 .sug button:last-child{border:0}
+#status.unk{background:#e0a800}
+.warn{color:#b07800;font-size:14px;margin:6px 4px}
