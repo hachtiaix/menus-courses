@@ -40,9 +40,13 @@ end $$;
 revoke all on function public.get_household(text) from public;
 revoke all on function public.put_household(text, jsonb) from public;
 revoke all on function public.change_household_code(text, text) from public;
-grant execute on function public.get_household(text) to anon, authenticated;
-grant execute on function public.put_household(text, jsonb) to anon, authenticated;
-grant execute on function public.change_household_code(text, text) to anon, authenticated;
+grant execute on function public.get_household(text) to anon;
+grant execute on function public.put_household(text, jsonb) to anon;
+grant execute on function public.change_household_code(text, text) to anon;
+
+-- Fonction ajoutée par Supabase (option « Enable automatic RLS ») : inutile côté API.
+revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+-- À faire aussi dans Authentication → Sign In / Providers : décocher « Allow new users to sign up ».
 
 -- Créer un foyer (une seule fois, ici dans le SQL Editor) :
 -- insert into households(code) values ('<code d''au moins 10 caractères>');
