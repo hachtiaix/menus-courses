@@ -51,7 +51,7 @@ function renderList(id){
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4;
+const BASE=4,VERSION="v9";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -150,7 +150,9 @@ function renderSettings(){
    <div class="card"><div class="row"><span class="t">Code du foyer<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"}</small></span><button class="btn sec" id="chgcode">Modifier</button></div></div>
    <h2 class="sec">Recettes <small>(quantités pour ${BASE} personnes)</small></h2>
    <div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
-   <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`;
+   <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>
+   <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`;
+  $("#upd").onclick=async e=>{e.preventDefault();try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(_){}location.reload()};
   $("#chgcode").onclick=()=>{const c=prompt("Code du foyer (identique sur tous les appareils, gardez-le secret) :",code);if(c!==null){code=LS.code=c.trim();sync();render()}};
   $("#newr").onclick=()=>recipeEditor(null);
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>recipeEditor(S.recipes[el.dataset.r]));
