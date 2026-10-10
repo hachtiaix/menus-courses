@@ -51,7 +51,7 @@ function renderList(id){
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v9";
+const BASE=4,VERSION="v10";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -76,7 +76,9 @@ function renderMenus(){
   $("#view").innerHTML=h;
   const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   const names=()=>{const seen=new Set(),out=[];
-    for(const t of [...live(S.recipes).map(r=>r.name),...live(S.meals).map(m=>m.text).filter(Boolean)]){const k=norm(t);if(!seen.has(k)){seen.add(k);out.push(t)}}return out};
+    for(const [t,recipe] of [...live(S.recipes).map(r=>[r.name,true]),...live(S.meals).map(m=>[m.text,false]).filter(x=>x[0])]){const k=norm(t);if(!seen.has(k)){seen.add(k);out.push({t,recipe})}}
+    // écarte les fragments saisis à moitié (ex. « Pom » quand « Pommes de terre… » existe)
+    return out.filter(x=>x.recipe||!out.some(y=>y!==x&&norm(y.t).length>norm(x.t).length&&norm(y.t).startsWith(norm(x.t))))};
   const commit=(el,t)=>{
     const key=el.dataset.m,o=S.meals[key]||{};
     if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});render();return}
@@ -87,11 +89,11 @@ function renderMenus(){
   document.querySelectorAll("[data-m]").forEach(el=>{
     el.oninput=()=>{
       clearSug();const q=norm(el.value.trim());if(!q)return;
-      const hits=names().filter(t=>norm(t).includes(q)&&norm(t)!==q).sort((a,b)=>norm(a).startsWith(q)?-1:norm(b).startsWith(q)?1:0).slice(0,6);
+      const hits=names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,6);
       if(!hits.length)return;
       const box=document.createElement("div");box.className="sug";
-      box.innerHTML=hits.map(t=>`<button type="button">${esc(t)}</button>`).join("");
-      box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el.value=b.textContent;clearSug();commit(el,b.textContent)};
+      box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}">${x.recipe?"📖":"🕘"} ${esc(x.t)}</button>`).join("");
+      box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el.value=b.dataset.t;clearSug();commit(el,b.dataset.t)};
       el.closest(".slotw").appendChild(box);
     };
     el.onblur=()=>setTimeout(clearSug,150);
