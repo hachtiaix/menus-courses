@@ -1,6 +1,24 @@
 const $=s=>document.querySelector(s), LS=localStorage;
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
-let S=JSON.parse(LS.s||"null")||{lists:{},items:{},meals:{},recipes:{}};S.recipes=S.recipes||{};
+// Les données synchronisées viennent de l'extérieur : on ne garde que des champs attendus, aux types attendus.
+const ID=/^[\w-]{1,64}$/, okId=id=>typeof id==="string"&&ID.test(id)&&id!=="__proto__";
+const str=(v,n)=>typeof v==="string"?v.slice(0,n):"";
+function clean(k,id,r){
+  if(!okId(id)||!r||typeof r!=="object")return null;
+  const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;
+  if(k==="lists")return{id,name:str(r.name,60)||id,ts,deleted};
+  if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,ts,deleted}:null;
+  if(k==="meals")return{key:id,text:str(r.text,120),servings:Math.max(1,Math.min(30,parseInt(r.servings,10)||4)),ts,deleted};
+  if(k==="recipes")return{id,name:str(r.name,120),ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80)
+    .map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
+  return null;
+}
+function cleanAll(src){
+  const out={lists:{},items:{},meals:{},recipes:{}};
+  for(const k in out)if(src&&src[k]&&typeof src[k]==="object")for(const [id,r] of Object.entries(src[k])){const c=clean(k,id,r);if(c)out[k][id]=c}
+  return out;
+}
+let S=cleanAll(JSON.parse(LS.s||"null"));
 const ORDER=["auchan","lidl","drive","boucherie","fermiers"];
 for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"],["boucherie","Boucherie"],["fermiers","Au pré des fermiers"]]) S.lists[id]=S.lists[id]||{id,name,ts:0};
 let tab=LS.tab||"auchan", code=LS.code||"", dirty=!!LS.dirty;
@@ -8,21 +26,26 @@ let tab=LS.tab||"auchan", code=LS.code||"", dirty=!!LS.dirty;
 function save(){LS.s=JSON.stringify(S);LS.dirty=dirty?"1":""}
 function touch(kind,rec){rec.ts=Date.now();(S[kind]=S[kind]||{})[rec.id||rec.key]=rec;dirty=true;save();sync();}
 function merge(remote){
-  for(const k of ["lists","items","meals","recipes"])for(const [id,r] of Object.entries(remote[k]||{}))
-    if(!S[k][id]||r.ts>S[k][id].ts)S[k][id]=r;
+  const r=cleanAll(remote);
+  for(const k in r)for(const [id,x] of Object.entries(r[k]))
+    if(!S[k][id]||x.ts>S[k][id].ts)S[k][id]=x;
 }
-const cfg=window.CONFIG, canSync=()=>cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY&&code;
+// Code minimal : en dessous, la base refuse l'écriture (cf. supabase.sql).
+const MIN_CODE=10;
+const cfg=window.CONFIG, canSync=()=>cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY&&code.length>=MIN_CODE;
 const H=()=>({apikey:cfg.SUPABASE_ANON_KEY,Authorization:"Bearer "+cfg.SUPABASE_ANON_KEY,"Content-Type":"application/json"});
+// Le code part dans le corps de la requête, jamais dans l'URL.
+const rpc=(fn,body)=>fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",headers:H(),body:JSON.stringify(body)});
 let syncing=false,again=false;
 async function sync(){
   if(!canSync()){setStatus("");return}
   if(syncing){again=true;return}
   syncing=true;
   try{
-    const r=await fetch(`${cfg.SUPABASE_URL}/rest/v1/households?code=eq.${encodeURIComponent(code)}&select=data`,{headers:H()});
+    const r=await rpc("get_household",{p_code:code});
     if(!r.ok)throw 0;
-    const rows=await r.json(); if(rows[0])merge(rows[0].data);
-    const w=await fetch(`${cfg.SUPABASE_URL}/rest/v1/households?on_conflict=code`,{method:"POST",headers:{...H(),Prefer:"resolution=merge-duplicates"},body:JSON.stringify({code,data:S,updated_at:new Date().toISOString()})});
+    const remote=await r.json(); if(remote)merge(remote);
+    const w=await rpc("put_household",{p_code:code,p_data:S});
     if(!w.ok)throw 0;
     dirty=false;save();setStatus("ok");render();
   }catch(e){setStatus("err")}
@@ -51,7 +74,7 @@ function renderList(id){
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v10";
+const BASE=4,VERSION="v11";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -155,7 +178,11 @@ function renderSettings(){
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>
    <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`;
   $("#upd").onclick=async e=>{e.preventDefault();try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(_){}location.reload()};
-  $("#chgcode").onclick=()=>{const c=prompt("Code du foyer (identique sur tous les appareils, gardez-le secret) :",code);if(c!==null){code=LS.code=c.trim();sync();render()}};
+  $("#chgcode").onclick=()=>{
+    let c=prompt(`Code du foyer, au moins ${MIN_CODE} caractères (identique sur tous les appareils, gardez-le secret) :`,code);
+    while(c!==null&&c.trim().length<MIN_CODE)c=prompt(`Trop court : au moins ${MIN_CODE} caractères. Par exemple trois mots et un nombre.`,c.trim());
+    if(c!==null){code=LS.code=c.trim();dirty=true;save();sync();render()}
+  };
   $("#newr").onclick=()=>recipeEditor(null);
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>recipeEditor(S.recipes[el.dataset.r]));
 }
