@@ -91,7 +91,7 @@ function renderList(id){
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v15";
+const BASE=4,VERSION="v16";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -247,7 +247,8 @@ function recipeEditor(r){
 }
 addEventListener("online",sync);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});
-setInterval(()=>{if(!document.hidden)sync()},20000);
+// Récupère les changements des autres appareils ; les siens partent tout de suite (touch).
+setInterval(()=>{const a=document.activeElement;if(!document.hidden&&!(a&&a.matches("input,textarea,select")))sync()},60000);
 if("serviceWorker" in navigator){
   const had=!!navigator.serviceWorker.controller;
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update());
