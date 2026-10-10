@@ -105,3 +105,7 @@ h2.sec small{text-transform:none;letter-spacing:0;font-weight:400}
 .sug button:last-child{border:0}
 #status.unk{background:#e0a800}
 .warn{color:#b07800;font-size:14px;margin:6px 4px}
+
+/* suggestions en surimpression : ne poussent plus le contenu */
+.slotw{position:relative}
+.sug{position:absolute;left:0;right:0;top:46px;z-index:5;margin-left:40px}

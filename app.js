@@ -47,17 +47,25 @@ async function sync(){
     const remote=await r.json(); if(remote)merge(remote);
     const w=await rpc("put_household",{p_code:code,p_data:S});
     if(!w.ok){const e=await w.json().catch(()=>({}));throw e.message==="code inconnu"?"unk":0}
-    dirty=false;save();setStatus("ok");render();
+    dirty=false;save();setStatus("ok");safeRender();
   }catch(e){setStatus(e==="unk"?"unk":"err")}
   syncing=false;if(again){again=false;sync()}
 }
 const STATE={ok:"Synchronisé",err:"Hors ligne (modifs conservées)",unk:"Code inconnu",
   "":"Synchro désactivée"};
 let status="";
+// Ne pas redessiner pendant une saisie : le champ serait recréé et la page sauterait.
+let pendingRender=false;
+function safeRender(){
+  const a=document.activeElement;
+  if(a&&a.matches("input,textarea,select")){pendingRender=true;return}
+  render();
+}
+document.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!document.activeElement.matches("input,textarea,select")){pendingRender=false;render()}},250));
 function setStatus(c){
   const changed=c!==status;status=c;
   $("#status").className=c;$("#status").title=STATE[c];
-  if(changed&&tab==="settings")render();
+  if(changed&&tab==="settings")safeRender();
 }
 
 const listSort=(a,b)=>{const i=ORDER.indexOf(a.id),j=ORDER.indexOf(b.id);return (i<0?99:i)-(j<0?99:j)||a.name.localeCompare(b.name)};
@@ -81,7 +89,7 @@ function renderList(id){
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v13";
+const BASE=4,VERSION="v14";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
