@@ -71,12 +71,36 @@ function renderMenus(){
     const d=new Date(m);d.setDate(m.getDate()+n);const k=d.toISOString().slice(0,10);
     const wd=d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".","");
     h+=`<section class="day ${k===today?"today":""}"><div class="dh"><b>${wd}</b><small>${d.getDate()}</small></div><div class="slots">`+
-      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const e=S.meals[k+"-"+s]||{};return `<div class="slot"><span>${l}</span><input type="text" data-m="${k}-${s}" list="recipes" placeholder="Choisir un plat…" value="${esc(e.text||"")}">${e.text?`<button class="pill" data-i="${k}-${s}" title="Ingrédients pour ${e.servings||BASE} personnes">🛒 ${e.servings||BASE}</button>`:""}</div>`}).join("")+`</div></section>`;
+      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const key=k+"-"+s,e=S.meals[key]||{},n=e.servings||BASE;return `<div class="slotw"><div class="slot"><span>${l}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}"></div>${e.text?`<div class="sub"><div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}">🛒 Ingrédients</button></div>`:""}</div>`}).join("")+`</div></section>`;
   }
-  h+=`<datalist id="recipes">${live(S.recipes).map(r=>`<option value="${esc(r.name)}">`).join("")}</datalist>`;
   $("#view").innerHTML=h;
-  document.querySelectorAll("[data-m]").forEach(el=>el.onchange=()=>{const t=el.value.trim(),o=S.meals[el.dataset.m]||{};touch("meals",{key:el.dataset.m,text:t,servings:o.servings||BASE});render();if(t)ingredientsDialog(t,el.dataset.m)});
+  const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const names=()=>{const seen=new Set(),out=[];
+    for(const t of [...live(S.recipes).map(r=>r.name),...live(S.meals).map(m=>m.text).filter(Boolean)]){const k=norm(t);if(!seen.has(k)){seen.add(k);out.push(t)}}return out};
+  const commit=(el,t)=>{
+    const key=el.dataset.m,o=S.meals[key]||{};
+    if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});render();return}
+    const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
+    touch("meals",{key,text:known?known.name:t,servings:o.servings||(+LS.defN||BASE)});render();ingredientsDialog(known?known.name:t,key);
+  };
+  const clearSug=()=>document.querySelectorAll(".sug").forEach(x=>x.remove());
+  document.querySelectorAll("[data-m]").forEach(el=>{
+    el.oninput=()=>{
+      clearSug();const q=norm(el.value.trim());if(!q)return;
+      const hits=names().filter(t=>norm(t).includes(q)&&norm(t)!==q).sort((a,b)=>norm(a).startsWith(q)?-1:norm(b).startsWith(q)?1:0).slice(0,6);
+      if(!hits.length)return;
+      const box=document.createElement("div");box.className="sug";
+      box.innerHTML=hits.map(t=>`<button type="button">${esc(t)}</button>`).join("");
+      box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el.value=b.textContent;clearSug();commit(el,b.textContent)};
+      el.closest(".slotw").appendChild(box);
+    };
+    el.onblur=()=>setTimeout(clearSug,150);
+    el.onchange=()=>{if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
+  });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
+  const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));LS.defN=n;touch("meals",{...m,servings:n});render()};
+  document.querySelectorAll("[data-sm]").forEach(el=>el.onclick=()=>step(el.dataset.sm,-1));
+  document.querySelectorAll("[data-sp]").forEach(el=>el.onclick=()=>step(el.dataset.sp,1));
   $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
 }
 function ingredientsDialog(name,mealKey){

@@ -92,3 +92,14 @@ h2.sec small{text-transform:none;letter-spacing:0;font-weight:400}
 .ed-row input{height:42px;min-width:0;font-size:16px}.ed-row select{height:42px}
 .danger{color:#d9534f}
 .acts .btn.sec{margin:0}
+
+/* v4 menus */
+.slotw{display:flex;flex-direction:column;gap:4px}
+.sub{display:flex;align-items:center;gap:10px;margin-left:40px}
+.stp{display:flex;align-items:center;gap:2px;background:var(--bg);border-radius:20px;padding:2px}
+.stp button{width:34px;height:34px;border-radius:50%;border:0;background:var(--card);color:var(--fg);font-size:20px;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.stp b{min-width:24px;text-align:center;font-size:17px}
+.stp em{font-style:normal;color:var(--mut);font-size:13px;padding:0 8px 0 2px}
+.sug{margin-left:40px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.sug button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;font-size:16px;color:var(--fg)}
+.sug button:last-child{border:0}
