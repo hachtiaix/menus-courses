@@ -1,7 +1,8 @@
 const $=s=>document.querySelector(s), LS=localStorage;
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 let S=JSON.parse(LS.s||"null")||{lists:{},items:{},meals:{},recipes:{}};S.recipes=S.recipes||{};
-for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"]]) S.lists[id]=S.lists[id]||{id,name,ts:0};
+const ORDER=["auchan","lidl","drive","boucherie","fermiers"];
+for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"],["boucherie","Boucherie"],["fermiers","Au pré des fermiers"]]) S.lists[id]=S.lists[id]||{id,name,ts:0};
 let tab=LS.tab||"auchan", code=LS.code||"", dirty=!!LS.dirty;
 
 function save(){LS.s=JSON.stringify(S);LS.dirty=dirty?"1":""}
@@ -29,9 +30,10 @@ async function sync(){
 }
 function setStatus(c){$("#status").className=c;$("#status").title=c==="ok"?"Synchronisé":c==="err"?"Hors ligne (modifs conservées)":"Synchro désactivée"}
 
+const listSort=(a,b)=>{const i=ORDER.indexOf(a.id),j=ORDER.indexOf(b.id);return (i<0?99:i)-(j<0?99:j)||a.name.localeCompare(b.name)};
 const live=o=>Object.values(o).filter(x=>!x.deleted);
 function render(){
-  const lists=live(S.lists).sort((a,b)=>a.name.localeCompare(b.name));
+  const lists=live(S.lists).sort(listSort);
   $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}"><i>🛒${c?`<b>${c}</b>`:""}</i>${esc(l.name)}</button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}"><i>📅</i>Menus</button>`;
   if(tab==="menus")renderMenus();else renderList(S.lists[tab]?tab:"auchan");
 }
@@ -77,7 +79,7 @@ function renderMenus(){
 }
 function ingredientsDialog(name,mealKey){
   const r=live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase());
-  const lists=live(S.lists).sort((a,b)=>a.name.localeCompare(b.name));
+  const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   let n=(mealKey&&S.meals[mealKey]&&S.meals[mealKey].servings)||BASE;
   const ov=document.createElement("div");ov.className="ov";

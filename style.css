@@ -66,3 +66,6 @@ section.day h3 small{color:var(--mut);font-weight:500;margin-left:4px}
 .ing-row{display:grid;grid-template-columns:26px 1fr auto;gap:10px}
 .ing-row select{height:42px;max-width:110px}
 .sheet .row input.ing{height:42px}
+
+nav{overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+nav button{flex:1 0 auto;min-width:64px;padding:4px 10px;white-space:nowrap}
