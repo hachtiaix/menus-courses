@@ -158,6 +158,10 @@ function recipeEditor(r){
 addEventListener("online",sync);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});
 setInterval(()=>{if(!document.hidden)sync()},20000);
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");
+if("serviceWorker" in navigator){
+  const had=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update());
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had)location.reload()});
+}
 render();sync();
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>$("#cfg").click(),300);
