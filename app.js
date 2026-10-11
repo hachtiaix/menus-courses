@@ -1,30 +1,6 @@
 const $=s=>document.querySelector(s), LS=localStorage;
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
-// Les données synchronisées viennent de l'extérieur : on ne garde que des champs attendus, aux types attendus.
-const ID=/^[\w-]{1,64}$/, okId=id=>typeof id==="string"&&ID.test(id)&&id!=="__proto__";
-const str=(v,n)=>typeof v==="string"?v.slice(0,n):"";
-function clean(k,id,r){
-  if(!okId(id)||!r||typeof r!=="object")return null;
-  const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;
-  if(k==="lists")return{id,name:str(r.name,60)||id,ts,deleted};
-  if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,archived:r.archived===true,c:Number.isFinite(r.c)?r.c:ts,ts,deleted}:null;
-  if(k==="meals"){
-    const ad=r.added&&typeof r.added==="object"&&Array.isArray(r.added.items)?{n:Math.max(1,Math.min(30,parseInt(r.added.n,10)||4)),
-      items:r.added.items.slice(0,80).map(g=>({t:str(g&&g.t,200),store:okId(g&&g.store)?g.store:"auchan"})),
-      ids:(Array.isArray(r.added.ids)?r.added.ids:[]).filter(okId).slice(0,120),b:Math.max(1,Math.min(30,parseInt(r.added.b,10)||4))}:null;
-    return{key:id,text:str(r.text,120),servings:Math.max(1,Math.min(30,parseInt(r.servings,10)||4)),added:ad,ts,deleted};
-  }
-  if(k==="stores")return{id,last:(Array.isArray(r.last)?r.last:[]).filter(okId).slice(-3),def:okId(r.def)?r.def:null,ts,deleted};
-  if(k==="aisles")return Rayons.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
-  if(k==="recipes")return{id,name:str(r.name,120),serves:Math.max(1,Math.min(30,parseInt(r.serves,10)||4)),ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80)
-    .map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
-  return null;
-}
-function cleanAll(src){
-  const out={lists:{},items:{},meals:{},recipes:{},aisles:{},stores:{}};
-  for(const k in out)if(src&&src[k]&&typeof src[k]==="object")for(const [id,r] of Object.entries(src[k])){const c=clean(k,id,r);if(c)out[k][id]=c}
-  return out;
-}
+const {cleanAll}=Data;
 let S=cleanAll(JSON.parse(LS.s||"null"));
 const ORDER=["auchan","lidl","drive","boucherie","fermiers"];
 for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"],["boucherie","Boucherie"],["fermiers","Au pré des fermiers"]]) S.lists[id]=S.lists[id]||{id,name,ts:0};
@@ -32,11 +8,7 @@ let tab=LS.tab||"auchan", code=LS.code||"", dirty=!!LS.dirty;
 
 function save(){LS.s=JSON.stringify(S);LS.dirty=dirty?"1":""}
 function touch(kind,rec){rec.ts=Date.now();(S[kind]=S[kind]||{})[rec.id||rec.key]=rec;dirty=true;save();sync();}
-function merge(remote){
-  const r=cleanAll(remote);
-  for(const k in r)for(const [id,x] of Object.entries(r[k]))
-    if(!S[k][id]||x.ts>S[k][id].ts)S[k][id]=x;
-}
+const merge=remote=>Data.mergeInto(S,remote);
 // Code minimal : en dessous, la base refuse l'écriture (cf. supabase.sql).
 const MIN_CODE=10;
 const cfg=window.CONFIG, canSync=()=>cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY&&code.length>=MIN_CODE;
@@ -92,7 +64,7 @@ function renderList(id){
   const items=live(S.items).filter(i=>i.list===id&&!i.archived).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
   const row=i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`;
   $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off"><button class="btn">+</button></form>`+
-   (items.length?Rayons.list.map(r=>{const g=items.filter(i=>!i.done&&rayonOf(i.text)===r.id);
+   (items.length?rayonOrder(id).map(r=>{const g=items.filter(i=>!i.done&&rayonOf(i.text)===r.id);
       return g.length?`<h3 class="ray">${r.icon} ${esc(r.label)}</h3><div class="card">${g.map(row).join("")}</div>`:""}).join("")+
     (items.some(i=>i.done)?`<h3 class="ray">✅ Dans le caddie</h3><div class="card">${items.filter(i=>i.done).map(row).join("")}</div>`:"")+`
    ${items.some(i=>i.done)?`<button class="btn sec" id="clr">Retirer les articles cochés</button>`:""}`:`<div class="empty">Liste vide</div>`);
@@ -144,6 +116,9 @@ function addBoxes(list,p,except){
   return ids;
 }
 // Rayon d'un article : celui choisi une fois par l'utilisateur, sinon deviné d'après le nom.
+// Ordre des rayons d'un magasin : celui choisi dans les réglages, puis les autres dans l'ordre par défaut.
+function rayonOrder(list){const o=(S.lists[list]&&S.lists[list].order)||[];
+  return [...o.map(x=>Rayons.byId[x]).filter(Boolean),...Rayons.list.filter(r=>!o.includes(r.id))]}
 function rayonOf(text){const n=Qty.parse(text).name||text,k=Rayons.keyOf(n);return (S.aisles[k]&&!S.aisles[k].deleted&&S.aisles[k].rayon)||Rayons.guess(n)}
 function itemEditor(i){
   const cur=rayonOf(i.text),ov=document.createElement("div");ov.className="ov";
@@ -293,7 +268,8 @@ function resizeMeal(m,n){
   return{...m,servings:n,added:{...m.added,n,ids:[...ids]}};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v43";
+const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
+const BASE=4,VERSION="v44";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -379,6 +355,7 @@ function ingredientsDialog(name,mealKey,startN){
   const home=t=>prev&&t&&!was(t); // décoché lors de l'ajout : on l'avait à la maison
   const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}" ${home(i.t)?'data-home="1"':""}><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/B))}" data-shown="${esc(Qty.buy(i.t,n/B))}"><span class="stp sm"><button type="button" data-st="-1" aria-label="Moins">−</button><button type="button" data-st="1" aria-label="Plus">+</button></span><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select><p class="homewarn"></p></div>`;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(name)}</h2>
+   ${r&&meal&&meal.text&&!prev&&meal.ts<LEGACY_TS?`<p class="homewarn" style="margin:6px 0">⚠ Ce repas date d'avant le suivi des ajouts : vérifiez qu'il n'est pas déjà dans vos listes avant d'ajouter.</p>`:""}
    ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
    <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. Recette pour ${B} personne${B>1?"s":""}.</p>
@@ -447,6 +424,9 @@ function renderSettings(){
    ${code?`<div class="row"><span class="t">Copier le code<br><small class="mut">Pour le coller sur un autre appareil</small></span><button class="btn sec" id="cpcode">Copier</button></div>`:""}
    ${status==="ok"?`<div class="row"><span class="t">Changer le code du foyer<br><small class="mut">Les autres appareils devront saisir le nouveau</small></span><button class="btn sec" id="rencode">Changer</button></div>`:""}</div>
    ${status==="unk"?`<p class="warn">Ce code ne correspond à aucun foyer. Vérifiez-le (majuscules, espaces) ou demandez-le à un autre membre du foyer.</p>`:""}
+   <h2 class="sec">Ordre des rayons</h2>
+   <div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
+   ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>
    <h2 class="sec">Recettes</h2>
    <div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>
@@ -473,6 +453,11 @@ function renderSettings(){
     alert(e.message==="code deja utilise"?"Ce code est déjà pris, choisissez-en un autre.":"Impossible de changer le code pour l'instant (hors ligne ?).");
   };
   $("#newr").onclick=()=>recipeEditor(null);
+  const ol=()=>LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan";
+  $("#ordl").onchange=e=>{LS.ordl=e.target.value;render()};
+  const moveR=(i,d)=>{const ids=rayonOrder(ol()).map(r=>r.id);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];touch("lists",{...S.lists[ol()],order:ids});render()};
+  document.querySelectorAll("[data-up]").forEach(el=>el.onclick=()=>moveR(+el.dataset.up,-1));
+  document.querySelectorAll("[data-dn]").forEach(el=>el.onclick=()=>moveR(+el.dataset.dn,1));
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=e=>{if(!e.target.closest("[data-plan]"))recipeEditor(S.recipes[el.dataset.r])});
   document.querySelectorAll("[data-plan]").forEach(el=>el.onclick=()=>planRecipe(S.recipes[el.dataset.plan]));
 }
@@ -510,6 +495,7 @@ if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update());
   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had)location.reload()});
 }
+if(Data.prune(S,Date.now()))save();
 purgeDone();render();sync();
 setInterval(purgeDone,5*60*1000);
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>$("#cfg").click(),300);

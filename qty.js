@@ -82,7 +82,8 @@ const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[
 const key=p=>(p.kind==="none"?"count":p.kind)+"|"+norm(p.name);
 
 // Quantité à acheter pour un facteur donné (arrondie).
-const buy=(text,f)=>{const p=parse(text);return p.n==null?p.name:format({...p,n:p.n*f})};
+// (les boîtes perdent leur taille : on regroupe au mieux, puis la liste les répartit par taille)
+const buy=(text,f)=>{const p=parse(text);return p.n==null?p.name:format({...p,size:undefined,n:p.n*f})};
 // Cumule b dans a (même clé) ; renvoie le texte ou null si pas cumulable.
 function add(aText,bText){
   const a=parse(aText),b=parse(bText);

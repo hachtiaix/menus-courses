@@ -138,3 +138,4 @@ h3.ray{font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--m
 .slot .lock{flex:none;width:32px;text-align:center;font-size:15px}
 .slot input[readonly]{background:var(--bg);color:var(--mut)}
 .sub .mut.sm{font-size:13px;margin-right:auto}
+.ordre .row .pill{flex:none;width:40px;height:36px;padding:0}.ordre .pill:disabled{opacity:.3}.ordre select{max-width:60%}
