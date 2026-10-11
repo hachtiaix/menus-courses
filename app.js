@@ -425,7 +425,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v85";
+const BASE=4,VERSION="v86";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -452,7 +452,8 @@ function slotHtml(key,label,past){
 // 2e plat d'un repas (pour qui, plat, personnes, ingrédients) ; il se déplace avec le repas principal.
 // Suite d'aliments : étiquettes colorées par-dessus le champ (le texte réapparaît quand on le touche).
 const tagsHtml=text=>{const real=live(S.recipes).some(r=>r.name.toLowerCase()===String(text||"").toLowerCase());
-  const tags=!real&&text?Data.suiteTags(S,text):null;
+  if(real)return `<span class="tags" aria-hidden="true"><i class="rcp">📖 <b>${esc(text)}</b></i></span>`; // recette : livre + nom en gras
+  const tags=text?Data.suiteTags(S,text):null;
   return tags?`<span class="tags" aria-hidden="true">${tags.map(x=>`<i class="tag ${x.cat}">${esc(x.t.charAt(0).toUpperCase()+x.t.slice(1))}</i>`).join("")}</span>`:""};
 function secondHtml(k2,e,past){
   const n=e.servings||1,b=bought(e),who="+ 2ᵉ plat";

@@ -267,3 +267,5 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 .tagwrap.has:not(:focus-within) input{position:absolute;inset:0;opacity:0}
 .tagwrap.has:not(:focus-within) .tags{min-width:0;width:100%}
 .slot span.tagwrap{flex:1 1 0}
+.slot .rcp{font-style:normal;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0;min-width:0}.slot .rcp b{font-weight:600}
+.tagwrap.has:not(:focus-within) .tags:has(.rcp){flex-wrap:nowrap}
