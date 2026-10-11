@@ -279,3 +279,4 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 .tag.pois,.card.fam.pois{background:#e2eef9;border-color:#a3c4e6;color:#1f5591}
 @media(prefers-color-scheme:dark){.tag.pois,.card.fam.pois{background:#1c3047;color:#a9cbef}}
 .row.add-food{width:100%;background:none;border:none;border-top:1px solid rgba(0,0,0,.08);font:inherit;color:inherit;opacity:.8;text-align:left;padding:12px 0;cursor:pointer}
+.ico{width:1.25em;height:1.25em;vertical-align:-.25em}

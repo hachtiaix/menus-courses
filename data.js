@@ -75,7 +75,7 @@ const FOODS=[
   {id:"paupiette",icon:"🐄",cat:"prot",label:"Paupiettes de veau",words:["paupiette"],kind:"n",q:1,store:"boucherie"},
   {id:"crepinette",icon:"🐖",cat:"prot",label:"Crépinettes",words:["crepinette"],kind:"n",q:1,store:"boucherie"},
   {id:"porc",icon:"🐖",cat:"prot",label:"Porc",words:["porc","cote de porc","filet mignon"],kind:"g",q:150,store:"boucherie"},
-  {id:"saucisse",icon:"🌭",cat:"prot",label:"Saucisses",words:["saucisse","chipolata","merguez"],kind:"n",q:2,store:"boucherie"},
+  {id:"saucisse",icon:"svg:saucisse",cat:"prot",label:"Saucisses",words:["saucisse","chipolata","merguez"],kind:"n",q:2,store:"boucherie"},
   {id:"poisson",icon:"🐟",cat:"pois",label:"Poisson",words:["poisson","saumon","cabillaud","colin","lieu","merlu"],kind:"g",q:150,store:"auchan"},
   {id:"crevettes",icon:"🦐",cat:"pois",label:"Crevettes",words:["crevette","gambas"],kind:"g",q:150,store:"auchan"},
   {id:"st-jacques",icon:"🐚",cat:"pois",label:"Noix de Saint-Jacques",words:["saint jacques","st jacques","noix de saint jacques","noix de st jacques"],kind:"n",q:3,store:"auchan"},
@@ -117,7 +117,7 @@ const EMOJI=[["tomate","🍅"],["carotte","🥕"],["courgette","🥒"],["concomb
  ["pomme de terre","🥔"],["patate","🥔"],["frite","🍟"],["pate","🍝"],["spaghetti","🍝"],["nouille","🍜"],["riz","🍚"],["pain","🥖"],["baguette","🥖"],["wrap","🌯"],["tortilla","🌮"],
  ["quinoa","🌾"],["boulgour","🌾"],["ble","🌾"],["semoule","🌾"],["lentille","🫘"],["pois chiche","🫘"],["haricot rouge","🫘"],["gnocchi","🥔"],["polenta","🌽"],
  ["poulet","🍗"],["dinde","🦃"],["canard","🦆"],["lapin","🐇"],["boeuf","🥩"],["steak","🥩"],["veau","🐄"],["agneau","🐑"],["mouton","🐑"],["porc","🐖"],
- ["jambon","🍖"],["lardon","🥓"],["bacon","🥓"],["saucisse","🌭"],["chorizo","🌭"],["merguez","🌭"],["boudin","🌭"],["andouillette","🌭"],["oeuf","🥚"],["fromage","🧀"],["tofu","🧈"],
+ ["jambon","🍖"],["lardon","🥓"],["bacon","🥓"],["saucisse","svg:saucisse"],["chorizo","svg:saucisse"],["merguez","svg:saucisse"],["boudin","svg:saucisse"],["andouillette","svg:saucisse"],["oeuf","🥚"],["fromage","🧀"],["tofu","🧈"],
  ["crevette","🦐"],["gambas","🦐"],["langoustine","🦐"],["homard","🦞"],["langouste","🦞"],["crabe","🦀"],["tourteau","🦀"],["calamar","🦑"],["encornet","🦑"],["seiche","🦑"],["poulpe","🐙"],
  ["huitre","🦪"],["moule","🦪"],["coque","🦪"],["bulot","🐚"],["bigorneau","🐚"],["saint jacques","🐚"],["palourde","🐚"],["saumon","🍣"],["thon","🐟"],["sardine","🐟"],["maquereau","🐟"]];
 function emojiFor(label){const n=words(label);let best=null,len=0;

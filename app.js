@@ -69,6 +69,8 @@ const listSort=(a,b)=>{const i=ORDER.indexOf(a.id),j=ORDER.indexOf(b.id);return 
 const SHORT={auchan:"Auchan",lidl:"Lidl",drive:"Drive",boucherie:"Boucherie",fermiers:"Fermiers"},ICON={drive:"🚗",boucherie:"🥩",fermiers:"🚜"},
   MENU_ICON="🍽️",LOGO={auchan:"icons/auchan.svg",lidl:"icons/lidl.svg"},PICTO={fermiers:"icons/ferme.svg"}; // logos du domaine public (Wikimedia Commons)
 const live=o=>Object.values(o).filter(x=>!x.deleted);
+// Image d'ingrédient : emoji, ou dessin maison « svg:nom » (icons/nom.svg) quand l'emoji n'existe pas (saucisse).
+const ico=i=>/^svg:[a-z-]+$/.test(i||"")?`<img class="ico" src="icons/${i.slice(4)}.svg" alt="">`:(i||"");
 function render(){
   Data.setCustom(S);
   $("#cfg").style.display=tab==="settings"?"none":""; // inutile dans les réglages : le point de synchro prend sa place
@@ -426,7 +428,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v97";
+const BASE=4,VERSION="v98";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -505,7 +507,7 @@ function renderMenus(){
     const showBox=hits=>{
       clearSug();if(!hits.length)return;
       const box=document.createElement("div");box.className="sug";
-      box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}" ${x.food?'data-food="1"':""}>${x.icon} ${esc(x.food?x.t.split(/[,+]/).pop().trim():x.t)}${x.note?` <small class="mut">${esc(x.note)}</small>`:""}</button>`).join("");
+      box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}" ${x.food?'data-food="1"':""}>${ico(x.icon)} ${esc(x.food?x.t.split(/[,+]/).pop().trim():x.t)}${x.note?` <small class="mut">${esc(x.note)}</small>`:""}</button>`).join("");
       // iPhone : sans ça, toucher une suggestion ferme d'abord le champ (et validait le texte à moitié tapé)
       box.addEventListener("touchstart",e=>{el._pick=Date.now();e.preventDefault()},{passive:false});box.onmousedown=e=>e.preventDefault();
       box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el._pick=Date.now();
