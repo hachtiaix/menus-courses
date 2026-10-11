@@ -315,8 +315,10 @@ function suggestDialog(){
     const c=Data.suggest(withProposals(r),today,12,seen,undefined,r.key);
     r.sug=c.find(x=>x.habit||!used.has(Data.typeOf(x.name)))||c[0]||null;
   };
-  // créneaux d'habitude d'abord, puis les autres
-  for(const r of [...rows.filter(r=>Data.habitTypesFor(S,r.key).length),...rows.filter(r=>!Data.habitTypesFor(S,r.key).length)])pickFor(r,[]);
+  // créneaux d'habitude d'abord, puis les autres dans un ordre tiré au hasard
+  // (s'il manque des recettes, ce ne sont pas toujours les mêmes créneaux qui restent vides)
+  const others=rows.filter(r=>!Data.habitTypesFor(S,r.key).length).map(r=>[Math.random(),r]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+  for(const r of [...rows.filter(r=>Data.habitTypesFor(S,r.key).length),...others])pickFor(r,[]);
   const live_=()=>rows.filter(r=>r.sug&&!r.off);
   if(!live_().length){alert("Aucune recette à suggérer pour l'instant : ajoutez des recettes dans ⚙︎ Réglages.");return}
   const label=k=>new Date(k.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric"})+(k.endsWith("-m")?" midi":" soir");
@@ -376,7 +378,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v69";
+const BASE=4,VERSION="v70";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
