@@ -62,7 +62,7 @@ const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&qu
 function renderList(id){
   // titre : le logo du magasin quand il y en a un (il contient déjà le nom)
   if(LOGO[id])$("#title").innerHTML=`<img src="${LOGO[id]}" alt="${esc(S.lists[id].name)}" class="hlogo hlogo-${id}">`;
-  else if(id==="boucherie"||id==="fermiers")$("#title").innerHTML=`${esc(S.lists[id].name)} <span class="hicon">${PICTO[id]?`<img src="${PICTO[id]}" alt="" class="picto">`:ICON[id]}</span>`;
+  else if(PICTO[id]||ICON[id])$("#title").innerHTML=`${esc(S.lists[id].name)} <span class="hicon">${PICTO[id]?`<img src="${PICTO[id]}" alt="" class="picto">`:ICON[id]}</span>`;
   else $("#title").textContent=S.lists[id].name;
   live(S.items).filter(i=>i.list===id&&!i.done&&/\s\+\s/.test(i.text)&&Qty.parse(i.text).kind==="box").forEach(i=>{touch("items",{...i,deleted:true});addBoxes(id,Qty.parse(i.text),i.id)});
   const items=live(S.items).filter(i=>i.list===id&&!i.archived).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
@@ -273,7 +273,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v56";
+const BASE=4,VERSION="v57";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
