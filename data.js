@@ -91,7 +91,7 @@ const FOODS=[
   {id:"st-jacques",icon:"🐚",cat:"pois",label:"Noix de Saint-Jacques",words:["saint jacques","st jacques","noix de saint jacques","noix de st jacques"],kind:"n",q:3,store:"auchan"},
   {id:"moules",icon:"🦪",cat:"pois",label:"Moules",words:["moule"],kind:"g",q:1000,store:"auchan"},
   {id:"pdt-surg",icon:"🥔",cat:"fec",label:"Pommes de terre surgelées",words:["pdt surgele","pdt surgelee","pomme de terre surgele","pomme de terre surgelee","pommes de terre surgelee"],kind:"g",q:200,store:"auchan"},
-  {id:"frites",icon:"🍟",cat:"fec",label:"Frites",words:["frite","potatoes"],kind:"g",q:200,store:"auchan"},
+  {id:"frites",icon:"🍟",cat:"fec",label:"Frites",words:["frite","potatoes"],kind:"g",q:250,buy:"pommes de terre (frites maison)",store:"auchan"},
   {id:"pdt",icon:"🥔",cat:"fec",label:"Pommes de terre",words:["pdt","pomme de terre","patate"],kind:"g",q:250,store:"auchan"},
   {id:"pates",icon:"🍝",cat:"fec",label:"Pâtes",words:["pate","spaghetti","tagliatelle","penne","coquillette"],kind:"g",q:100,store:"auchan"},
   {id:"riz",icon:"🍚",cat:"fec",label:"Riz",words:["riz"],kind:"g",q:80,store:"auchan"},
@@ -164,16 +164,24 @@ function foodLine(S,f,name){
 // Morceaux d'une suite d'aliments avec leur famille (affichage en étiquettes), ou null si ce n'est pas une suite.
 function suiteTags(S,text){
   if(!suite(S,text))return null;
-  return String(text).split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean).map(p=>{const f=foodFor(p);return{t:p,cat:f?f.cat:"autre"}});
+  return String(text).split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean).map(p=>{const f=foodFor(p);return{t:p,cat:recipeNamed(S,p)?"rcp":f?f.cat:"autre"}});
 }
 // Sur la liste : le nom complet de l'ingrédient (« Épinards » → « épinards surgelés »), sauf pour les familles larges
 // où le mot tapé est plus précis (« bavette » reste « bavette » plutôt que « viande rouge »).
 const GENERIC=["viande","poisson","porc"];
 // Suite d'aliments (« viande rouge, haricots verts, PDT surgelés ») → recette virtuelle pour 1 personne, ou null.
+// Une recette enregistrée peut faire partie de la suite (« Carbonade flamande, Frites ») : ses ingrédients sont repris,
+// et la suite est comptée pour le nombre de personnes de la recette (les aliments sont multipliés d'autant).
+const recipeNamed=(S,p)=>Object.values(S.recipes||{}).find(r=>r&&!r.deleted&&r.name&&plain(r.name)===plain(p));
 function suite(S,text){
   const parts=String(text||"").split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
   if(!parts.length||(parts.length===1&&!foodFor(parts[0],true)))return null;
-  return{name:text,serves:1,virtual:true,ingredients:parts.map(p=>{const f=foodFor(p);return{t:f?foodLine(S,f,GENERIC.includes(f.id)?p:f.label):p,store:f?f.store:"auchan"}})};
+  const recs=parts.map(p=>recipeNamed(S,p)),B=(recs.find(Boolean)||{}).serves||1,ings=[];
+  parts.forEach((p,i)=>{const r=recs[i];
+    if(r){for(const g of r.ingredients||[])ings.push({t:(r.serves||4)===B?g.t:Qty.buy(g.t,B/(r.serves||4),r.serves||4),store:g.store||"auchan"});return}
+    const f=foodFor(p),t=f?foodLine(S,f,GENERIC.includes(f.id)?p:f.buy||f.label):p;
+    ings.push({t:f&&B>1&&f.kind!=="text"?Qty.buy(t,B,1):t,store:f?f.store:"auchan"})});
+  return{name:text,serves:B,virtual:true,ingredients:ings};
 }
 // Clés : « AAAA-MM-JJ-s » repas principal, « AAAA-MM-JJ-s2 » 2e plat du même repas.
 const isSecond=key=>/\d$/.test(key);

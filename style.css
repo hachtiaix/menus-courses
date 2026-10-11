@@ -267,10 +267,10 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 .tagwrap.has:not(:focus-within) input{position:absolute;inset:0;opacity:0}
 .tagwrap.has:not(:focus-within) .tags{min-width:0;width:100%}
 .slot span.tagwrap{flex:1 1 0}
-.slot .rcp{font-style:normal;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0;min-width:0}.slot .rcp b{font-weight:600}
+.slot .rcp:not(.tag){font-style:normal;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0;min-width:0}.slot .rcp:not(.tag) b{font-weight:600}
 .tagwrap.has:not(:focus-within) .tags:has(.rcp){flex-wrap:nowrap}
-.slot .rcp{display:inline-block;max-width:100%;background:#fff;border:1px solid #c9ced6;border-radius:5px;padding:4px 9px;font-size:14px;color:#1f2329;box-shadow:0 1px 1px rgba(0,0,0,.06)}
-@media(prefers-color-scheme:dark){.slot .rcp{background:#2c3038;border-color:#4a505b;color:#eef0f3}}
+.slot .rcp:not(.tag){display:inline-block;max-width:100%;background:#fff;border:1px solid #c9ced6;border-radius:5px;padding:4px 9px;font-size:14px;color:#1f2329;box-shadow:0 1px 1px rgba(0,0,0,.06)}
+@media(prefers-color-scheme:dark){.slot .rcp:not(.tag){background:#2c3038;border-color:#4a505b;color:#eef0f3}}
 #paste{width:100%;box-sizing:border-box;margin:0 0 10px;font:inherit;font-size:16px;padding:10px;border:1px dashed #b9c0ca;border-radius:10px;background:transparent;color:inherit;resize:vertical}
 .slot span.chips{display:contents}
 .tagwrap.editing{flex-wrap:wrap;gap:4px;align-items:center;padding:4px 6px;border:1px solid var(--acc,#2f6d3e);border-radius:10px;background:var(--card,#fff)}
@@ -281,3 +281,5 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 .row.add-food{width:100%;background:none;border:none;border-top:1px solid rgba(0,0,0,.08);font:inherit;color:inherit;opacity:.8;text-align:left;padding:12px 0;cursor:pointer}
 .ico{width:1.25em;height:1.25em;vertical-align:-.25em}
 #fsearch{box-sizing:border-box;height:42px;padding:0 12px;font-size:16px;border:1px solid #d5d9df;border-radius:10px;background:var(--card,#fff);color:inherit;margin:4px 0 8px}
+.tag.rcp{background:#fff;border-color:#c9ced6;color:#1f2329;border-radius:5px;font-weight:600}
+@media(prefers-color-scheme:dark){.tag.rcp{background:#2c3038;color:#eef0f3}}

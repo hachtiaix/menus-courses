@@ -43,3 +43,11 @@ test("image d'un ingrédient ajouté : d'après son nom, sinon famille", () => {
   assert.equal(Data.foodFor("navets").icon, "🫜");
   Data.setCustom({ foods: {} });
 });
+
+test("recette + aliments dans le même repas (« Carbonade flamande, Frites »)", () => {
+  const S = Data.cleanAll({ recipes: { c: { id: "c", name: "Carbonade flamande", serves: 6, ingredients: [{ t: "1,2 kg de boeuf", store: "boucherie" }] } } });
+  const r = Data.suite(S, "Carbonade flamande, Frites");
+  assert.equal(r.serves, 6);
+  assert.deepEqual(r.ingredients.map((i) => Qty.buy(i.t, 4 / 6, 6)), ["800 g de boeuf", "1 kg de pommes de terre (frites maison)"]);
+  assert.deepEqual(Data.suiteTags(S, "Carbonade flamande, Frites").map((x) => x.cat), ["rcp", "fec"]);
+});

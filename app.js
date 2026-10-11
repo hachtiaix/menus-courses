@@ -428,7 +428,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v106";
+const BASE=4,VERSION="v107";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -457,7 +457,7 @@ function slotHtml(key,label,past){
 const tagsHtml=text=>{const real=live(S.recipes).some(r=>r.name.toLowerCase()===String(text||"").toLowerCase());
   if(real)return `<span class="tags" aria-hidden="true"><i class="rcp">📖 <b>${esc(text)}</b></i></span>`; // recette : livre + nom en gras
   const tags=text?Data.suiteTags(S,text):null;
-  return tags?`<span class="tags" aria-hidden="true">${tags.map(x=>`<i class="tag ${x.cat}">${esc(x.t.charAt(0).toUpperCase()+x.t.slice(1))}</i>`).join("")}</span>`:""};
+  return tags?`<span class="tags" aria-hidden="true">${tags.map(x=>`<i class="tag ${x.cat}">${x.cat==="rcp"?"📖 ":""}${esc(x.t.charAt(0).toUpperCase()+x.t.slice(1))}</i>`).join("")}</span>`:""};
 function secondHtml(k2,e,past){
   const n=e.servings||1,b=bought(e),who="+ 2ᵉ plat";
   const lock=past||b?"readonly":"";
@@ -513,7 +513,8 @@ function renderMenus(){
       box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el._pick=Date.now();
         if(b.dataset.food){addChip(b.dataset.t.split(/[,+]/).pop().trim());clearSug();el.focus();return} // pastille, puis l'aliment suivant
         // plat déjà fait qui est une suite d'aliments (« Steak haché », « Poulet, riz ») : en pastilles, on continue la saisie
-        const t=b.dataset.t,tags=live(S.recipes).some(r=>norm(r.name)===norm(t))?null:Data.suiteTags(S,t);
+        const t=b.dataset.t;if(el._items.length){addChip(t);clearSug();el.focus();return}
+        const tags=live(S.recipes).some(r=>norm(r.name)===norm(t))?null:Data.suiteTags(S,t);
         if(tags){tags.forEach(x=>addChip(x.t));clearSug();el.focus();return}
         el.value=t;clearSug();commit(el,t)};
       el.closest(".slotw").appendChild(box);
@@ -526,25 +527,26 @@ function renderMenus(){
     const drawChips=()=>{const w=el.parentElement;let c=w.querySelector(".chips");
       if(!c){c=document.createElement("span");c.className="chips";w.insertBefore(c,el)}
       w.classList.toggle("editing",el._items.length>0);el.placeholder=el._items.length?"Ajouter…":el.dataset.ph;
-      c.innerHTML=el._items.map((t,i)=>{const f=Data.foodFor(t);return `<i class="tag ${f?f.cat:"autre"}">${esc(t.charAt(0).toUpperCase()+t.slice(1))}<b data-ci="${i}">×</b></i>`}).join("");
+      c.innerHTML=el._items.map((t,i)=>{const r=live(S.recipes).some(x=>norm(x.name)===norm(t)),f=Data.foodFor(t);return `<i class="tag ${r?"rcp":f?f.cat:"autre"}">${r?"📖 ":""}${esc(t.charAt(0).toUpperCase()+t.slice(1))}<b data-ci="${i}">×</b></i>`}).join("");
       c.onpointerdown=e=>{const x=e.target.closest("[data-ci]");e.preventDefault();if(x){el._items.splice(+x.dataset.ci,1);drawChips()}el.focus()}};
     const addChip=t=>{t=t.trim();if(!t)return;el._items.push(t);el.value="";drawChips()};
     el.dataset.ph=el.placeholder;
-    el.onfocus=()=>{el._orig=el.value;const tags=live(S.recipes).some(r=>norm(r.name)===norm(el.value.trim()))?null:Data.suiteTags(S,el.value);
+    el.onfocus=()=>{el._orig=el.value;const v=el.value.trim(),tags=live(S.recipes).some(r=>norm(r.name)===norm(v))?[{t:v}]:Data.suiteTags(S,el.value);
       if(tags&&!el.readOnly&&!el.disabled){el._items=tags.map(x=>x.t);el.value="";drawChips()}};
     el.onkeydown=e=>{
       if(e.key==="Backspace"&&!el.value&&el._items.length){el._items.pop();drawChips();e.preventDefault();return}
       if(e.key!=="Enter")return;e.preventDefault();
       const seg=el.value.trim(),recipe=live(S.recipes).some(r=>norm(r.name)===norm(seg));
       if(seg&&(el._items.length||(!recipe&&Data.foodFor(seg)))){addChip(seg);clearSug();return}
-      el.blur()};
+      el._pick=0;el.blur()};
     el.oninput=()=>{
       const v=el.value,q=norm(v.trim());if(!q){clearSug();return}
       // suite d'aliments en cours (après une virgule ou un +) : on propose seulement des aliments pour le dernier morceau
       const cut=el._items.length?-1:Math.max(v.lastIndexOf(","),v.lastIndexOf("+")),seg=norm(v.slice(cut+1).trim()),head=cut>=0?v.slice(0,cut+1).trimEnd()+" ":"";
       const foods=seg?Data.allFoods().flatMap(f=>f.words.filter(w=>w.startsWith(seg)||w.includes(" "+seg)).slice(0,1).map(w=>({f,w}))).slice(0,4)
         .map(({f})=>({t:head+f.label,icon:f.icon,food:true})):[];
-      if(cut>=0||el._items.length){showBox(foods);return}
+      if(el._items.length){showBox([...foods.slice(0,3),...live(S.recipes).filter(r=>norm(r.name).includes(seg)).slice(0,3).map(r=>({t:r.name,icon:"📖"}))]);return}
+      if(cut>=0){showBox(foods);return}
       showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,5)
         .filter(x=>!foods.some(f=>norm(f.t)===norm(x.t))).map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"}))]);
     };
@@ -594,7 +596,7 @@ function ingredientsDialog(name,mealKey,startN){
    ${r&&meal&&meal.text&&!prev&&meal.ts<LEGACY_TS?`<p class="homewarn" style="margin:6px 0">⚠ Ce repas date d'avant le suivi des ajouts : vérifiez qu'il n'est pas déjà dans vos listes avant d'ajouter.</p>`:""}
    ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
-   <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans ⚙︎ → Aliments.":`Recette pour ${B} personne${B>1?"s":""}.`}</p>
+   <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans ⚙︎ → Ingrédients.":`Recette pour ${B} personne${B>1?"s":""}.`}</p>
    <div id="ings" class="card">${r.ingredients.map(rowH).join("")}</div><button class="btn sec" id="more">+ Ingrédient</button>`
    :`<p class="mut">Nouvelle recette : un ingrédient par ligne, quantité en premier (ex. « 400 g de pâtes »).</p><div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${n}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div><textarea id="ta" rows="7" placeholder="400 g de pâtes&#10;200 g de lardons&#10;2 oeufs&#10;crème fraîche"></textarea>`}
    <div class="acts"><button class="btn sec" id="no">Ignorer</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour les listes":"Ajouter aux listes"}</button></div></div>`;
