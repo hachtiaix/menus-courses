@@ -30,6 +30,15 @@ const cases = [
   ["+ sur une taille de boîte", Qty.step("1 grosse boîte de tomates", 1), "2 grosses boîtes de tomates"],
   ["+ sur l'ail = une tête", Qty.step("2 têtes d'ail (pour 7 gousses)", 1), "3 têtes d'ail"],
 ];
+cases.push(
+  ["quantité après le nom : poulet 1,6 kg ×1,5", Qty.buy("poulet 1,6 kg", 1.5), "2,4 kg de poulet"],
+  ["quantité après le nom : oignons 2 ×2", Qty.buy("oignons 2", 2), "4 oignons"],
+  ["quantité après le nom entre parenthèses", Qty.buy("tomates (1 grosse boîte)", 1), "1 grosse boîte de tomates"],
+  ["quantité après le nom : ail 2 gousses", Qty.buy("ail 2 gousses", 1), "1 tête d'ail (pour 2 gousses)"],
+  ["quantité après le nom : crème 20 cl ×2", Qty.buy("crème fraîche 20 cl", 2), "40 cl de crème fraîche"],
+  ["un chiffre dans le nom n'est pas une quantité", Qty.buy("pizza 4 fromages", 2), "pizza 4 fromages"],
+  ["cumul poulet 1,6 kg + 400 g de poulet", Qty.add("poulet 1,6 kg", "400 g de poulet"), "2 kg de poulet"],
+);
 for (const [name, got, want] of cases) test(name, () => assert.equal(got, want));
 
 test("boîtes : une ligne par taille", () => {

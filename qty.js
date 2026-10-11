@@ -12,6 +12,7 @@ const AIL=5; // gousses par tête (on préfère en avoir trop)
 const NUM=/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?\s*[½¼¾⅓⅔]?|[½¼¾⅓⅔])\s*/;
 const MASS=/^(kg|kilos?|kilogrammes?|g|gr|grammes?)\.?(?=\s|$)/i;
 const VOL=/^(ml|cl|dl|l|litres?|millilitres?|centilitres?)\.?(?=\s|$)/i;
+const TRAIL=/^(.*?\D)\s*[:(,-]?\s*(\d+(?:[.,]\d+)?|\d+\/\d+)\s*(kg|kilos?|g|gr|grammes?|ml|cl|dl|l|litres?|(?:petites?|moyennes?|grosses?|grandes?)\s+bo[iî]tes?|bo[iî]tes?|gousses?|t[eê]tes?)?\.?\s*\)?\s*$/i;
 const BOXRE=/^(?:(petites?|moyennes?|grosses?|grandes?)\s+)?bo[iî]tes?(?:\s+(petites?|moyennes?|grosses?|grandes?))?(?=\s|$)/i;
 
 function num(s){
@@ -30,7 +31,12 @@ function parse(text){
     if(parts.every(x=>x.kind==="box"))return{n:parts.reduce((a,x)=>a+x.n,0),kind:"box",name:last.name};
   }
   const m=t.match(NUM);
-  if(!m)return{n:null,kind:"none",name:t};
+  if(!m){ // quantité écrite après le nom : « poulet 1,6 kg », « oignons 2 », « tomates (1 boîte) »
+    const tr=t.match(TRAIL);
+    if(tr&&tr[1].trim()){const name=tr[1].trim(),unit=tr[3]||"";
+      return parse(tr[2]+" "+(unit?unit+(/^[aeiouyhâàéèêëîïôûù]/i.test(name)?" d'":" de ")+name:name))}
+    return{n:null,kind:"none",name:t};
+  }
   const n=num(m[1]);let rest=t.slice(m[0].length),u;
   if(!(n>0))return{n:null,kind:"none",name:t};
   if((u=rest.match(MASS))){const k=/^k/i.test(u[1])?1000:1;return{n:n*k,kind:"mass",name:stripDe(rest.slice(u[0].length))}}
