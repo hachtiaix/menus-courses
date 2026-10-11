@@ -439,7 +439,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v116";
+const BASE=4,VERSION="v117";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -692,7 +692,7 @@ function renderSettings(){
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`,
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
    <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
-   ${(()=>{const w=live(S.foods).filter(r=>r.cat==="wait").sort((a,b)=>a.label.localeCompare(b.label));
+   ${(()=>{const w=live(S.foods).filter(r=>r.cat==="wait"&&!Data.foodFor(r.label,true)&&!live(S.recipes).some(x=>x.name.toLowerCase()===r.label.toLowerCase())) // devenu recette ou ingrédient : plus à classer.sort((a,b)=>a.label.localeCompare(b.label));
      return w.length?`<h3 class="fam wait">⏳ À classer</h3><div class="card fam wait">${w.map(r=>`<div class="row"><span class="t">${esc(r.label)}<br><small class="mut">tapé dans un repas</small></span><button class="btn sec" data-fwait="${r.id}">Classer</button><button class="x" data-fdel="${r.id}" aria-label="Écarter">×</button></div>`).join("")}</div>`:""})()}
    ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
      const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";

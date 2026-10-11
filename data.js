@@ -148,7 +148,6 @@ const allFoods=()=>[...FOODS,...CUSTOM];
 // Aliments inconnus d'une suite (« Saucisses, Asperges » → ["Asperges"]) : ni ingrédient, ni recette, ni déjà à classer ou écarté.
 function unknownFoods(S,text){
   const parts=String(text||"").split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
-  if(parts.length<2)return[]; // un plat seul (« Restes ») n'est pas un aliment
   const seen=new Set(Object.values(S.foods||{}).filter(r=>r&&r.label).map(r=>plain(r.label)));
   return parts.filter(p=>!foodFor(p)&&!recipeNamed(S,p)&&!seen.has(plain(p))&&(seen.add(plain(p)),true));
 }
