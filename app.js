@@ -452,7 +452,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v120";
+const BASE=4,VERSION="v121";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -612,16 +612,9 @@ function renderMenus(){
   $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
 }
 function ingredientsDialog(name,mealKey,startN,asRecipe){
-  const r=recipeOf(name);
-  // Plat inconnu tapé seul : ingrédient (quantité au poids ou à la pièce) ou nouvelle recette ?
-  if(!r&&!asRecipe){const ov=document.createElement("div");ov.className="ov";
-    ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>« ${esc(name)} »</h2><p class="mut">C'est :</p>
-     <div class="acts" style="flex-direction:column;gap:10px"><button class="btn" id="asf">🥕 Un ingrédient (quantité par personne)</button>
-     <button class="btn sec" id="asr">📖 Une recette (plusieurs ingrédients)</button><button class="btn sec" id="no">Ignorer</button></div></div>`;
-    document.body.appendChild(ov);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
-    $("#asr").onclick=()=>{close();ingredientsDialog(name,mealKey,startN,true)};
-    $("#asf").onclick=()=>{close();foodEditor(null,live(S.foods).find(f=>f.cat==="wait"&&f.label.toLowerCase()===name.toLowerCase())||{id:"c-"+uid(),label:name},()=>ingredientsDialog(name,mealKey,startN))};
-    return}
+  // Plat ou aliment inconnu tapé seul : une ligne sans quantité, comme dans une suite ; il attend dans
+  // Réglages → Ingrédients → ⏳ À classer. Les recettes se créent dans Réglages → Recettes.
+  const r=recipeOf(name)||(asRecipe?null:{name,serves:1,virtual:true,ingredients:[{t:name,store:"auchan"}]});
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   const B=(r&&r.serves)||BASE; // la recette est écrite pour B personnes
