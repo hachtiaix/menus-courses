@@ -240,7 +240,7 @@ function planRecipe(r){
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Ajouter « ${esc(r.name)} » aux menus</h2>
    <select id="plto" style="width:100%">${slotOptions(null,nextFreeSlot()," (remplace)")}</select>
-   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">${h?"Enregistrer":"Ajouter"}</button></div></div>`;
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
   $("#ok").onclick=()=>{
@@ -385,7 +385,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v81";
+const BASE=4,VERSION="v81.1";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -626,7 +626,7 @@ function habitEditor(h){
    <div class="days">${DAYS.map((d,i)=>`<label><input type="checkbox" value="${i+1}" ${h&&h.days.includes(i+1)?"checked":""}><span>${d.slice(0,3)}</span></label>`).join("")}</div>
    <div class="serv"><span>Moment</span><select id="hslot"><option value="s">Soir</option><option value="m" ${h&&h.slot==="m"?"selected":""}>Midi</option></select></div>
    <div class="serv"><span>Plat</span><div class="pick"><input type="text" id="hq" placeholder="Tapez : pâtes, soupe, une recette…" autocomplete="off" value="${h?esc(habitWhat(h).icon+" "+habitWhat(h).label):""}"><div id="hlist"></div></div></div>
-   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">${h?"Enregistrer":"Ajouter"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
   // recherche dans les types de plats et les recettes (pratique avec beaucoup de recettes)
