@@ -130,7 +130,7 @@ const FOOD_CATS=["leg","fec","prot","pois"],CAT_ICON={leg:"🥦",fec:"🥔",prot
 // Image d'un ingrédient ajouté à la main, d'après son nom (sinon celle de sa famille).
 const EMOJI=[["tomate","🍅"],["carotte","🥕"],["courgette","🥒"],["concombre","🥒"],["cornichon","🥒"],["poivron","🫑"],["piment","🌶️"],["aubergine","🍆"],
  ["champignon","🍄"],["brocoli","🥦"],["chou","🥬"],["salade","🥬"],["laitue","🥬"],["epinard","🥬"],["poireau","🥬"],["blette","🥬"],["avocat","🥑"],["mais","🌽"],
- ["oignon","🧅"],["echalote","🧅"],["ail","🧄"],["navet","🫜"],["radis","🫜"],["betterave","🫜"],["panais","🫜"],["celeri","🫜"],["topinambour","🫜"],["patate douce","🍠"],["potiron","🎃"],["courge","🎃"],["butternut","🎃"],["citrouille","🎃"],
+ ["oignon","🧅"],["echalote","🧅"],["ail","🧄"],["asperge","🌱"],["navet","🫜"],["radis","🫜"],["betterave","🫜"],["panais","🫜"],["celeri","🫜"],["topinambour","🫜"],["patate douce","🍠"],["potiron","🎃"],["courge","🎃"],["butternut","🎃"],["citrouille","🎃"],
  ["haricot","🫛"],["petit pois","🫛"],["pois","🫛"],["feve","🫛"],["edamame","🫛"],["olive","🫒"],
  ["pomme de terre","🥔"],["patate","🥔"],["frite","🍟"],["pate","🍝"],["spaghetti","🍝"],["nouille","🍜"],["riz","🍚"],["pain","🥖"],["baguette","🥖"],["wrap","🌯"],["tortilla","🌮"],
  ["quinoa","🌾"],["boulgour","🌾"],["ble","🌾"],["semoule","🌾"],["lentille","🫘"],["pois chiche","🫘"],["haricot rouge","🫘"],["gnocchi","🥔"],["polenta","🌽"],
@@ -142,9 +142,16 @@ function emojiFor(label){const n=words(label);let best=null,len=0;
   for(const [w,e] of EMOJI)if(w.length>len&&new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? ").test(n)){best=e;len=w.length}
   return best}
 let CUSTOM=[];
-function setCustom(S){CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
+function setCustom(S){CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&r.cat!=="wait"&&!FOODS.some(f=>f.id===r.id))
   .map(r=>({id:r.id,icon:emojiFor(r.label)||CAT_ICON[r.cat],cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
 const allFoods=()=>[...FOODS,...CUSTOM];
+// Aliments inconnus d'une suite (« Saucisses, Asperges » → ["Asperges"]) : ni ingrédient, ni recette, ni déjà à classer ou écarté.
+function unknownFoods(S,text){
+  const parts=String(text||"").split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
+  if(parts.length<2)return[]; // un plat seul (« Restes ») n'est pas un aliment
+  const seen=new Set(Object.values(S.foods||{}).filter(r=>r&&r.label).map(r=>plain(r.label)));
+  return parts.filter(p=>!foodFor(p)&&!recipeNamed(S,p)&&!seen.has(plain(p))&&(seen.add(plain(p)),true));
+}
 function foodFor(name,exact){
   const n=words(name);let best=null,len=0;
   for(const f of allFoods())for(const w of f.words){const re=" "+w.replace(/ /g,"[sx]? ")+"[sx]? ";
@@ -340,7 +347,7 @@ function clean(k,id,r){
     adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,ts,deleted}:null;
   if(k==="foods"){const q=Math.max(0.25,Math.min(2000,+r.q||0))||null;
     if(FOODS.some(f=>f.id===id))return{id,q,ts,deleted};
-    const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;
+    const label=str(r.label,40);if(!label||!(FOOD_CATS.includes(r.cat)||r.cat==="wait"))return null; // « wait » : à classer
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,ts,deleted}}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
@@ -374,5 +381,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,companionFor,FOODS,FOOD_CATS,CAT_ICON,emojiFor,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,companionFor,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
