@@ -14,7 +14,6 @@ const RAYONS=[
   ["surgeles","🧊","Surgelés"],
   ["hygiene","🧴","Hygiène, beauté"],
   ["entretien","🧽","Entretien, maison"],
-  ["bebe","🍼","Bébé"],
   ["animaux","🐾","Animalerie"],
   ["autres","🛒","Autres"],
 ].map(([id,icon,label])=>({id,icon,label}));
@@ -32,9 +31,8 @@ const K={
   boissons:"eau jus soda coca limonade sirop boisson",
   alcools:"vin biere cidre champagne rhum whisky vodka pastis aperitif",
   surgeles:"surgele glace frite poelee",
-  hygiene:"shampoing savon dentifrice deodorant coton mouchoir rasoir",
+  hygiene:"shampoing savon dentifrice deodorant coton mouchoir rasoir lingette",
   entretien:"lessive eponge javel nettoyant adoucissant",
-  bebe:"couche lingette bebe",
   animaux:"croquette patee litiere chat chien",
 };
 const norm=s=>String(s).toLowerCase().replace(/œ/g,"oe").replace(/æ/g,"ae").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[’']/g," ")
@@ -50,7 +48,7 @@ const PHRASES=[
   ["pomme de terre","fruits"],["petit pois","fruits"],["haricot vert","fruits"],["chou fleur","fruits"],
   ["pain de mie","pain"],["pain au chocolat","pain"],
   ["thon en boite","sale"],["sardine en boite","sale"],["sauce tomate","sale"],["pate a tartiner","sucre"],
-  ["lait concentre","sucre"],["lait infantile","bebe"],["petit pot","bebe"],["fromage blanc","cremerie"],
+  ["lait concentre","sucre"],["fromage blanc","cremerie"],
   ["creme fraiche","cremerie"],["creme hydratante","hygiene"],["the glace","boissons"],["jus de","boissons"],
   ["noix de saint jacque","boucherie"],["blanc de poulet","charcuterie"],["jambon cru","charcuterie"],
   ["legume surgele","surgeles"],["poisson pane","surgeles"],["papier toilette","hygiene"],["brosse a dent","hygiene"],
