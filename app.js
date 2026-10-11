@@ -84,7 +84,7 @@ function renderList(id){
   live(S.items).filter(i=>i.list===id&&!i.done&&/\s\+\s/.test(i.text)&&Qty.parse(i.text).kind==="box").forEach(i=>{touch("items",{...i,deleted:true});addBoxes(id,Qty.parse(i.text),i.id)});
   const items=live(S.items).filter(i=>i.list===id).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
   $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off"><button class="btn">+</button></form>`+
-   (items.length?`<div class="card">${items.map(i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done&&Qty.parse(i.text).n!=null?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`).join("")}</div>
+   (items.length?`<div class="card">${items.map(i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`).join("")}</div>
    ${items.some(i=>i.done)?`<button class="btn sec" id="clr">Retirer les articles cochés</button>`:""}`:`<div class="empty">Liste vide</div>`);
   // Suggestions : articles déjà saisis (toutes listes, même retirés) et ingrédients des recettes,
   // dont le nom commence par ce qui est tapé ; les plus fréquents d'abord.
@@ -120,13 +120,6 @@ function addToList(list,text){
   const same=live(S.items).find(i=>i.list===list&&!i.done&&Qty.key(Qty.parse(i.text))===Qty.key(Qty.parse(text)));
   if(same){const t=Qty.add(same.text,text);if(t&&t!==same.text)touch("items",{...same,text:t});return}
   touch("items",{id:uid(),list,text,done:false,c:Date.now()});
-  if(Qty.parse(text).n==null)setTimeout(defaultQty,10500);
-}
-// Article sans quantité depuis plus de 10 s : on met 1 (« lait » → « 1 lait »).
-function defaultQty(){
-  let n=0;
-  live(S.items).forEach(i=>{if(!i.done&&Date.now()-(i.c||i.ts)>=10000&&Qty.parse(i.text).n==null){touch("items",{...i,text:"1 "+i.text});n++}});
-  if(n&&tab!=="menus"&&tab!=="settings")safeRender();
 }
 // Boîtes : la quantité ajoutée (une recette) est répartie par taille (1 grosse = 2 moyennes = 4 petites),
 // puis chaque taille s'ajoute à la ligne de même taille. Pas de conversion entre recettes :
@@ -140,7 +133,7 @@ function addBoxes(list,p,except){
   }
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v23";
+const BASE=4,VERSION="v24";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -303,5 +296,5 @@ if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update());
   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had)location.reload()});
 }
-render();defaultQty();sync();
+render();sync();
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>$("#cfg").click(),300);

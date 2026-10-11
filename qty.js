@@ -76,7 +76,7 @@ function boxLines(p){let s=Math.ceil(p.n-1e-9);const out=[];
 // Clé de cumul : même nature de quantité + même nom, sans casse, accents ni pluriel.
 const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]+/g," ")
   .split(/\s+/).filter(Boolean).map(w=>w.length>3?w.replace(/[sx]$/,""):w).join(" ");
-const key=p=>(p.kind==="none"?"none":p.kind)+"|"+norm(p.name);
+const key=p=>(p.kind==="none"?"count":p.kind)+"|"+norm(p.name);
 
 // Quantité à acheter pour un facteur donné (arrondie).
 const buy=(text,f)=>{const p=parse(text);return p.n==null?p.name:format({...p,n:p.n*f})};
@@ -84,12 +84,13 @@ const buy=(text,f)=>{const p=parse(text);return p.n==null?p.name:format({...p,n:
 function add(aText,bText){
   const a=parse(aText),b=parse(bText);
   if(key(a)!==key(b))return null;
-  if(a.n==null)return aText;
-  return format({...a,n:Math.ceil(a.n)+Math.ceil(b.n)});
+  const n=x=>x.n==null?1:Math.ceil(x.n);
+  return format({...a,kind:a.kind==="none"?"count":a.kind,n:n(a)+n(b)});
 }
 // Pas du − / + dans la liste.
 function step(text,dir){
-  const p=parse(text);if(p.n==null)return null;
+  const p=parse(text);
+  if(p.n==null)return dir>0?format({kind:"count",n:2,name:p.name}):null; // « lait » = 1 implicite
   if(p.kind==="ail"){const t=Math.ceil(p.n/AIL)+dir;return t>=1?format({...p,n:t*AIL}):null}
   const s=p.kind==="mass"?(p.n<1000?50:100):p.kind==="vol"?(p.n<1000?50:250):p.kind==="box"&&p.size?BOX[p.size]:1;
   const n=Math.ceil(p.n)+dir*s;
