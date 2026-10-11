@@ -6,10 +6,10 @@ const ORDER=["auchan","lidl","drive","boucherie","fermiers"];
 for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"],["boucherie","Boucherie"],["fermiers","Au pré des fermiers"]]) S.lists[id]=S.lists[id]||{id,name,ts:0};
 for(const h of [{id:"h-pates-lundi",type:"pates",days:[1],slot:"s"},{id:"h-soupe-dimanche",type:"soupe",days:[7],slot:"s"},
   {id:"h-burger-vensam",type:"burger",days:[5,6],slot:"s"}]) if(!S.habits[h.id])S.habits[h.id]={...h,state:"on",auto:false,ts:0};
-let tab=LS.tab||"auchan", code=LS.code||"", dirty=!!LS.dirty;
+let tab=LS.tab||"auchan", code=LS.code||"", pending=JSON.parse(LS.pending||"{}"); // pending : modifications pas encore envoyées
 
-function save(){LS.s=JSON.stringify(S);LS.dirty=dirty?"1":""}
-function touch(kind,rec){rec.ts=Date.now();(S[kind]=S[kind]||{})[rec.id||rec.key]=rec;dirty=true;save();sync();}
+function save(){LS.s=JSON.stringify(S);LS.pending=JSON.stringify(pending)}
+function touch(kind,rec){rec.ts=Date.now();const id=rec.id||rec.key;(S[kind]=S[kind]||{})[id]=rec;(pending[kind]=pending[kind]||{})[id]=1;save();sync();}
 const merge=remote=>Data.mergeInto(S,remote);
 // Code minimal : en dessous, la base refuse l'écriture (cf. supabase.sql).
 const MIN_CODE=10;
@@ -18,19 +18,31 @@ const H=()=>({apikey:cfg.SUPABASE_ANON_KEY,Authorization:"Bearer "+cfg.SUPABASE_
 // Le code part dans le corps de la requête, jamais dans l'URL.
 const rpc=(fn,body)=>fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",headers:H(),body:JSON.stringify(body)});
 let syncing=false,again=false;
+// Synchro par différences : on ne reçoit que ce qui a changé depuis la dernière visite (date du serveur,
+// avec 1 minute de recouvrement pour ne rien rater) et on n'envoie que nos modifications.
+// La première fois (ou après un changement de foyer), échange complet.
+const SYNC_OVERLAP=60000;
 async function sync(){
   if(!canSync()){setStatus("");return}
   if(syncing){again=true;return}
   syncing=true;
   try{
-    const r=await rpc("get_household",{p_code:code});
+    const since=LS.since?Math.max(0,+LS.since-SYNC_OVERLAP):0;
+    const r=await rpc("get_household_since",{p_code:code,p_since:since});
     if(!r.ok)throw 0;
-    const before=JSON.stringify(S);
-    const remote=await r.json(); if(remote)merge(remote);
-    const changed=JSON.stringify(S)!==before;
-    const w=await rpc("put_household",{p_code:code,p_data:S});
-    if(!w.ok){const e=await w.json().catch(()=>({}));throw e.message==="code inconnu"?"unk":0}
-    dirty=false;save();setStatus("ok");if(changed)safeRender();
+    const remote=await r.json();
+    if(remote==null)throw "unk";
+    const changed=merge(remote);
+    const full=!LS.deltaInit,payload=full?S:Data.pick(S,pending),sent={};
+    for(const k in payload)for(const id in payload[k])(sent[k]=sent[k]||{})[id]=payload[k][id].ts;
+    if(Object.keys(sent).length){
+      const w=await rpc("put_household",{p_code:code,p_data:payload});
+      if(!w.ok){const e=await w.json().catch(()=>({}));throw e.message==="code inconnu"?"unk":0}
+      // retirées de la file seulement si elles n'ont pas été remodifiées pendant l'envoi
+      for(const k in sent)for(const id in sent[k])if(pending[k]&&(!S[k][id]||S[k][id].ts===sent[k][id]))delete pending[k][id];
+    }
+    LS.deltaInit="1";if(remote._now)LS.since=remote._now;
+    save();setStatus("ok");if(changed)safeRender();
   }catch(e){setStatus(e==="unk"?"unk":"err")}
   syncing=false;if(again){again=false;sync()}
 }
@@ -362,7 +374,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v64";
+const BASE=4,VERSION="v65";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -567,7 +579,7 @@ function renderSettings(){
   const cp=$("#cpcode");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(code);cp.textContent="Copié ✓"}catch(_){alert("Copie impossible sur cet appareil.")}};
   on("#setcode","onclick",()=>{
     const c=askCode("Code du foyer (le même que sur les autres appareils) :",code);
-    if(c!==null){code=LS.code=c;dirty=true;save();sync();render()}
+    if(c!==null){code=LS.code=c;LS.since="";LS.deltaInit="";save();sync();render()}
   });
   // Renommer le foyer côté serveur : il faut que le code actuel soit valide.
   const ren=$("#rencode");if(ren)ren.onclick=async()=>{

@@ -35,3 +35,13 @@ test("ordre des rayons : seuls les rayons connus", () => {
   const S = Data.cleanAll({ lists: { lidl: { name: "Lidl", order: ["surgeles", "inconnu", "fruits"], ts: 1 } } });
   assert.deepEqual(S.lists.lidl.order, ["surgeles", "fruits"]);
 });
+
+test("synchro par différences : seuls les enregistrements modifiés partent", () => {
+  const S = Data.cleanAll({ items: { a: { list: "lidl", text: "lait", ts: 1 }, b: { list: "lidl", text: "pain", ts: 1 } }, recipes: { r: { name: "Soupe", ts: 1 } } });
+  assert.deepEqual(Data.pick(S, { items: { b: 1, disparu: 1 } }), { items: { b: S.items.b } });
+  assert.deepEqual(Data.pick(S, {}), {});
+});
+test("champ technique _s (date serveur) ignoré à la lecture", () => {
+  const S = Data.cleanAll({ items: { a: { list: "lidl", text: "lait", ts: 1, _s: 123 } } });
+  assert.equal("_s" in S.items.a, false);
+});

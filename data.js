@@ -159,6 +159,12 @@ function mergeInto(S,remote){
   for(const k of KINDS){S[k]=S[k]||{};for(const [id,x] of Object.entries(r[k]))if(!S[k][id]||x.ts>S[k][id].ts){S[k][id]=x;changed=true}}
   return changed;
 }
+// Synchro par différences : ne garder que les enregistrements modifiés (pending = {type: {id: 1}}).
+function pick(S,pending){
+  const out={};
+  for(const k of KINDS)for(const id of Object.keys((pending||{})[k]||{}))if(S[k]&&S[k][id])(out[k]=out[k]||{})[id]=S[k][id];
+  return out;
+}
 // Purge : supprimés depuis plus de 60 jours, repas de plus de 6 mois (même règle côté Supabase).
 function prune(S,now){
   let n=0;
@@ -168,5 +174,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,habitTypesFor,learnHabits,weekday,addDays,mondayOf,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

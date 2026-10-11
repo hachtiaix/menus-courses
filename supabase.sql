@@ -41,20 +41,39 @@ returns jsonb language sql stable set search_path = public as $$
     and not (k = 'meals' and e.key ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' and left(e.key, 10)::date < current_date - 180);
 $$;
 
+-- Date serveur (ms) posée sur chaque enregistrement reçu : sert à la synchro par différences.
+create or replace function public.stamp_kind(b jsonb, s numeric)
+returns jsonb language sql immutable set search_path = public as $$
+  select coalesce(jsonb_object_agg(e.key, case when jsonb_typeof(e.value) = 'object' then e.value || jsonb_build_object('_s', s) else e.value end), '{}'::jsonb)
+  from jsonb_each(case when jsonb_typeof(b) = 'object' then b else '{}'::jsonb end) e;
+$$;
+
 -- Met à jour un foyer EXISTANT uniquement (personne ne peut créer de foyer depuis l'app),
 -- en fusionnant avec ce qui est déjà en base : deux appareils ne s'écrasent plus.
 create or replace function public.put_household(p_code text, p_data jsonb)
 returns void language plpgsql security definer set search_path = public as $$
-declare cur jsonb; k text; res jsonb := '{}'::jsonb;
+declare cur jsonb; k text; res jsonb := '{}'::jsonb; now_ms numeric := floor(extract(epoch from clock_timestamp()) * 1000);
 begin
   if pg_column_size(p_data) > 1000000 then raise exception 'donnees trop volumineuses'; end if;
   select data into cur from households where code = p_code and length(p_code) >= 10 for update;
   if not found then raise exception 'code inconnu'; end if;
   foreach k in array array['lists', 'items', 'meals', 'recipes', 'aisles', 'stores', 'habits'] loop
-    res := res || jsonb_build_object(k, prune_kind(k, merge_kind(cur->k, p_data->k)));
+    res := res || jsonb_build_object(k, prune_kind(k, merge_kind(cur->k, stamp_kind(p_data->k, now_ms))));
   end loop;
   update households set data = res, updated_at = now() where code = p_code;
 end $$;
+
+-- Lecture par différences : seulement les enregistrements reçus par la base après p_since (ms),
+-- plus « _now », l'heure du serveur, à repasser la fois suivante. Code inconnu → null.
+create or replace function public.get_household_since(p_code text, p_since numeric)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('_now', floor(extract(epoch from clock_timestamp()) * 1000)) || coalesce((
+    select jsonb_object_agg(k.key, (
+      select coalesce(jsonb_object_agg(e.key, e.value), '{}'::jsonb) from jsonb_each(k.value) e
+      where coalesce(case when jsonb_typeof(e.value->'_s') = 'number' then (e.value->>'_s')::numeric end, 0) > coalesce(p_since, 0)))
+    from jsonb_each(h.data) k where jsonb_typeof(k.value) = 'object'), '{}'::jsonb)
+  from households h where h.code = p_code and length(p_code) >= 10;
+$$;
 
 -- Change le code du foyer : il faut connaître l'ancien.
 create or replace function public.change_household_code(p_old text, p_new text)
@@ -71,7 +90,10 @@ revoke all on function public.put_household(text, jsonb) from public;
 revoke all on function public.change_household_code(text, text) from public;
 revoke all on function public.merge_kind(jsonb, jsonb) from public, anon, authenticated;
 revoke all on function public.prune_kind(text, jsonb) from public, anon, authenticated;
+revoke all on function public.stamp_kind(jsonb, numeric) from public, anon, authenticated;
+revoke all on function public.get_household_since(text, numeric) from public;
 grant execute on function public.get_household(text) to anon;
+grant execute on function public.get_household_since(text, numeric) to anon;
 grant execute on function public.put_household(text, jsonb) to anon;
 grant execute on function public.change_household_code(text, text) to anon;
 
