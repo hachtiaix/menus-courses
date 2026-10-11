@@ -112,3 +112,7 @@ h2.sec small{text-transform:none;letter-spacing:0;font-weight:400}
 
 .stp.sm{flex:none;padding:1px}.stp.sm button{width:30px;height:30px;font-size:18px}
 .row .t[data-e]{cursor:pointer}
+
+/* pas de zoom : double-tap désactivé, champs à 16 px minimum (sinon iOS zoome au focus) */
+html,body,button,input,select,textarea,.row,.t{touch-action:manipulation}
+input,select,textarea{font-size:16px!important}
