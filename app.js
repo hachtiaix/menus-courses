@@ -426,7 +426,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v93";
+const BASE=4,VERSION="v94";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -767,7 +767,7 @@ function foodEditor(cat){
    <div class="serv"><span>Par personne</span><input type="number" id="fqv" value="150" min="0.25" step="any" inputmode="decimal" style="width:80px">
    <select id="fk"><option value="g">grammes</option><option value="n">pièce(s)</option></select></div>
    <div class="serv"><span>Magasin</span><select id="fs">${lists.map(l=>`<option value="${l.id}" ${l.id==="auchan"?"selected":""}>${esc(SHORT[l.id]||l.name)}</option>`).join("")}</select></div>
-   <div class="serv"><span>Image (facultatif)</span><input type="text" id="fi" maxlength="4" placeholder="🍽️" style="width:60px;text-align:center"></div>
+   <div class="serv"><span>Image (sinon celle de la famille)</span><input type="text" id="fi" maxlength="4" placeholder="${Data.CAT_ICON[cat]}" style="width:60px;text-align:center"></div>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;

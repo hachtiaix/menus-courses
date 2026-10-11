@@ -108,10 +108,10 @@ const FOODS=[
 // Aliment reconnu dans un morceau de texte : l'expression la plus longue qui correspond.
 // exact : le texte entier doit être l'aliment (« Soupe » oui, « Pommes de terre vache qui rit » non).
 // Ingrédients ajoutés dans les réglages (S.foods avec un nom) : mêmes règles que ceux de base.
-const FOOD_CATS=["leg","fec","prot","pois"];
+const FOOD_CATS=["leg","fec","prot","pois"],CAT_ICON={leg:"🥦",fec:"🥔",prot:"🥩",pois:"🐟"};
 let CUSTOM=[];
 function setCustom(S){CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
-  .map(r=>({id:r.id,icon:r.icon||"🍽️",cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
+  .map(r=>({id:r.id,icon:r.icon||CAT_ICON[r.cat]||"🍽️",cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
 const allFoods=()=>[...FOODS,...CUSTOM];
 function foodFor(name,exact){
   const n=words(name);let best=null,len=0;
@@ -331,5 +331,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,companionFor,FOODS,FOOD_CATS,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,companionFor,FOODS,FOOD_CATS,CAT_ICON,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
