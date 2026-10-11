@@ -103,3 +103,14 @@ revoke execute on function public.rls_auto_enable() from public, anon, authentic
 
 -- Créer un foyer (une seule fois, ici dans le SQL Editor) :
 -- insert into households(code) values ('<code d''au moins 10 caractères>');
+
+-- Ingrédients ajoutés à la main (noms et familles seulement), lisibles sans code, à la demande de l'admin :
+-- sert à leur donner une image adaptée dans data.js (EMOJI). Aucune autre donnée exposée.
+create or replace function public.custom_foods()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(distinct jsonb_build_object('label', f.value->>'label', 'cat', f.value->>'cat')), '[]'::jsonb)
+  from households h, jsonb_each(coalesce(h.data->'foods', '{}'::jsonb)) f
+  where jsonb_typeof(f.value) = 'object' and f.value ? 'label' and coalesce(f.value->>'deleted', 'false') <> 'true';
+$$;
+revoke all on function public.custom_foods() from public;
+grant execute on function public.custom_foods() to anon;
