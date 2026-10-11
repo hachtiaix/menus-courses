@@ -193,10 +193,10 @@ function moveMeal(from){
     close();render();
   };
 }
-// Créneaux proposés (d'une semaine avant à 4 semaines après) ; les créneaux occupés sont signalés.
+// Créneaux proposés (d'aujourd'hui à 4 semaines) : jamais un jour passé ; les créneaux occupés sont signalés.
 function slotOptions(exclude,selected,busyLabel){
   const today=new Date();today.setHours(12);const out=[];
-  for(let d=-7;d<=28;d++){const x=new Date(today);x.setDate(today.getDate()+d);const k=x.toISOString().slice(0,10);
+  for(let d=0;d<=28;d++){const x=new Date(today);x.setDate(today.getDate()+d);const k=x.toISOString().slice(0,10);
     for(const [s,l] of [["m","midi"],["s","soir"]]){const key=k+"-"+s;if(key===exclude)continue;const o=S.meals[key];
       out.push(`<option value="${key}" ${key===selected?"selected":""}>${x.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})} ${l}${o&&o.text?" — "+esc(o.text)+busyLabel:""}</option>`)}}
   return out.join("");
@@ -273,7 +273,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v58";
+const BASE=4,VERSION="v59";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -283,9 +283,23 @@ function scaleText(t,f){
   const rest=m[2];
   return fmt(n*f)+(rest?" "+rest:"");
 }
+// Date du jour au format des clés de repas (AAAA-MM-JJ), à midi pour éviter les décalages UTC.
+const todayKey=()=>{const x=new Date();x.setHours(12,0,0,0);return x.toISOString().slice(0,10)};
+// Un créneau du planning. Jour passé : plus rien à compléter, le repas reste visible et déplaçable.
+function slotHtml(key,label,past){
+  const e=S.meals[key]||{},n=e.servings||BASE,b=bought(e);
+  const lock=past?(e.text?'readonly title="Jour passé"':'disabled placeholder="—"'):b?'readonly title="Ingrédients déjà achetés : déplacez le repas avec ⇄"':"";
+  const right=past||!e.text?"":!b?`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`:`<span class="lock" title="Ingrédients déjà achetés">🔒</span>`;
+  const sub=!e.text?"":`<div class="sub">${
+    past?`<span class="mut sm">${n} pers.${b?" · acheté":""}</span>`
+    :b?`<div class="stp"><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers. · acheté</em></div>`
+    :`<div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`
+  }<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`;
+  return `<div class="slotw ${past?"past":""}"><div class="slot"><span>${label}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div>${sub}</div>`;
+}
 function renderMenus(){
   $("#title").innerHTML=`Menus <span class="hicon">${MENU_ICON}</span>`;
-  const m=monday(),today=new Date().toISOString().slice(0,10);
+  const m=monday(),today=todayKey();
   const end=new Date(m);end.setDate(m.getDate()+6);
   const f=d=>d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
   let h=`<div class="wk"><button class="btn sec" id="pv">‹</button><div>${f(m)} – ${f(end)}</div><button class="btn sec" id="nx">›</button></div>`;
@@ -293,7 +307,7 @@ function renderMenus(){
     const d=new Date(m);d.setDate(m.getDate()+n);const k=d.toISOString().slice(0,10);
     const wd=d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".","");
     h+=`<section class="day ${k===today?"today":""}"><div class="dh"><b>${wd}</b><small>${d.getDate()}</small></div><div class="slots">`+
-      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const key=k+"-"+s,e=S.meals[key]||{},n=e.servings||BASE;return `<div class="slotw"><div class="slot"><span>${l}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${bought(e)?"readonly title=\"Ingrédients déjà achetés : déplacez le repas avec ⇄\"":""}>${e.text&&!bought(e)?`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`:e.text?`<span class="lock" title="Ingrédients déjà achetés">🔒</span>`:""}</div>${e.text?`<div class="sub">${bought(e)?`<div class="stp"><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers. · acheté</em></div>`:`<div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`}<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`:""}</div>`}).join("")+`</div></section>`;
+      [["m","Midi"],["s","Soir"]].map(([s,l])=>slotHtml(k+"-"+s,l,k<today)).join("")+`</div></section>`;
   }
   $("#view").innerHTML=h;
   const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -303,6 +317,7 @@ function renderMenus(){
     return out.filter(x=>x.recipe||!out.some(y=>y!==x&&norm(y.t).length>norm(x.t).length&&norm(y.t).startsWith(norm(x.t))))};
   const commit=(el,t)=>{
     const key=el.dataset.m,o=S.meals[key]||{};
+    if(key.slice(0,10)<todayKey()){el.value=o.text||"";return}
     // plat remplacé ou effacé : on retire des listes ce que l'ancien plat y avait ajouté
     if(bought(o)&&norm(o.text||"")!==norm(t)){
       el.value=o.text;

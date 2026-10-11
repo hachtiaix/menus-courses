@@ -180,3 +180,5 @@ nav button i b,nav i:has(.logo-auchan) b,nav i:has(.logo-lidl) b{position:absolu
 nav i{height:44px;font-size:36px;line-height:1}
 nav i img.picto{height:40px;width:40px}
 nav button i b,nav i:has(.logo-auchan) b,nav i:has(.logo-lidl) b{left:calc(50% + 16px)}
+.slotw.past .slot input{background:transparent;border-style:dashed;color:var(--mut)}
+section.day:has(.slotw.past) .dh{opacity:.5}
