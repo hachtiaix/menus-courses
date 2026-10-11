@@ -176,3 +176,7 @@ nav button.on i{outline:2px solid var(--accent);outline-offset:3px;border-radius
 nav button{position:relative}
 nav i{position:static}
 nav button i b,nav i:has(.logo-auchan) b,nav i:has(.logo-lidl) b{position:absolute;top:2px;left:calc(50% + 14px);right:auto}
+/* pictogrammes plus grands (voiture, steak, grange, calendrier) */
+nav i{height:44px;font-size:36px;line-height:1}
+nav i img.picto{height:40px;width:40px}
+nav button i b,nav i:has(.logo-auchan) b,nav i:has(.logo-lidl) b{left:calc(50% + 16px)}
