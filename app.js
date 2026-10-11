@@ -70,6 +70,7 @@ const SHORT={auchan:"Auchan",lidl:"Lidl",drive:"Drive",boucherie:"Boucherie",fer
   MENU_ICON="🍽️",LOGO={auchan:"icons/auchan.svg",lidl:"icons/lidl.svg"},PICTO={fermiers:"icons/ferme.svg"}; // logos du domaine public (Wikimedia Commons)
 const live=o=>Object.values(o).filter(x=>!x.deleted);
 function render(){
+  Data.setCustom(S);
   $("#cfg").style.display=tab==="settings"?"none":""; // inutile dans les réglages : le point de synchro prend sa place
   const lists=live(S.lists).sort(listSort);
   $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}" aria-label="${esc(l.name)}"><i>${LOGO[l.id]?`<img src="${LOGO[l.id]}" alt="" class="logo-${l.id}">`:PICTO[l.id]?`<img src="${PICTO[l.id]}" alt="" class="picto">`:ICON[l.id]||"🛒"}${c?`<b>${c}</b>`:""}</i></button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}" aria-label="Menus"><i>${MENU_ICON}</i></button>`;
@@ -425,7 +426,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v92";
+const BASE=4,VERSION="v93";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -539,7 +540,7 @@ function renderMenus(){
       const v=el.value,q=norm(v.trim());if(!q){clearSug();return}
       // suite d'aliments en cours (après une virgule ou un +) : on propose seulement des aliments pour le dernier morceau
       const cut=el._items.length?-1:Math.max(v.lastIndexOf(","),v.lastIndexOf("+")),seg=norm(v.slice(cut+1).trim()),head=cut>=0?v.slice(0,cut+1).trimEnd()+" ":"";
-      const foods=seg?Data.FOODS.flatMap(f=>f.words.filter(w=>w.startsWith(seg)||w.includes(" "+seg)).slice(0,1).map(w=>({f,w}))).slice(0,4)
+      const foods=seg?Data.allFoods().flatMap(f=>f.words.filter(w=>w.startsWith(seg)||w.includes(" "+seg)).slice(0,1).map(w=>({f,w}))).slice(0,4)
         .map(({f})=>({t:head+(f.id==="legboite"?"Haricots verts":f.label),icon:f.icon,food:true})):[];
       if(cut>=0||el._items.length){showBox(foods);return}
       showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,5)
@@ -660,9 +661,9 @@ function renderSettings(){
    recettes:`<div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${{ete:" · ☀️ été",hiver:" · ❄️ hiver"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`,
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
-   ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, poissons, œufs"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.FOODS.filter(f=>f.cat===c).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
-     const v=f.kind==="g"?q+" g":f.kind==="n"&&f.as?q+" "+f.as.replace(/^boîte/,q>1?"boîtes":"boîte"):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
-     return `<div class="row"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}</div>`}).join("")}</div>`).join("")}`,
+   ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+     const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^boîte/,q>1?"boîtes":"boîte"):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
+     return `<div class="row"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}${f.custom?`<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button>`:""}</div>`}).join("")}<button class="row add-food" data-fadd="${c}">+ Ajouter un ingrédient</button></div>`).join("")}`,
    habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
    <div class="card">${hs.length?hs.map(h=>`<div class="row link" data-hedit="${h.id}"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}${h.adj?" · ajustée":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
    <button class="btn" id="newh" style="width:100%">+ Habitude</button>`,
@@ -681,9 +682,11 @@ function renderSettings(){
   document.querySelectorAll("[data-hedit]").forEach(el=>el.onclick=()=>habitEditor(S.habits[el.dataset.hedit]));
   on("#newh","onclick",()=>habitEditor());
   // portion d'un aliment : ± 10 g (grammes) ou ± 1 / ± ¼ (à l'unité)
-  document.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.FOODS.find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+  document.querySelectorAll("[data-fadd]").forEach(el=>el.onclick=()=>foodEditor(el.dataset.fadd));
+  document.querySelectorAll("[data-fdel]").forEach(el=>el.onclick=()=>{const r=S.foods[el.dataset.fdel];if(r&&confirm(`Retirer « ${r.label} » ?`)){touch("foods",{...r,deleted:true});render()}});
+  document.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.allFoods().find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
     const st=f.kind==="g"?10:cur<1||(cur===1&&+el.dataset.d<0)?0.25:1,q=Math.max(f.kind==="g"?10:0.25,Math.round((cur+st*el.dataset.d)*100)/100);
-    touch("foods",{id:f.id,q});render()});
+    touch("foods",{...(S.foods[f.id]||{}),id:f.id,q,deleted:false});render()});
 
   // Forcer la mise à jour : vide le cache de l'app ET celui de Safari (qui garde les fichiers jusqu'à 10 min), puis recharge.
   on("#upd","onclick",async e=>{e.preventDefault();LS.updFrom=VERSION;e.target.textContent="Mise à jour…";
@@ -754,6 +757,26 @@ function habitEditor(h){
     // modifiée à la main : elle redevient une habitude « à vous », et l'année se recompte
     touch("habits",{...(h||{}),id:h?h.id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,adj:null,state:"on",since:todayKey()});close();render();
   };
+}
+// Nouvel ingrédient dans une famille (réglages) : nom, quantité par personne en grammes ou en pièces, magasin.
+function foodEditor(cat){
+  const lists=live(S.lists).sort(listSort),fam={leg:"Légumes",fec:"Féculents",prot:"Viandes, œufs",pois:"Poissons, crustacés"}[cat];
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Nouvel ingrédient · ${fam}</h2>
+   <input type="text" id="fn" placeholder="Nom (ex. Haricots beurre)" autocapitalize="sentences" style="width:100%;margin-bottom:10px">
+   <div class="serv"><span>Par personne</span><input type="number" id="fqv" value="150" min="0.25" step="any" inputmode="decimal" style="width:80px">
+   <select id="fk"><option value="g">grammes</option><option value="n">pièce(s)</option></select></div>
+   <div class="serv"><span>Magasin</span><select id="fs">${lists.map(l=>`<option value="${l.id}" ${l.id==="auchan"?"selected":""}>${esc(SHORT[l.id]||l.name)}</option>`).join("")}</select></div>
+   <div class="serv"><span>Image (facultatif)</span><input type="text" id="fi" maxlength="4" placeholder="🍽️" style="width:60px;text-align:center"></div>
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  $("#fk").onchange=()=>{$("#fqv").value=$("#fk").value==="n"?1:150};
+  $("#ok").onclick=()=>{const label=$("#fn").value.trim(),q=parseFloat(String($("#fqv").value).replace(",","."));
+    if(!label){$("#fn").focus();return}if(!(q>0)){$("#fqv").focus();return}
+    if(Data.foodFor(label,true)&&!confirm(`« ${label} » ressemble à un ingrédient existant. L'ajouter quand même ?`))return;
+    touch("foods",{id:"c-"+uid(),label:label.charAt(0).toUpperCase()+label.slice(1),cat,kind:$("#fk").value,q,store:$("#fs").value,icon:$("#fi").value.trim()||null});close();render()};
+  setTimeout(()=>$("#fn").focus(),50);
 }
 function recipeEditor(r){
   const lists=live(S.lists).sort(listSort);

@@ -76,16 +76,18 @@ const FOODS=[
   {id:"crepinette",icon:"🐖",cat:"prot",label:"Crépinettes",words:["crepinette"],kind:"n",q:1,store:"boucherie"},
   {id:"porc",icon:"🐖",cat:"prot",label:"Porc",words:["porc","cote de porc","filet mignon"],kind:"g",q:150,store:"boucherie"},
   {id:"saucisse",icon:"🌭",cat:"prot",label:"Saucisses",words:["saucisse","chipolata","merguez"],kind:"n",q:2,store:"boucherie"},
-  {id:"poisson",icon:"🐟",cat:"prot",label:"Poisson",words:["poisson","saumon","cabillaud","colin","lieu","merlu"],kind:"g",q:150,store:"auchan"},
-  {id:"crevettes",icon:"🦐",cat:"prot",label:"Crevettes",words:["crevette","gambas"],kind:"g",q:150,store:"auchan"},
-  {id:"st-jacques",icon:"🐚",cat:"prot",label:"Noix de Saint-Jacques",words:["saint jacques","st jacques","noix de saint jacques","noix de st jacques"],kind:"n",q:3,store:"auchan"},
-  {id:"moules",icon:"🦪",cat:"prot",label:"Moules",words:["moule"],kind:"g",q:1000,store:"auchan"},
+  {id:"poisson",icon:"🐟",cat:"pois",label:"Poisson",words:["poisson","saumon","cabillaud","colin","lieu","merlu"],kind:"g",q:150,store:"auchan"},
+  {id:"crevettes",icon:"🦐",cat:"pois",label:"Crevettes",words:["crevette","gambas"],kind:"g",q:150,store:"auchan"},
+  {id:"st-jacques",icon:"🐚",cat:"pois",label:"Noix de Saint-Jacques",words:["saint jacques","st jacques","noix de saint jacques","noix de st jacques"],kind:"n",q:3,store:"auchan"},
+  {id:"moules",icon:"🦪",cat:"pois",label:"Moules",words:["moule"],kind:"g",q:1000,store:"auchan"},
   {id:"pdt-surg",icon:"🍟",cat:"fec",label:"Pommes de terre surgelées",words:["pdt surgele","pdt surgelee","pomme de terre surgele","pomme de terre surgelee","pommes de terre surgelee","frite","potatoes"],kind:"g",q:200,store:"auchan"},
   {id:"pdt",icon:"🥔",cat:"fec",label:"Pommes de terre",words:["pdt","pomme de terre","patate"],kind:"g",q:250,store:"auchan"},
   {id:"pates",icon:"🍝",cat:"fec",label:"Pâtes",words:["pate","spaghetti","tagliatelle","penne","coquillette"],kind:"g",q:100,store:"auchan"},
   {id:"riz",icon:"🍚",cat:"fec",label:"Riz",words:["riz"],kind:"g",q:80,store:"auchan"},
   {id:"beans",icon:"🥫",cat:"fec",label:"Beans",words:["beans","baked beans","haricots a la tomate"],kind:"n",q:1,as:"boîte de beans (400 g)",store:"auchan"},
   {id:"raviolis",icon:"🥫",cat:"fec",label:"Raviolis",words:["ravioli","raviolis"],kind:"n",q:1,as:"boîte de raviolis (400 g)",store:"auchan"},
+  {id:"orzo",icon:"🍝",cat:"fec",label:"Orzo",words:["orzo","pates grain de riz","risoni"],kind:"g",q:80,store:"auchan"},
+  {id:"ebly",icon:"🌾",cat:"fec",label:"Blé Ebly",words:["ebly","ble ebly","ble tendre","ble"],kind:"g",q:80,store:"auchan"},
   {id:"semoule",icon:"🌾",cat:"fec",label:"Semoule",words:["semoule"],kind:"g",q:80,store:"auchan"},
   {id:"lentilles",icon:"🫘",cat:"fec",label:"Lentilles",words:["lentille"],kind:"g",q:70,store:"auchan"},
   {id:"legboite",icon:"🥫",cat:"leg",label:"Haricots verts, petits pois, flageolets (boîte)",words:["haricot vert","petit pois","flageolet"],kind:"box",store:"auchan"},
@@ -105,9 +107,15 @@ const FOODS=[
 ];
 // Aliment reconnu dans un morceau de texte : l'expression la plus longue qui correspond.
 // exact : le texte entier doit être l'aliment (« Soupe » oui, « Pommes de terre vache qui rit » non).
+// Ingrédients ajoutés dans les réglages (S.foods avec un nom) : mêmes règles que ceux de base.
+const FOOD_CATS=["leg","fec","prot","pois"];
+let CUSTOM=[];
+function setCustom(S){CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
+  .map(r=>({id:r.id,icon:r.icon||"🍽️",cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
+const allFoods=()=>[...FOODS,...CUSTOM];
 function foodFor(name,exact){
   const n=words(name);let best=null,len=0;
-  for(const f of FOODS)for(const w of f.words){const re=" "+w.replace(/ /g,"[sx]? ")+"[sx]? ";
+  for(const f of allFoods())for(const w of f.words){const re=" "+w.replace(/ /g,"[sx]? ")+"[sx]? ";
     if(w.length>len&&new RegExp(exact?"^"+re+"$":re).test(n)){best=f;len=w.length}}
   return best;
 }
@@ -287,7 +295,10 @@ function clean(k,id,r){
     state:r.state==="off"?"off":"on",auto:r.auto===true,
     last:/^\d{4}-\d{2}-\d{2}$/.test(r.last)?r.last:null,since:/^\d{4}-\d{2}-\d{2}$/.test(r.since)?r.since:null,
     adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,ts,deleted}:null;
-  if(k==="foods")return FOODS.some(f=>f.id===id)?{id,q:Math.max(1,Math.min(2000,+r.q||0))||null,ts,deleted}:null;
+  if(k==="foods"){const q=Math.max(0.25,Math.min(2000,+r.q||0))||null;
+    if(FOODS.some(f=>f.id===id))return{id,q,ts,deleted};
+    const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;
+    return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,ts,deleted}}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
@@ -320,5 +331,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,companionFor,FOODS,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,companionFor,FOODS,FOOD_CATS,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
