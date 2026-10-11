@@ -172,3 +172,7 @@ nav button{padding:8px 0}
 nav i{height:42px;font-size:30px}
 nav i img.picto{height:32px;width:32px}
 nav button.on i{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}
+/* pastilles alignées : même position dans chaque onglet, quelle que soit la largeur du pictogramme */
+nav button{position:relative}
+nav i{position:static}
+nav button i b,nav i:has(.logo-auchan) b,nav i:has(.logo-lidl) b{position:absolute;top:2px;left:calc(50% + 14px);right:auto}
