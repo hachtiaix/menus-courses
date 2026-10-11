@@ -9,13 +9,14 @@ function clean(k,id,r){
   if(k==="lists")return{id,name:str(r.name,60)||id,ts,deleted};
   if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,c:Number.isFinite(r.c)?r.c:ts,ts,deleted}:null;
   if(k==="meals")return{key:id,text:str(r.text,120),servings:Math.max(1,Math.min(30,parseInt(r.servings,10)||4)),ts,deleted};
+  if(k==="stores")return{id,last:(Array.isArray(r.last)?r.last:[]).filter(okId).slice(-3),def:okId(r.def)?r.def:null,ts,deleted};
   if(k==="aisles")return Rayons.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80)
     .map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
   return null;
 }
 function cleanAll(src){
-  const out={lists:{},items:{},meals:{},recipes:{},aisles:{}};
+  const out={lists:{},items:{},meals:{},recipes:{},aisles:{},stores:{}};
   for(const k in out)if(src&&src[k]&&typeof src[k]==="object")for(const [id,r] of Object.entries(src[k])){const c=clean(k,id,r);if(c)out[k][id]=c}
   return out;
 }
@@ -113,7 +114,7 @@ function renderList(id){
   $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){addToList(id,t);render();$("#new").focus()}};
   document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.q],t=Qty.step(i.text,+el.dataset.dir);if(t){touch("items",{...i,text:t});render()}});
   document.querySelectorAll("[data-e]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.e];if(!i.done)itemEditor(i)});
-  document.querySelectorAll("[data-c]").forEach(el=>el.onchange=()=>{const i=S.items[el.dataset.c];touch("items",{...i,done:el.checked});render()});
+  document.querySelectorAll("[data-c]").forEach(el=>el.onchange=()=>{const i=S.items[el.dataset.c];touch("items",{...i,done:el.checked});recordPurchase(i.text,i.list,el.checked);render()});
   document.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{touch("items",{...S.items[el.dataset.d],deleted:true});render()});
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
@@ -154,8 +155,19 @@ function itemEditor(i){
     close();render();
   };
 }
+// Magasin par défaut d'un article : fixé seulement après 3 achats consécutifs au même endroit,
+// et il change si les 3 derniers achats se font ailleurs.
+function recordPurchase(text,store,bought){
+  const k=Rayons.keyOf(Qty.parse(text).name||text),o=S.stores[k]||{id:k,last:[],def:null};
+  let last=[...o.last];
+  if(bought)last=[...last,store].slice(-3);
+  else{const j=last.lastIndexOf(store);if(j>=0)last.splice(j,1)} // case décochée : on annule cet achat
+  const def=last.length===3&&last.every(s=>s===last[0])?last[0]:o.def;
+  touch("stores",{id:k,last,def});
+}
+const defaultStore=(text,fallback)=>{const s=S.stores[Rayons.keyOf(Qty.parse(text).name||text)];return (s&&s.def&&S.lists[s.def]&&s.def)||fallback||"auchan"};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v25";
+const BASE=4,VERSION="v26";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -215,7 +227,7 @@ function ingredientsDialog(name,mealKey){
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   let n=(mealKey&&S.meals[mealKey]&&S.meals[mealKey].servings)||BASE;
   const ov=document.createElement("div");ov.className="ov";
-  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}"><input type="checkbox" checked><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/BASE))}" data-shown="${esc(Qty.buy(i.t,n/BASE))}"><select>${opts(i.store||"auchan")}</select></div>`;
+  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}"><input type="checkbox" checked><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/BASE))}" data-shown="${esc(Qty.buy(i.t,n/BASE))}"><select>${opts(defaultStore(i.t,i.store))}</select></div>`;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(name)}</h2>
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
    <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. Recette de base : ${BASE} personnes.</p>
@@ -242,7 +254,7 @@ function ingredientsDialog(name,mealKey){
     const rows=[...ov.querySelectorAll(".ing-row")].map(el=>{const i=el.querySelector(".ing"),edited=i.value!==i.dataset.shown;
       return{on:el.querySelector("[type=checkbox]").checked,shown:i.value.trim(),base:edited?scaleText(i.value.trim(),BASE/n):el.dataset.base,store:el.querySelector("select").value}}).filter(x=>x.shown);
     rows.filter(x=>x.on).forEach(x=>addToList(x.store,x.shown));
-    touch("recipes",{...r,ingredients:rows.map(x=>({t:x.base,store:x.store}))});
+    touch("recipes",{...r,ingredients:rows.map(x=>({t:x.base,store:(r.ingredients.find(g=>g.t===x.base)||x).store}))});
     if(mealKey&&S.meals[mealKey])touch("meals",{...S.meals[mealKey],servings:n});
     close();render();
   };
