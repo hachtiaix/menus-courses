@@ -8,6 +8,7 @@
 (function(){
 const FRAC={"½":.5,"¼":.25,"¾":.75,"⅓":1/3,"⅔":2/3};
 const BOX={petite:1,moyenne:2,grosse:4,grande:4};
+const AIL=5; // gousses par tête (on préfère en avoir trop)
 const NUM=/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?\s*[½¼¾⅓⅔]?|[½¼¾⅓⅔])\s*/;
 const MASS=/^(kg|kilos?|kilogrammes?|g|gr|grammes?)\.?(?=\s|$)/i;
 const VOL=/^(ml|cl|dl|l|litres?|millilitres?|centilitres?)\.?(?=\s|$)/i;
@@ -37,6 +38,10 @@ function parse(text){
     return{n:n*k,kind:"vol",name:stripDe(rest.slice(u[0].length))}}
   if((u=rest.match(BOXRE))){const size=(u[1]||u[2]||"").toLowerCase().replace(/s$/,"");const name=stripDe(rest.slice(u[0].length));
     return BOX[size]?{n:n*BOX[size],kind:"box",size,name}:{n,kind:"boxany",name}}
+  // Ail : compté en gousses (1 tête = 5 gousses), acheté par tête.
+  const ail=rest.match(/^(gousses?|t[eê]tes?)\s+d['’]\s*ail\b/i);
+  if(ail){const pour=rest.match(/\(pour\s+(\d+)\s+gousses?\)/i);
+    return{n:pour?+pour[1]:/^g/i.test(ail[1])?n:n*AIL,kind:"ail",name:"ail"}}
   return{n,kind:"count",name:rest.trim()};
 }
 
@@ -53,6 +58,8 @@ function format(p){
     return (g>=1000?fr(g/1000)+" kg":g+" g")+de(p.name)}
   if(p.kind==="vol"){const ml=Math.ceil(p.n);
     return (ml>=1000?fr(ml/1000)+" l":ml%10===0?ml/10+" cl":ml+" ml")+de(p.name)}
+  if(p.kind==="ail"){const g=Math.ceil(p.n-1e-9),t=Math.ceil(g/AIL);
+    return t+" "+plural("tête",t)+" d'ail"+(g%AIL?" (pour "+g+" "+plural("gousse",g)+")":"")}
   if(p.kind==="box"&&p.size){const c=Math.max(1,Math.ceil(p.n/BOX[p.size]-1e-9));return c+" "+plural(p.size,c)+" "+plural("boîte",c)+de(p.name)}
   if(p.kind==="box"){let s=Math.ceil(p.n-1e-9);const parts=[];
     for(const [adj,k] of [["grosse",4],["moyenne",2],["petite",1]]){const c=Math.floor(s/k);s-=c*k;if(c)parts.push(c+" "+plural(adj,c)+" "+plural("boîte",c))}
@@ -83,6 +90,7 @@ function add(aText,bText){
 // Pas du − / + dans la liste.
 function step(text,dir){
   const p=parse(text);if(p.n==null)return null;
+  if(p.kind==="ail"){const t=Math.ceil(p.n/AIL)+dir;return t>=1?format({...p,n:t*AIL}):null}
   const s=p.kind==="mass"?(p.n<1000?50:100):p.kind==="vol"?(p.n<1000?50:250):p.kind==="box"&&p.size?BOX[p.size]:1;
   const n=Math.ceil(p.n)+dir*s;
   return n>=s||dir>0?format({...p,n:Math.max(n,s)}):null;
