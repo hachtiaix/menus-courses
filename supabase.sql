@@ -35,7 +35,7 @@ create or replace function public.prune_kind(k text, a jsonb)
 returns jsonb language sql stable set search_path = public as $$
   select coalesce(jsonb_object_agg(e.key, e.value), '{}'::jsonb)
   from jsonb_each(case when jsonb_typeof(a) = 'object' then a else '{}'::jsonb end) e
-  where not (e.value->>'deleted' = 'true'
+  where not (coalesce(e.value->>'deleted', 'false') = 'true'  -- coalesce : sans « deleted », la ligne est gardée
              and coalesce(case when jsonb_typeof(e.value->'ts') = 'number' then (e.value->>'ts')::numeric end, 0)
                  < extract(epoch from now()) * 1000 - 5184000000)  -- 60 jours en ms
     and not (k = 'meals' and e.key ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' and left(e.key, 10)::date < current_date - 180);
