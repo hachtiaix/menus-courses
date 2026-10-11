@@ -144,11 +144,11 @@ nav i img.logo-lidl{height:24px;width:24px;border-radius:4px}
 nav i img.logo-auchan{height:14px;width:auto;max-width:56px}
 nav i:has(.logo-auchan) b{right:-18px;top:-10px}
 /* logos sans texte : plus grands, centrés dans la hauteur de l'onglet */
-nav button:has(img) i{height:42px}
+nav button:has(img[class^=logo]) i{height:42px}
 nav i img.logo-lidl{height:34px;width:34px}
 nav i img.logo-auchan{height:20px;max-width:64px}
-nav button.on:has(img) i{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
-nav button:has(img){overflow:visible}
+nav button.on:has(img[class^=logo]) i{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+nav button:has(img[class^=logo]){overflow:visible}
 nav i img.logo-auchan{height:16px;max-width:52px}
 nav i:has(.logo-auchan) b{right:-10px;top:-2px}
 nav i:has(.logo-lidl) b{right:-10px;top:-2px}
@@ -161,3 +161,5 @@ nav button{flex:1 1 0;min-width:0}
 nav i img.logo-lidl{height:42px;width:42px}
 nav i img.logo-auchan{height:auto;width:50px;max-width:50px}
 #title .hicon{margin-left:6px}
+nav i img.picto{height:24px;width:24px}
+#title .hicon img.picto{height:30px;width:30px;vertical-align:-4px}

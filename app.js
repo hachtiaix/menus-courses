@@ -51,18 +51,18 @@ function setStatus(c){
 
 const listSort=(a,b)=>{const i=ORDER.indexOf(a.id),j=ORDER.indexOf(b.id);return (i<0?99:i)-(j<0?99:j)||a.name.localeCompare(b.name)};
 const SHORT={auchan:"Auchan",lidl:"Lidl",drive:"Drive",boucherie:"Boucherie",fermiers:"Fermiers"},ICON={drive:"🚗",boucherie:"🥩",fermiers:"🚜"},
-  LOGO={auchan:"icons/auchan.svg",lidl:"icons/lidl.svg"}; // logos du domaine public (Wikimedia Commons)
+  LOGO={auchan:"icons/auchan.svg",lidl:"icons/lidl.svg"},PICTO={fermiers:"icons/ferme.svg"}; // logos du domaine public (Wikimedia Commons)
 const live=o=>Object.values(o).filter(x=>!x.deleted);
 function render(){
   const lists=live(S.lists).sort(listSort);
-  $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}" aria-label="${esc(l.name)}"><i>${LOGO[l.id]?`<img src="${LOGO[l.id]}" alt="" class="logo-${l.id}">`:ICON[l.id]||"🛒"}${c?`<b>${c}</b>`:""}</i>${LOGO[l.id]?"":esc(SHORT[l.id]||l.name)}</button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}"><i>📅</i>Menus</button>`;
+  $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}" aria-label="${esc(l.name)}"><i>${LOGO[l.id]?`<img src="${LOGO[l.id]}" alt="" class="logo-${l.id}">`:PICTO[l.id]?`<img src="${PICTO[l.id]}" alt="" class="picto">`:ICON[l.id]||"🛒"}${c?`<b>${c}</b>`:""}</i>${LOGO[l.id]?"":esc(SHORT[l.id]||l.name)}</button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}"><i>📅</i>Menus</button>`;
   if(tab==="settings")renderSettings();else if(tab==="menus")renderMenus();else renderList(S.lists[tab]?tab:"auchan");
 }
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function renderList(id){
   // titre : le logo du magasin quand il y en a un (il contient déjà le nom)
   if(LOGO[id])$("#title").innerHTML=`<img src="${LOGO[id]}" alt="${esc(S.lists[id].name)}" class="hlogo hlogo-${id}">`;
-  else if(id==="boucherie"||id==="fermiers")$("#title").innerHTML=`${esc(S.lists[id].name)} <span class="hicon">${ICON[id]}</span>`;
+  else if(id==="boucherie"||id==="fermiers")$("#title").innerHTML=`${esc(S.lists[id].name)} <span class="hicon">${PICTO[id]?`<img src="${PICTO[id]}" alt="" class="picto">`:ICON[id]}</span>`;
   else $("#title").textContent=S.lists[id].name;
   live(S.items).filter(i=>i.list===id&&!i.done&&/\s\+\s/.test(i.text)&&Qty.parse(i.text).kind==="box").forEach(i=>{touch("items",{...i,deleted:true});addBoxes(id,Qty.parse(i.text),i.id)});
   const items=live(S.items).filter(i=>i.list===id&&!i.archived).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
@@ -273,7 +273,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v51";
+const BASE=4,VERSION="v52";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
