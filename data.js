@@ -76,6 +76,8 @@ const FOODS=[
   {id:"crepinette",icon:"🐖",cat:"prot",label:"Crépinettes",words:["crepinette"],kind:"n",q:1,store:"boucherie"},
   {id:"porc",icon:"🐖",cat:"prot",label:"Porc",words:["porc","cote de porc","filet mignon"],kind:"g",q:150,store:"boucherie"},
   {id:"saucisse",icon:"svg:saucisse",cat:"prot",label:"Saucisses",words:["saucisse","chipolata","merguez"],kind:"n",q:2,store:"boucherie"},
+  {id:"boudin-noir",icon:"svg:saucisse",cat:"prot",label:"Boudin noir",words:["boudin noir","boudin"],kind:"n",q:1,store:"boucherie"},
+  {id:"boudin-blanc",icon:"svg:saucisse",cat:"prot",label:"Boudin blanc",words:["boudin blanc"],kind:"n",q:1,store:"boucherie"},
   {id:"poisson",icon:"🐟",cat:"pois",label:"Poisson",words:["poisson","saumon","cabillaud","colin","lieu","merlu"],kind:"g",q:150,store:"auchan"},
   {id:"crevettes",icon:"🦐",cat:"pois",label:"Crevettes",words:["crevette","gambas"],kind:"g",q:150,store:"auchan"},
   {id:"st-jacques",icon:"🐚",cat:"pois",label:"Noix de Saint-Jacques",words:["saint jacques","st jacques","noix de saint jacques","noix de st jacques"],kind:"n",q:3,store:"auchan"},
