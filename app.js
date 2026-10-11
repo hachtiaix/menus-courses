@@ -223,7 +223,7 @@ function resizeMeal(m,n){
   return{...m,servings:n,added:{...m.added,n,ids:[...ids]}};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v32";
+const BASE=4,VERSION="v33";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -243,7 +243,7 @@ function renderMenus(){
     const d=new Date(m);d.setDate(m.getDate()+n);const k=d.toISOString().slice(0,10);
     const wd=d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".","");
     h+=`<section class="day ${k===today?"today":""}"><div class="dh"><b>${wd}</b><small>${d.getDate()}</small></div><div class="slots">`+
-      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const key=k+"-"+s,e=S.meals[key]||{},n=e.servings||BASE;return `<div class="slotw"><div class="slot"><span>${l}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}"></div>${e.text?`<div class="sub"><div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}">🛒 Ingrédients</button><button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`:""}</div>`}).join("")+`</div></section>`;
+      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const key=k+"-"+s,e=S.meals[key]||{},n=e.servings||BASE;return `<div class="slotw"><div class="slot"><span>${l}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}"></div>${e.text?`<div class="sub"><div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}">🛒 Ingrédients</button><button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button><button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button></div>`:""}</div>`}).join("")+`</div></section>`;
   }
   $("#view").innerHTML=h;
   const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -281,6 +281,13 @@ function renderMenus(){
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
   document.querySelectorAll("[data-mv]").forEach(el=>el.onclick=()=>moveMeal(el.dataset.mv));
+  document.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{
+    const key=el.dataset.del,m=S.meals[key];
+    if(bought(m)){alert(`Les ingrédients de « ${m.text} » ont déjà été achetés : ce repas ne peut pas être supprimé. Utilisez ⇄ pour le déplacer.`);return}
+    if(!confirm(`Supprimer « ${m.text} »${m.added?" et retirer ses ingrédients des listes":""} ?`))return;
+    if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/BASE)));
+    touch("meals",{key,text:"",servings:m.servings||BASE});render();
+  });
   // − / + sur un repas : ouvre la fenêtre des ingrédients au nouveau nombre de personnes (rien n'est appliqué sans valider).
   const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));LS.defN=n;
     if(live(S.recipes).some(r=>r.name.toLowerCase()===m.text.toLowerCase()))ingredientsDialog(m.text,key,n);
