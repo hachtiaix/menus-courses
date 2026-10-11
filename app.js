@@ -317,8 +317,8 @@ function suggestDialog(){
   };
   // créneaux d'habitude d'abord, puis les autres dans un ordre tiré au hasard
   // (s'il manque des recettes, ce ne sont pas toujours les mêmes créneaux qui restent vides)
-  const others=rows.filter(r=>!Data.habitTypesFor(S,r.key).length).map(r=>[Math.random(),r]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
-  for(const r of [...rows.filter(r=>Data.habitTypesFor(S,r.key).length),...others])pickFor(r,[]);
+  const others=rows.filter(r=>!Data.habitsFor(S,r.key).length).map(r=>[Math.random(),r]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+  for(const r of [...rows.filter(r=>Data.habitsFor(S,r.key).length),...others])pickFor(r,[]);
   const live_=()=>rows.filter(r=>r.sug&&!r.off);
   if(!live_().length){alert("Aucune recette à suggérer pour l'instant : ajoutez des recettes dans ⚙︎ Réglages.");return}
   const label=k=>new Date(k.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric"})+(k.endsWith("-m")?" midi":" soir");
@@ -369,7 +369,9 @@ function runLearning(){
 }
 const DAYS=["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
 const habitWhen=h=>"le "+h.days.map(d=>DAYS[d-1]).join(" ou ")+(h.slot==="m"?" midi":" soir");
-const typeById=id=>Data.TYPES.find(t=>t.id===id)||{icon:"🍽️",label:id};
+const typeById=id=>id==="recette"?{icon:"📖",label:"Recette"}:Data.TYPES.find(t=>t.id===id)||{icon:"🍽️",label:id};
+// libellé d'une habitude : la recette visée, sinon le type de plat
+const habitWhat=h=>h.recipe?{icon:"📖",label:(S.recipes[h.recipe]&&!S.recipes[h.recipe].deleted)?S.recipes[h.recipe].name:"Recette supprimée"}:typeById(h.type);
 function resizeMeal(m,n){
   if(!m.added||m.added.n===n)return{...m,servings:n};
   const ids=new Set(m.added.ids||[]);
@@ -378,7 +380,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v71";
+const BASE=4,VERSION="v72";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -562,7 +564,7 @@ function renderSettings(){
    recettes:`<div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${{ete:" · ☀️ été",hiver:" · ❄️ hiver"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`,
    habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
-   <div class="card">${hs.length?hs.map(h=>`<div class="row"><span class="t">${typeById(h.type).icon} ${esc(typeById(h.type).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
+   <div class="card">${hs.length?hs.map(h=>`<div class="row"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
    <button class="btn" id="newh" style="width:100%">+ Habitude</button>`,
    rayons:`<div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
    ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>`,
@@ -613,14 +615,16 @@ function habitEditor(){
    <p class="mut">Plusieurs jours cochés = l'un ou l'autre dans la semaine.</p>
    <div class="days">${DAYS.map((d,i)=>`<label><input type="checkbox" value="${i+1}"><span>${d.slice(0,3)}</span></label>`).join("")}</div>
    <div class="serv"><span>Moment</span><select id="hslot"><option value="s">Soir</option><option value="m">Midi</option></select></div>
-   <div class="serv"><span>Plat</span><select id="htype">${Data.TYPES.map(t=>`<option value="${t.id}">${t.icon} ${esc(t.label)}</option>`).join("")}</select></div>
+   <div class="serv"><span>Plat</span><select id="htype"><optgroup label="Type de plat">${Data.TYPES.map(t=>`<option value="${t.id}">${t.icon} ${esc(t.label)}</option>`).join("")}</optgroup>
+     ${live(S.recipes).length?`<optgroup label="Une de mes recettes">${live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<option value="r:${r.id}">📖 ${esc(r.name)}</option>`).join("")}</optgroup>`:""}</select></div>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
   $("#ok").onclick=()=>{
     const days=[...ov.querySelectorAll(".days input:checked")].map(x=>+x.value);
     if(!days.length){alert("Cochez au moins un jour.");return}
-    touch("habits",{id:"h-"+uid(),days,slot:$("#hslot").value,type:$("#htype").value,auto:false,state:"on"});close();render();
+    const v=$("#htype").value,what=v.startsWith("r:")?{recipe:v.slice(2),type:null}:{type:v,recipe:null};
+    touch("habits",{id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,state:"on"});close();render();
   };
 }
 function recipeEditor(r){

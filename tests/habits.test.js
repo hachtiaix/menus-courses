@@ -61,3 +61,17 @@ test("habitudes nettoyées (type, jours, créneau)", () => {
   assert.deepEqual(Object.keys(S.habits), ["ok"]);
   assert.deepEqual(S.habits.ok.days, [1, 6]);
 });
+
+test("habitude sur une recette précise : proposée en premier sur son créneau", () => {
+  const S = Data.cleanAll({
+    recipes: { a: { name: "Pain de hachis", ts: 1 }, b: { name: "Chili", ts: 1 }, c: { name: "Quiche", ts: 1 } },
+    habits: { h: { recipe: "a", days: [7], slot: "s", ts: 1 } },
+  });
+  const got = Data.suggest(S, "2026-12-10", 3, [], () => 0, "2026-12-13-s");
+  assert.equal(got[0].name, "Pain de hachis"); assert.equal(got[0].habit, "recette");
+  assert.equal(Data.suggest(S, "2026-12-10", 3, [], () => 0, "2026-12-12-s")[0].habit, null); // samedi : pas d'habitude
+});
+test("habitude sur une recette : nettoyée et gardée", () => {
+  const S = Data.cleanAll({ habits: { h: { recipe: "r1", days: [7], slot: "s" }, ko: { days: [7], slot: "s" } } });
+  assert.deepEqual(Object.keys(S.habits), ["h"]); assert.equal(S.habits.h.recipe, "r1"); assert.equal(S.habits.h.type, null);
+});

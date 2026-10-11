@@ -55,6 +55,21 @@ const addDays=(ymd,n)=>new Date(Date.parse(ymd)+n*DAY).toISOString().slice(0,10)
 const weekday=ymd=>((new Date(Date.parse(ymd)).getUTCDay()+6)%7)+1;
 const mondayOf=ymd=>addDays(ymd,1-weekday(ymd));
 
+// Une habitude vise un type de plat (h.type) ou une recette précise (h.recipe).
+const habitMatches=(S,h,name)=>{
+  if(h.recipe){const r=(S.recipes||{})[h.recipe];return!!(r&&!r.deleted&&plain(r.name).trim()===plain(name).trim())}
+  return typeOf(name)===h.type;
+};
+// Habitudes attendues pour un créneau (objets habitude).
+function habitsFor(S,key){
+  const ymd=key.slice(0,10),wd=weekday(ymd),slot=key.slice(-1),mon=mondayOf(ymd),out=[];
+  for(const h of Object.values(S.habits||{})){
+    if(h.deleted||h.state!=="on"||h.slot!==slot||!h.days.includes(wd))continue;
+    const done=h.days.some(d=>{if(d===wd)return false;const m=(S.meals||{})[addDays(mon,d-1)+"-"+slot];return m&&!m.deleted&&m.text&&habitMatches(S,h,m.text)});
+    if(!done)out.push(h);
+  }
+  return out;
+}
 // Types d'habitude attendus pour un créneau (« 2026-10-12-s »). Habitude sur plusieurs jours (« vendredi ou samedi ») :
 // ignorée si le type est déjà prévu un autre de ces jours dans la même semaine.
 function habitTypesFor(S,key){
@@ -131,14 +146,16 @@ function suggest(S,today,n,exclude,rnd,slotKey){
     const past=ds.filter(d=>d<today).sort().pop();
     rows.push({name:x.name,gap,days:past?Math.round((todayT-Date.parse(past))/DAY):null,score:Math.min(gap==null?400:gap,400)+rnd()*20});
   }
-  const types=slotKey?habitTypesFor(S,slotKey):[];
-  const habit=rows.filter(x=>types.includes(typeOf(x.name))).sort((a,b)=>b.score-a.score).map(x=>({...x,habit:typeOf(x.name)}));
-  // aucun plat connu pour une habitude du créneau : on propose le type lui-même (« Pâtes », « Soupe »…)
+  const hs=slotKey?habitsFor(S,slotKey):[],types=hs.filter(h=>!h.recipe).map(h=>h.type);
+  const tag=x=>{const h=hs.find(h=>habitMatches(S,h,x.name));return h?(h.recipe?"recette":h.type):null};
+  // recette d'habitude en tête, puis les plats du type d'habitude
+  const habit=rows.filter(x=>tag(x)).sort((a,b)=>(tag(b)==="recette")-(tag(a)==="recette")||b.score-a.score).map(x=>({...x,habit:tag(x)}));
+  // aucun plat connu pour une habitude de type : on propose le type lui-même (« Pâtes », « Soupe »…)
   for(const t of types)if(!habit.some(x=>x.habit===t)){
     const dish=(TYPES.find(y=>y.id===t)||{}).dish,dk=key(dish||"");
     if(dish&&!ex.has(dk)&&!(dates[dk]||[]).some(d=>d>=mon&&d<=sun))habit.push({name:dish,days:null,habit:t});
   }
-  const rest=rows.filter(x=>!types.includes(typeOf(x.name)));
+  const rest=rows.filter(x=>!tag(x));
   const fresh=rest.filter(x=>x.gap==null||x.gap>30).sort((a,b)=>b.score-a.score);
   const recent=rest.filter(x=>x.gap!=null&&x.gap<=30).sort((a,b)=>b.score-a.score);
   return [...habit,...fresh,...recent].slice(0,n).map(({name,days,habit})=>({name,days,habit:habit||null}));
@@ -160,7 +177,8 @@ function clean(k,id,r){
     return{key:id,text:str(r.text,120),servings:int(r.servings,1,30,4),added:ad,ts,deleted};
   }
   if(k==="stores")return{id,last:(Array.isArray(r.last)?r.last:[]).filter(okId).slice(-3),def:okId(r.def)?r.def:null,ts,deleted};
-  if(k==="habits")return TYPE_IDS.includes(r.type)&&(r.slot==="m"||r.slot==="s")?{id,type:r.type,slot:r.slot,
+  if(k==="habits")return (TYPE_IDS.includes(r.type)||okId(r.recipe))&&(r.slot==="m"||r.slot==="s")?{id,
+    type:TYPE_IDS.includes(r.type)?r.type:null,recipe:okId(r.recipe)?r.recipe:null,slot:r.slot,
     days:[...new Set((Array.isArray(r.days)?r.days:[]).map(x=>parseInt(x,10)).filter(x=>x>=1&&x<=7))].sort().slice(0,7),
     state:r.state==="off"?"off":"on",auto:r.auto===true,ts,deleted}:null;
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
@@ -195,5 +213,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
