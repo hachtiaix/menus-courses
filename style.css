@@ -262,3 +262,18 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 .slot .tag.rcp{border-radius:6px}
 .tagwrap.has:not(:focus-within) .tags{gap:5px;padding:6px}
 .slot .tag{flex-shrink:0}
+/* MIDI / SOIR / + 2ᵉ plat : petite étiquette posée sur le bord haut de la case (la case gagne la largeur) */
+.slot{position:relative;margin-top:9px}
+.slot>span.lbl,.slotw.second .slot>span.lbl{position:absolute;top:-7px;left:10px;width:auto;z-index:2;font-size:10px;line-height:1.2;padding:0 5px;background:var(--card);border-radius:4px;pointer-events:none;white-space:nowrap}
+.sub{margin-left:0}
+.sub .x{margin-left:auto}
+nav{z-index:10}header{z-index:10}
+/* jour en en-tête de la carte, les repas prennent toute la largeur */
+section.day{grid-template-columns:1fr;gap:0;padding:8px 12px 10px}
+.dh{flex-direction:row;align-items:baseline;gap:6px;padding:0 2px 2px}
+.dh b{font-size:15px;letter-spacing:.2px;text-transform:capitalize;color:var(--fg)}
+.dh small{font-size:15px;font-weight:700}
+/* 2ᵉ plat présenté comme les autres repas */
+.slotw.second .slot{gap:6px}.slotw.second .sub .x{width:auto}
+.slotw.second .slot>span.lbl{color:var(--accent);font-weight:700;text-transform:none;letter-spacing:0}
+.sub .x,.slotw.second .sub .x{width:32px;text-align:center;margin-left:auto}
