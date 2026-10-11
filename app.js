@@ -428,7 +428,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v98";
+const BASE=4,VERSION="v99";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -543,7 +543,7 @@ function renderMenus(){
       // suite d'aliments en cours (après une virgule ou un +) : on propose seulement des aliments pour le dernier morceau
       const cut=el._items.length?-1:Math.max(v.lastIndexOf(","),v.lastIndexOf("+")),seg=norm(v.slice(cut+1).trim()),head=cut>=0?v.slice(0,cut+1).trimEnd()+" ":"";
       const foods=seg?Data.allFoods().flatMap(f=>f.words.filter(w=>w.startsWith(seg)||w.includes(" "+seg)).slice(0,1).map(w=>({f,w}))).slice(0,4)
-        .map(({f})=>({t:head+(f.id==="legboite"?"Haricots verts":f.label),icon:f.icon,food:true})):[];
+        .map(({f})=>({t:head+f.label,icon:f.icon,food:true})):[];
       if(cut>=0||el._items.length){showBox(foods);return}
       showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,5)
         .filter(x=>!foods.some(f=>norm(f.t)===norm(x.t))).map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"}))]);
