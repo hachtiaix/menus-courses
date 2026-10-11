@@ -133,3 +133,4 @@ h3.ray{font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--m
 .ing-row>[type=checkbox]{grid-area:cb}.ing-row>.ing{grid-area:q}.ing-row>.stp{grid-area:st;justify-self:start}.ing-row>select{grid-area:sel}
 .homewarn{grid-area:w;margin:0;font-size:13px;color:#b07800}.homewarn:empty{display:none}
 .ing-row.warn{background:color-mix(in srgb,#e0a800 12%,transparent);border-radius:10px;padding-left:6px;padding-right:6px}
+.slot .x{flex:none;width:32px;padding:0}
