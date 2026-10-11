@@ -32,17 +32,17 @@ const inSeason=(season,month)=>season==="ete"?!(month>=11||month<=3):season==="h
 // Types de plats (pour les habitudes), reconnus dans le nom : l'expression la plus à gauche l'emporte
 // (« Salade de pâtes » → salade, « Gratin de pâtes » → gratin).
 const TYPES=[
-  {id:"pates",label:"Pâtes",icon:"🍝",words:["pate","spaghetti","tagliatelle","penne","fusilli","macaroni","coquillette","carbonara","bolognaise",
+  {id:"pates",dish:"Pâtes",label:"Pâtes",icon:"🍝",words:["pate","spaghetti","tagliatelle","penne","fusilli","macaroni","coquillette","carbonara","bolognaise",
     "lasagne","ravioli","gnocchi","linguine","farfalle","tortellini","cannelloni","pesto"]},
-  {id:"soupe",label:"Soupe",icon:"🍲",words:["soupe","veloute","potage","minestrone","gaspacho","gazpacho","bouillon","garbure"]},
-  {id:"burger",label:"Burger / hot-dog",icon:"🍔",words:["burger","hamburger","cheeseburger","hot dog","hotdog"]},
-  {id:"pizza",label:"Pizza",icon:"🍕",words:["pizza","calzone"]},
-  {id:"salade",label:"Salade",icon:"🥗",words:["salade","taboule","poke"]},
-  {id:"poisson",label:"Poisson",icon:"🐟",words:["poisson","saumon","cabillaud","colin","truite","dorade","merlu","lieu","sole","crevette","moule","fruits de mer"]},
-  {id:"gratin",label:"Gratin",icon:"🧀",words:["gratin","parmentier","moussaka"]},
-  {id:"quiche",label:"Quiche / tarte",icon:"🥧",words:["quiche","tarte","tourte","flammekueche"]},
-  {id:"raclette",label:"Raclette / fondue",icon:"🫕",words:["raclette","fondue","tartiflette","croziflette","pierrade"]},
-  {id:"riz",label:"Riz / curry",icon:"🍛",words:["riz","risotto","curry","paella","biryani","chili"]},
+  {id:"soupe",dish:"Soupe",label:"Soupe",icon:"🍲",words:["soupe","veloute","potage","minestrone","gaspacho","gazpacho","bouillon","garbure"]},
+  {id:"burger",dish:"Burgers",label:"Burger / hot-dog",icon:"🍔",words:["burger","hamburger","cheeseburger","hot dog","hotdog"]},
+  {id:"pizza",dish:"Pizza",label:"Pizza",icon:"🍕",words:["pizza","calzone"]},
+  {id:"salade",dish:"Salade",label:"Salade",icon:"🥗",words:["salade","taboule","poke"]},
+  {id:"poisson",dish:"Poisson",label:"Poisson",icon:"🐟",words:["poisson","saumon","cabillaud","colin","truite","dorade","merlu","lieu","sole","crevette","moule","fruits de mer"]},
+  {id:"gratin",dish:"Gratin",label:"Gratin",icon:"🧀",words:["gratin","parmentier","moussaka"]},
+  {id:"quiche",dish:"Quiche",label:"Quiche / tarte",icon:"🥧",words:["quiche","tarte","tourte","flammekueche"]},
+  {id:"raclette",dish:"Raclette",label:"Raclette / fondue",icon:"🫕",words:["raclette","fondue","tartiflette","croziflette","pierrade"]},
+  {id:"riz",dish:"Riz",label:"Riz / curry",icon:"🍛",words:["riz","risotto","curry","paella","biryani","chili"]},
 ];
 const TYPE_IDS=TYPES.map(t=>t.id);
 function typeOf(name){
@@ -119,7 +119,7 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   }
   const names=new Map();
   for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name)names.set(key(r.name),{name:r.name,season:recipeSeason(r)});
-  for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&k.slice(0,10)<today&&!names.has(key(m.text)))
+  for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text)))
     names.set(key(m.text),{name:m.text,season:guessSeason(m.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
   const rows=[];
@@ -133,6 +133,11 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   }
   const types=slotKey?habitTypesFor(S,slotKey):[];
   const habit=rows.filter(x=>types.includes(typeOf(x.name))).sort((a,b)=>b.score-a.score).map(x=>({...x,habit:typeOf(x.name)}));
+  // aucun plat connu pour une habitude du créneau : on propose le type lui-même (« Pâtes », « Soupe »…)
+  for(const t of types)if(!habit.some(x=>x.habit===t)){
+    const dish=(TYPES.find(y=>y.id===t)||{}).dish,dk=key(dish||"");
+    if(dish&&!ex.has(dk)&&!(dates[dk]||[]).some(d=>d>=mon&&d<=sun))habit.push({name:dish,days:null,habit:t});
+  }
   const rest=rows.filter(x=>!types.includes(typeOf(x.name)));
   const fresh=rest.filter(x=>x.gap==null||x.gap>30).sort((a,b)=>b.score-a.score);
   const recent=rest.filter(x=>x.gap!=null&&x.gap<=30).sort((a,b)=>b.score-a.score);

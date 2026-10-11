@@ -80,3 +80,14 @@ test("deux créneaux n'ont pas forcément le même ordre de suggestions", () => 
   assert.equal(a, a2);   // stable pour un même créneau
   assert.notEqual(a, b); // différent d'un créneau à l'autre
 });
+
+test("habitude sans recette correspondante : plat déjà saisi de ce type, sinon le type lui-même", () => {
+  const S = real();
+  S.habits = Data.cleanAll({ habits: { p: { type: "pates", days: [1], slot: "s" }, s: { type: "soupe", days: [7], slot: "s" } } }).habits;
+  const lundi = Data.suggest(S, "2026-10-11", 3, [], noRandom, "2026-10-19-s");
+  assert.equal(lundi[0].name, "Pates"); assert.equal(lundi[0].habit, "pates");   // « Pates » saisi le 12/10, sans recette
+  const dimanche = Data.suggest(S, "2026-10-11", 3, [], noRandom, "2026-10-25-s");
+  assert.equal(dimanche[0].name, "Soupe"); assert.equal(dimanche[0].habit, "soupe"); // aucune soupe connue
+  const memeSemaine = Data.suggest(S, "2026-10-11", 3, [], noRandom, "2026-10-17-s");
+  assert.ok(!memeSemaine.some(x => x.habit)); // samedi : pas d'habitude ce jour-là
+});
