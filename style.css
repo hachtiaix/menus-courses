@@ -2,36 +2,33 @@
 @media(prefers-color-scheme:dark){:root{--bg:#161815;--fg:#eee;--card:#222522;--mut:#999;--line:#333}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px -apple-system,system-ui,sans-serif;padding-bottom:calc(70px + env(safe-area-inset-bottom))}
-header{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line);z-index:2}
-h1{font-size:22px;margin:0;flex:1}
-#cfg{background:none;border:0;font-size:24px;color:var(--fg)}
-#status{width:10px;height:10px;border-radius:50%;background:var(--mut)}
+header{position:sticky;top:0;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line);z-index:2}
+h1{margin:0;flex:1}
+#cfg{background:none;border:0;color:var(--fg)}
+#status{border-radius:50%;background:var(--mut)}
 #status.ok{background:#3bb273}#status.err{background:#d9534f}
 main{padding:12px 16px;max-width:640px;margin:auto}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;padding:12px 4px;background:none;border:0;color:var(--mut);font-size:14px}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line)}
+nav button{background:none;border:0;color:var(--mut)}
 nav button.on{color:var(--accent);font-weight:700}
-.card{background:var(--card);border-radius:12px;padding:4px 14px;margin:10px 0}
+.card{background:var(--card);margin:10px 0}
 .row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
 .row:last-child{border:0}
-.row input[type=checkbox]{width:24px;height:24px;accent-color:var(--accent)}
+.row input[type=checkbox]{accent-color:var(--accent)}
 .row .t{flex:1}.done .t{text-decoration:line-through;color:var(--mut)}
 .x{background:none;border:0;color:var(--mut);font-size:20px}
 form{display:flex;gap:8px;margin:10px 0}
 input[type=text]{flex:1;font-size:17px;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg)}
-.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:0 16px;font-size:17px}
+.btn{background:var(--accent);color:#fff;border:0;padding:0 16px;font-size:17px}
 .btn.sec{background:var(--card);color:var(--fg);border:1px solid var(--line);padding:10px 14px;margin:4px 0}
 .day{font-weight:700;margin:16px 0 4px;text-transform:capitalize}
-.slot{display:flex;gap:8px;align-items:center;margin:4px 0}.slot span{width:56px;color:var(--mut);font-size:14px}
 .empty{color:var(--mut);text-align:center;padding:24px}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10;display:flex;align-items:flex-end}
-.sheet{background:var(--bg);width:100%;max-height:85vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-width:640px;margin:auto}
+.sheet{background:var(--bg);width:100%;max-height:85vh;overflow:auto;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-width:640px;margin:auto}
 .sheet h2{margin:0 0 4px}.mut{color:var(--mut);margin:0 0 8px}
 .sheet .row input.ing{flex:1;min-width:0;padding:8px;font-size:16px}
 select,textarea{font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
 textarea{width:100%}.acts{display:flex;gap:8px;margin-top:10px}.acts .btn{flex:1;padding:12px}
-.slot input[type=text]{min-width:0}
-
 /* v2 */
 :root{--r:16px;--shadow:0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05)}
 body{font-size:17px;line-height:1.35}
@@ -45,35 +42,30 @@ h1{font-size:26px;letter-spacing:-.4px}
 .btn{height:48px;min-width:48px;border-radius:14px;font-weight:600}
 .btn.sec{height:auto;min-height:44px;border-radius:12px}
 nav{padding-top:6px;box-shadow:0 -4px 16px rgba(0,0,0,.05)}
-nav button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;padding:4px 2px}
-nav i{font-style:normal;font-size:22px;position:relative}
+nav button{display:flex;flex-direction:column;align-items:center;gap:2px}
+nav i{font-style:normal}
 nav i b{position:absolute;top:-4px;right:-12px;background:var(--accent);color:#fff;font-size:11px;border-radius:9px;min-width:17px;height:17px;line-height:17px;text-align:center}
-.wk{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:600;margin-bottom:6px}
+.wk{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:600}
 .wk .btn{width:48px;padding:0}
-section.day{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:12px 14px;margin:12px 0}
+section.day{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow)}
 section.day.today{outline:2px solid var(--accent)}
 section.day h3{margin:0 0 6px;font-size:17px;text-transform:capitalize}
 section.day h3 small{color:var(--mut);font-weight:500;margin-left:4px}
-.slot{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
-.slot span{width:48px;font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
-.slot input[type=text]{flex:1;min-width:140px;height:44px}
-.pill{border:0;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);border-radius:20px;padding:8px 12px;font-size:14px;font-weight:600;white-space:nowrap}
+.slot span{color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+.pill{border:0;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);border-radius:20px;font-size:14px;font-weight:600;white-space:nowrap}
 .sheet{border-radius:22px 22px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
 .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
 .serv{display:flex;align-items:center;gap:12px;margin:8px 0}
 .serv b{min-width:28px;text-align:center;font-size:22px}
 .serv .btn{width:48px;padding:0;margin:0;font-size:22px}
-.ing-row{display:grid;grid-template-columns:26px 1fr auto;gap:10px}
+.ing-row{display:grid;gap:10px}
 .ing-row select{height:42px;max-width:110px}
 .sheet .row input.ing{height:42px}
-
 nav{overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
-nav button{flex:1 0 auto;min-width:64px;padding:4px 10px;white-space:nowrap}
-
+nav button{white-space:nowrap}
 /* v3 compact */
 nav{overflow:hidden;padding-bottom:max(env(safe-area-inset-bottom),6px)}
-nav button{flex:1 1 0;min-width:0;padding:4px 0;font-size:11px;overflow:hidden;text-overflow:ellipsis}
-nav i{font-size:21px}
+nav button{font-size:11px;text-overflow:ellipsis}
 section.day{display:grid;grid-template-columns:42px 1fr;gap:6px;padding:10px 12px;margin:8px 0;align-items:start}
 .dh{display:flex;flex-direction:column;align-items:center;padding-top:6px}
 .dh b{font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut)}
@@ -92,42 +84,33 @@ h2.sec small{text-transform:none;letter-spacing:0;font-weight:400}
 .ed-row input{height:42px;min-width:0;font-size:16px}.ed-row select{height:42px}
 .danger{color:#d9534f}
 .acts .btn.sec{margin:0}
-
 /* v4 menus */
 .slotw{display:flex;flex-direction:column;gap:4px}
-.sub{display:flex;align-items:center;gap:10px;margin-left:40px}
+.sub{display:flex;align-items:center}
 .stp{display:flex;align-items:center;gap:2px;background:var(--bg);border-radius:20px;padding:2px}
 .stp button{width:34px;height:34px;border-radius:50%;border:0;background:var(--card);color:var(--fg);font-size:20px;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .stp b{min-width:24px;text-align:center;font-size:17px}
 .stp em{font-style:normal;color:var(--mut);font-size:13px;padding:0 8px 0 2px}
-.sug{margin-left:40px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.sug{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
 .sug button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;font-size:16px;color:var(--fg)}
 .sug button:last-child{border:0}
 #status.unk{background:#e0a800}
 .warn{color:#b07800;font-size:14px;margin:6px 4px}
-
 /* suggestions en surimpression : ne poussent plus le contenu */
 .slotw{position:relative}
 .sug{position:absolute;left:0;right:0;top:46px;z-index:5;margin-left:40px}
-
-.stp.sm{flex:none;padding:1px}.stp.sm button{width:30px;height:30px;font-size:18px}
+.stp.sm{flex:none}
 .row .t[data-e]{cursor:pointer}
-
 /* pas de zoom : double-tap désactivé, champs à 16 px minimum (sinon iOS zoome au focus) */
 html,body,button,input,select,textarea,.row,.t{touch-action:manipulation}
 input,select,textarea{font-size:16px!important}
-
-#add{position:relative}
 #add .sug{position:absolute;left:0;right:56px;top:52px;margin:0;z-index:6}
-
 /* − / + plus grands et espacés dans les listes */
 .stp.sm{gap:10px;padding:3px;background:none}
 .stp.sm button{width:40px;height:40px;font-size:22px}
-
 h3.ray{font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);margin:16px 4px 4px;font-weight:600}
 .okmsg{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);border-radius:10px;padding:8px 10px;font-size:14px;margin:6px 0}
 .sub .x{margin-left:auto}
-
 /* fenêtre ingrédients : quantité sur toute la largeur, puis − / + et magasin */
 .ing-row{grid-template-columns:26px 1fr auto;grid-template-areas:"cb q q" ". st sel" ". w w";row-gap:6px}
 .ing-row>[type=checkbox]{grid-area:cb}.ing-row>.ing{grid-area:q}.ing-row>.stp{grid-area:st;justify-self:start}.ing-row>select{grid-area:sel}
@@ -139,29 +122,21 @@ h3.ray{font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--m
 .slot input[readonly]{background:var(--bg);color:var(--mut)}
 .sub .mut.sm{font-size:13px;margin-right:auto}
 .ordre .row .pill{flex:none;width:40px;height:36px;padding:0}.ordre .pill:disabled{opacity:.3}.ordre select{max-width:60%}
-nav i{display:flex;align-items:center;justify-content:center;height:26px}
-nav i img.logo-lidl{height:24px;width:24px;border-radius:4px}
-nav i img.logo-auchan{height:14px;width:auto;max-width:56px}
-nav i:has(.logo-auchan) b{right:-18px;top:-10px}
+nav i{display:flex;align-items:center;justify-content:center}
+nav i img.logo-lidl{border-radius:4px}
 /* logos sans texte : plus grands, centrés dans la hauteur de l'onglet */
 nav button:has(img[class^=logo]) i{height:42px}
-nav i img.logo-lidl{height:34px;width:34px}
-nav i img.logo-auchan{height:20px;max-width:64px}
 nav button.on:has(img[class^=logo]) i{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
-nav button:has(img[class^=logo]){overflow:visible}
-nav i img.logo-auchan{height:16px;max-width:52px}
-nav i:has(.logo-auchan) b{right:-10px;top:-2px}
 nav i:has(.logo-lidl) b{right:-10px;top:-2px}
 nav i:has(.logo-auchan) b{right:-4px;top:-10px}
 #title .hlogo{display:block}
 #title .hlogo-lidl{height:38px;width:38px;border-radius:6px}
 #title .hlogo-auchan{height:26px;width:auto}
 /* logos de même encombrement visuel dans des onglets de même largeur */
-nav button{flex:1 1 0;min-width:0}
+nav button{flex:1 1 0}
 nav i img.logo-lidl{height:42px;width:42px}
 nav i img.logo-auchan{height:auto;width:50px;max-width:50px}
 #title .hicon{margin-left:6px}
-nav i img.picto{height:24px;width:24px}
 #title .hicon img.picto{height:30px;width:30px;vertical-align:-4px}
 /* barre du bas : colonnes strictement égales, quel que soit le contenu (logos, textes longs) */
 nav{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
@@ -169,13 +144,11 @@ nav button{width:auto;min-width:0;overflow:hidden}
 nav button:has(img[class^=logo]){overflow:visible}
 /* barre du bas sans texte : pictogrammes plus grands, onglet actif encadré */
 nav button{padding:8px 0}
-nav i{height:42px;font-size:30px}
-nav i img.picto{height:32px;width:32px}
 nav button.on i{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}
 /* pastilles alignées : même position dans chaque onglet, quelle que soit la largeur du pictogramme */
 nav button{position:relative}
 nav i{position:static}
-nav button i b,nav i:has(.logo-auchan) b,nav i:has(.logo-lidl) b{position:absolute;top:2px;left:calc(50% + 14px);right:auto}
+nav button i b,nav i:has(.logo-auchan) b,nav i:has(.logo-lidl) b{position:absolute;top:2px;right:auto}
 /* pictogrammes plus grands (voiture, steak, grange, calendrier) */
 nav i{height:44px;font-size:36px;line-height:1}
 nav i img.picto{height:40px;width:40px}
@@ -197,7 +170,7 @@ section.day:has(.slotw.past) .dh{opacity:.5}
 .sug small.mut{font-size:12px}
 /* onglets des réglages */
 .seg{display:flex;background:var(--line);border-radius:12px;padding:3px;margin:4px 0 14px;gap:2px}
-.seg button{flex:1;border:0;background:none;padding:9px 2px;border-radius:9px;font-size:14px;color:var(--fg);font-weight:500}
+.seg button{flex:1;border:0;background:none;border-radius:9px;color:var(--fg);font-weight:500}
 .seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700}
 .days{display:flex;gap:6px;margin:8px 0}
 .days label{flex:1}.days input{display:none}
@@ -209,13 +182,10 @@ section.day:has(.slotw.past) .dh{opacity:.5}
 .sugtop .x{flex:none;width:32px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top));background:var(--accent);color:#fff;padding:12px 18px;border-radius:14px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:30;white-space:nowrap}
 .pick{flex:1;min-width:0}.pick input{width:100%}
-#hlist{margin-top:6px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}#hlist:empty{display:none}
-#hlist button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;font-size:16px;color:var(--fg)}
-#hlist button:last-child{border:0}#hlist p{margin:10px 12px}
 header:has(#cfg[style*="none"]) #status{margin-right:6px}
 /* 2e plat d'un repas (ex. pour Jules) */
-.slotw.second{margin:2px 0 0 18px;padding-left:8px;border-left:2px solid var(--line)}
-.slotw.second .slot span{color:var(--accent);font-weight:700;text-transform:none;letter-spacing:0;font-size:12px;width:42px;overflow:hidden;text-overflow:ellipsis}
+.slotw.second{padding-left:8px;border-left:2px solid var(--line)}
+.slotw.second .slot span{overflow:hidden;text-overflow:ellipsis}
 .pill.add2{flex:none;height:38px;padding:0 12px;border-radius:19px;font-size:13px}
 .side{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:14px}
 .side .t{flex:1}.side .pill{flex:none;width:34px;height:34px;padding:0;border-radius:50%}
@@ -229,18 +199,17 @@ header:has(#cfg[style*="none"]) #status{margin-right:6px}
 .sub .stp b{min-width:20px}
 .sub .pill[data-i],.sub .pill[data-mv],.sub .pill.add2{width:34px;height:34px;font-size:16px}
 @media (max-width:400px){.sub .stp em{display:none}}
-.slotw.second .slot span{font-size:11px;width:42px;white-space:nowrap}
 .sub .pill.add2{position:relative}.sub .pill.add2::after{content:"+";position:absolute;right:-3px;top:-4px;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;line-height:15px;text-align:center}
 /* 2e plat : même présentation que les lignes Midi / Soir */
 .slotw.second{margin:0;padding:0;border:0}
-.slotw.second .slot span{width:34px;font-size:13px;color:var(--mut);font-weight:600;text-align:left;text-transform:none;letter-spacing:0}
+.slotw.second .slot span{width:34px;text-align:left;text-transform:none;letter-spacing:0}
 .slotw.second .slot span{color:var(--accent);font-weight:700;font-size:11px;line-height:1.15;white-space:normal}
 /* 2e plat sur une seule ligne */
-.slotw.second .slot{gap:5px}.slotw.second .slot input{min-width:0}
+.slotw.second .slot input{min-width:0}
 .stp.mini{display:inline-flex;align-items:center;gap:1px;padding:1px;flex:none}
 .stp.mini button{width:26px;height:26px;font-size:16px}.stp.mini b{min-width:16px;text-align:center;font-size:15px}
-.slotw.second .pill.ing{flex:none;width:30px;height:30px;padding:0;border-radius:50%;font-size:14px}
-.slotw.second .x{flex:none;width:24px;padding:0}.slotw.second .pill.bulb{width:32px;height:32px}
+.slotw.second .pill.ing{flex:none;padding:0;border-radius:50%}
+.slotw.second .x{flex:none;padding:0}.slotw.second .pill.bulb{width:32px;height:32px}
 /* 2e plat une fois rempli : tient sur une ligne même sur iPhone étroit */
 .slotw.second .slot>span:first-child{width:34px;font-size:10px}
 .slotw.second .stp.mini button{width:22px;height:22px;font-size:15px}.slotw.second .stp.mini b{min-width:12px;font-size:14px}
@@ -267,7 +236,7 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 .tagwrap.has:not(:focus-within) input{position:absolute;inset:0;opacity:0}
 .tagwrap.has:not(:focus-within) .tags{min-width:0;width:100%}
 .slot span.tagwrap{flex:1 1 0}
-.slot .rcp:not(.tag){font-style:normal;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0;min-width:0}.slot .rcp:not(.tag) b{font-weight:600}
+.slot .rcp:not(.tag){font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0;min-width:0}.slot .rcp:not(.tag) b{font-weight:600}
 .tagwrap.has:not(:focus-within) .tags:has(.rcp){flex-wrap:nowrap}
 .slot .rcp:not(.tag){display:inline-block;max-width:100%;background:#fff;border:1px solid #c9ced6;border-radius:5px;padding:4px 9px;font-size:14px;color:#1f2329;box-shadow:0 1px 1px rgba(0,0,0,.06)}
 @media(prefers-color-scheme:dark){.slot .rcp:not(.tag){background:#2c3038;border-color:#4a505b;color:#eef0f3}}

@@ -95,7 +95,7 @@ function renderList(id){
    ${items.some(i=>i.done)?`<button class="btn sec" id="clr">Retirer les articles cochés</button>`:""}`:`<div class="empty">Liste vide</div>`);
   // Suggestions : articles déjà saisis (toutes listes, même retirés) et ingrédients des recettes,
   // dont le nom commence par ce qui est tapé ; les plus fréquents d'abord.
-  const nm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const nm=Data.plain;
   const known=()=>{const m=new Map();
     const put=(t,ts)=>{const p=Qty.parse(t),k=Qty.key(p);if(!p.name)return;const e=m.get(k)||{n:0,ts:0};e.n++;if(ts>=e.ts){e.ts=ts;e.text=t;e.name=p.name}m.set(k,e)};
     Object.values(S.items).forEach(i=>put(i.text,i.ts||0));
@@ -444,15 +444,9 @@ function applyCompanion(key){
 }
 // Recette d'un plat : une recette enregistrée, sinon une suite d'aliments (« viande rouge, haricots verts »).
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
-function resizeMeal(m,n){
-  if(!m.added||m.added.n===n)return{...m,servings:n};
-  const ids=new Set(m.added.ids||[]);
-  m.added.items.forEach(g=>{const b=m.added.b||BASE;removeFromList(g.store,Qty.buy(g.t,m.added.n/b,b));addToList(g.store,Qty.buy(g.t,n/b,b)).forEach(x=>ids.add(x))});
-  return{...m,servings:n,added:{...m.added,n,ids:[...ids]}};
-}
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v124";
+const BASE=4,VERSION="v125";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -504,7 +498,7 @@ function renderMenus(){
       [["m","Midi"],["s","Soir"]].map(([s,l])=>slotHtml(k+"-"+s,l,k<today)).join("")+`</div></section>`;
   }
   $("#view").innerHTML=h;
-  const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const norm=Data.plain;
   const names=()=>{const seen=new Set(),out=[];
     for(const [t,recipe] of [...live(S.recipes).map(r=>[r.name,true]),...live(S.meals).map(m=>[m.text,false]).filter(x=>x[0])]){const k=norm(t);if(!seen.has(k)){seen.add(k);out.push({t,recipe})}}
     // écarte les fragments saisis à moitié (ex. « Pom » quand « Pommes de terre… » existe)
@@ -723,7 +717,7 @@ function renderSettings(){
   document.querySelectorAll("[data-hedit]").forEach(el=>el.onclick=()=>habitEditor(S.habits[el.dataset.hedit]));
   on("#newh","onclick",()=>habitEditor());
   // portion d'un aliment : ± 10 g (grammes) ou ± 1 / ± ¼ (à l'unité)
-  on("#fsearch","oninput",e=>{const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""),q=norm(e.target.value.trim());
+  on("#fsearch","oninput",e=>{const norm=Data.plain,q=norm(e.target.value.trim());
     document.querySelectorAll(".card.fam").forEach(c=>{let any=false;
       c.querySelectorAll(".row:not(.add-food)").forEach(r=>{const ok=!q||norm(r.querySelector(".t").textContent).includes(q);r.style.display=ok?"":"none";any=any||ok});
       c.querySelector(".add-food").style.display=q?"none":"";c.style.display=any||!q?"":"none";c.previousElementSibling.style.display=c.style.display})});
@@ -770,7 +764,7 @@ function renderSettings(){
 // Champ de recherche d'un plat (types et recettes) ; renvoie une fonction qui donne le choix {type, recipe} ou null.
 function dishPicker(ov,initial){
   const q=ov.querySelector(".pick input"),list=ov.querySelector(".pick .plist");
-  const fold=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const fold=Data.plain;
   const all=[...Data.TYPES.map(t=>({type:t.id,recipe:null,icon:t.icon,label:t.label,find:fold(t.label+" "+t.words.join(" "))})),
     ...live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>({type:null,recipe:r.id,icon:"📖",label:r.name,find:fold(r.name)}))];
   let sel=initial&&(initial.type||initial.recipe)?{type:initial.type||null,recipe:initial.recipe||null}:null;
