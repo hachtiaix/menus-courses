@@ -223,7 +223,7 @@ function resizeMeal(m,n){
   return{...m,servings:n,added:{...m.added,n,ids:[...ids]}};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v31";
+const BASE=4,VERSION="v32";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -281,17 +281,20 @@ function renderMenus(){
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
   document.querySelectorAll("[data-mv]").forEach(el=>el.onclick=()=>moveMeal(el.dataset.mv));
-  const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));LS.defN=n;touch("meals",resizeMeal(m,n));render()};
+  // − / + sur un repas : ouvre la fenêtre des ingrédients au nouveau nombre de personnes (rien n'est appliqué sans valider).
+  const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));LS.defN=n;
+    if(live(S.recipes).some(r=>r.name.toLowerCase()===m.text.toLowerCase()))ingredientsDialog(m.text,key,n);
+    else{touch("meals",{...m,servings:n});render()}};
   document.querySelectorAll("[data-sm]").forEach(el=>el.onclick=()=>step(el.dataset.sm,-1));
   document.querySelectorAll("[data-sp]").forEach(el=>el.onclick=()=>step(el.dataset.sp,1));
   $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
 }
-function ingredientsDialog(name,mealKey){
+function ingredientsDialog(name,mealKey,startN){
   const r=live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase());
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   const meal=mealKey&&S.meals[mealKey],prev=meal&&meal.text===name&&meal.added;
-  let n=(meal&&meal.servings)||BASE;
+  let n=startN||(meal&&meal.servings)||BASE;
   const was=t=>prev&&prev.items.find(g=>g.t===t);
   const ov=document.createElement("div");ov.className="ov";
   const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}"><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/BASE))}" data-shown="${esc(Qty.buy(i.t,n/BASE))}"><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select></div>`;
