@@ -3,6 +3,8 @@
 
     python3 restaurer.py courses-2026-10-11.json            # fusion : ne remplace rien de plus récent
     python3 restaurer.py courses-2026-10-11.json --force    # la sauvegarde l'emporte (annule une suppression)
+    python3 restaurer.py courses-2026-10-11.json --repas 2026-10-12 2026-10-18
+        # remet seulement les repas de ces dates (ceux effacés depuis), sans toucher au reste ; demande confirmation
 
 Le code du foyer est lu dans .code (à côté du script), sinon demandé à l'écran.
 La base fusionne enregistrement par enregistrement : rien n'est supprimé par une restauration.
@@ -34,10 +36,29 @@ def count(d):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    argv = sys.argv[1:]
+    span = None
+    if "--repas" in argv:
+        i = argv.index("--repas")
+        span = (argv[i + 1], argv[i + 2])
+        del argv[i:i + 3]
+    args = [a for a in argv if not a.startswith("--")]
     if len(args) != 1:
         sys.exit(__doc__)
     data = json.loads(pathlib.Path(args[0]).read_text(encoding="utf-8"))
+    if span:  # seulement les repas (non vides) des dates demandées, rendus plus récents que leur effacement
+        meals = {k: v for k, v in (data.get("meals") or {}).items()
+                 if isinstance(v, dict) and span[0] <= k[:10] <= span[1] and (v.get("text") or "").strip() and not v.get("deleted")}
+        for k in sorted(meals):
+            print(" ", k, "→", meals[k]["text"], "pour", meals[k].get("servings"))
+        if not meals:
+            sys.exit("Aucun repas dans la sauvegarde pour ces dates.")
+        if input("Remettre ces %d repas ? (o/n) " % len(meals)).strip().lower() != "o":
+            sys.exit("Rien n'a été fait.")
+        now = int(time.time() * 1000)
+        for v in meals.values():
+            v["ts"] = now
+        data = {"meals": meals}
     if not isinstance(data, dict) or not any(k in data for k in KINDS):
         sys.exit("Ce fichier n'est pas une sauvegarde Menus & Courses.")
     if "--force" in sys.argv:  # date d'aujourd'hui sur chaque enregistrement : la sauvegarde gagne la fusion
