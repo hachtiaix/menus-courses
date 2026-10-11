@@ -52,7 +52,9 @@ function parse(text){
 }
 
 const fr=x=>String(Math.round(x*100)/100).replace(".",",");
-const de=name=>!name?"":/^[aeiouyhâàéèêëîïôûù]/i.test(name)?" d'"+name:" de "+name;
+// « d' » devant une voyelle ou un h muet ; h aspiré (haricot, hachis, homard…) → « de »
+const ASPIRE=/^h(aricot|achis|amburger|omard|ibou|arengs?|ors|aut)/i;
+const de=name=>!name?"":(/^[aeiouyâàéèêëîïôûù]/i.test(name)||(/^h/i.test(name)&&!ASPIRE.test(name)))?" d'"+name:" de "+name;
 const plural=(w,n)=>n>1&&!/[sxz]$/i.test(w)?w+"s":w;
 // « 1 gousses » → « 1 gousse » (sans toucher ananas, radis, jus…)
 const single=w=>w.length>4&&/[^saiu]s$/i.test(w)?w.slice(0,-1):w;
@@ -89,7 +91,12 @@ const key=p=>(p.kind==="none"?"count":p.kind)+"|"+norm(p.name);
 
 // Quantité à acheter pour un facteur donné (arrondie).
 // (les boîtes perdent leur taille : on regroupe au mieux, puis la liste les répartit par taille)
-const buy=(text,f)=>{const p=parse(text);return p.n==null?p.name:format({...p,size:undefined,n:p.n*f})};
+// Légumes en boîte sans quantité (haricots verts, petits pois, flageolets) : comptés en portions,
+// 1 par personne de la recette (B) ; petite boîte = 1 pers., moyenne = 2, grande = 4.
+const plain=s=>String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+const CANNED=/^(haricots? verts?|petits? pois|flageolets?)( en boites?)?$/;
+const buy=(text,f,B)=>{const p=parse(text);
+  if(p.n==null&&CANNED.test(plain(p.name)))return format({kind:"box",n:(B||1)*f,name:p.name});return p.n==null?p.name:format({...p,size:undefined,n:p.n*f})};
 // Cumule b dans a (même clé) ; renvoie le texte ou null si pas cumulable.
 function add(aText,bText){
   const a=parse(aText),b=parse(bText);

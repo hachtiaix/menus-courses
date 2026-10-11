@@ -235,3 +235,15 @@ header:has(#cfg[style*="none"]) #status{margin-right:6px}
 .slotw.second{margin:0;padding:0;border:0}
 .slotw.second .slot span{width:34px;font-size:13px;color:var(--mut);font-weight:600;text-align:left;text-transform:none;letter-spacing:0}
 .slotw.second .slot span{color:var(--accent);font-weight:700;font-size:11px;line-height:1.15;white-space:normal}
+/* 2e plat sur une seule ligne */
+.slotw.second .slot{gap:5px}.slotw.second .slot input{min-width:0}
+.stp.mini{display:inline-flex;align-items:center;gap:1px;padding:1px;flex:none}
+.stp.mini button{width:26px;height:26px;font-size:16px}.stp.mini b{min-width:16px;text-align:center;font-size:15px}
+.slotw.second .pill.ing{flex:none;width:30px;height:30px;padding:0;border-radius:50%;font-size:14px}
+.slotw.second .x{flex:none;width:24px;padding:0}.slotw.second .pill.bulb{width:32px;height:32px}
+/* 2e plat une fois rempli : tient sur une ligne même sur iPhone étroit */
+.slotw.second .slot>span:first-child{width:34px;font-size:10px}
+.slotw.second .stp.mini button{width:22px;height:22px;font-size:15px}.slotw.second .stp.mini b{min-width:12px;font-size:14px}
+.slotw.second .pill.ing{width:26px;height:26px;font-size:12px}
+.slotw.second .x{width:18px}.slotw.second .slot{gap:4px}
+.slotw.second .slot .stp.mini{width:auto;font-size:inherit;color:inherit}

@@ -63,5 +63,6 @@ test("2e plat appris : 2 des 3 dernières soupes avaient un 2e plat", () => {
   assert.equal(Data.companionFor(S, "Lasagnes", "2026-10-15"), null);
   // une seule soupe sur les 3 dernières avec un 2e plat → rien
   const S2 = Data.cleanAll({ meals: Object.fromEntries([m("2026-09-20-s", "Soupe"), m("2026-09-27-s", "Soupe"), m("2026-10-04-s", "Soupe"), m("2026-10-04-s2", "Pâtes", 1)]) });
-  assert.equal(Data.companionFor(S2, "Soupe", "2026-10-15"), null);
+  assert.deepEqual(Data.companionFor(S2, "Soupe", "2026-10-15"), { n: 1 }); // une soupe a toujours un 2e plat proposé
+  assert.equal(Data.companionFor(S2, "Lasagnes", "2026-10-15"), null);
 });

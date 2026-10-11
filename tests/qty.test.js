@@ -31,6 +31,12 @@ const cases = [
   ["+ sur l'ail = une tête", Qty.step("2 têtes d'ail (pour 7 gousses)", 1), "3 têtes d'ail"],
 ];
 cases.push(
+  ["boîte de légumes : 4 pers. → 1 grande", Qty.buy("haricots verts", 1, 4), "1 grosse boîte de haricots verts"],
+  ["boîte de légumes : 3 pers. → 1 moyenne + 1 petite", Qty.buy("petits pois", 3, 1), "1 moyenne boîte + 1 petite boîte de petits pois"],
+  ["boîte de légumes : 1 pers. → 1 petite", Qty.buy("flageolets", 1/4, 4), "1 petite boîte de flageolets"],
+  ["surgelés : pas des boîtes", Qty.buy("haricots verts surgelés", 2, 4), "haricots verts surgelés"],
+  ["h aspiré : haricots verts", Qty.buy("200 g de haricots verts", 3), "600 g de haricots verts"],
+  ["h muet : huile", Qty.buy("10 cl d'huile", 2), "20 cl d'huile"],
   ["quantité après le nom : poulet 1,6 kg ×1,5", Qty.buy("poulet 1,6 kg", 1.5), "2,4 kg de poulet"],
   ["quantité après le nom : oignons 2 ×2", Qty.buy("oignons 2", 2), "4 oignons"],
   ["quantité après le nom entre parenthèses", Qty.buy("tomates (1 grosse boîte)", 1), "1 grosse boîte de tomates"],

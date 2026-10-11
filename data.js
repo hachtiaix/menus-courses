@@ -60,7 +60,8 @@ function companionFor(S,name,today){
     const s=(S.meals||{})[k+"2"];past.push({d:k.slice(0,10),n:s&&!s.deleted&&s.text?s.servings||1:0});
   }
   const last3=past.sort((a,b)=>b.d.localeCompare(a.d)).slice(0,3),withSide=last3.filter(x=>x.n);
-  return withSide.length>=2?{n:withSide[0].n}:null;
+  if(withSide.length>=2)return{n:withSide[0].n};
+  return t==="soupe"?{n:1}:null; // une soupe est toujours proposée avec un 2e plat
 }
 // Clés : « AAAA-MM-JJ-s » repas principal, « AAAA-MM-JJ-s2 » 2e plat du même repas.
 const isSecond=key=>/\d$/.test(key);

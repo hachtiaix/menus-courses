@@ -253,7 +253,7 @@ function planRecipe(r){
     if(o&&o.text){
       if(bought(o)){alert(`Les ingrédients de « ${o.text} » ont déjà été achetés : choisissez un autre créneau.`);return}
       if(!confirm(`Remplacer « ${o.text} » ?`))return;
-      if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE))));
+      if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)));
     }
     const n=+LS.defN||r.serves||BASE;
     touch("meals",{key,text:r.name,servings:n});applyCompanion(key);close();
@@ -268,8 +268,8 @@ function extraDialog(key,n){
   const B=r.serves||BASE,lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   const was=t=>prev.items.find(g=>g.t===t);
-  const diff=(t,k)=>{const a=Qty.parse(Qty.buy(t,prev.n/B)),b=Qty.parse(Qty.buy(t,k/B));
-    if(a.n==null||b.n==null||Qty.key(a)!==Qty.key(b))return Qty.buy(t,k/B);
+  const diff=(t,k)=>{const a=Qty.parse(Qty.buy(t,prev.n/B,B)),b=Qty.parse(Qty.buy(t,k/B,B));
+    if(a.n==null||b.n==null||Qty.key(a)!==Qty.key(b))return Qty.buy(t,k/B,B);
     return b.n-a.n>0?Qty.format({...b,n:b.n-a.n}):""};
   const ov=document.createElement("div");ov.className="ov";
   const rowH=g=>`<div class="row ing-row ${was(g.t)?"":"warn"}" data-base="${esc(g.t)}"><input type="checkbox" ${was(g.t)?"checked":""}><input type="text" class="ing" value=""><span class="stp sm"><button type="button" data-st="-1" aria-label="Moins">−</button><button type="button" data-st="1" aria-label="Plus">+</button></span><select>${opts(was(g.t)?was(g.t).store:defaultStore(g.t,g.store))}</select><p class="homewarn">${was(g.t)?"":`⚠ Vous l'aviez à la maison pour ${prev.n} personne${prev.n>1?"s":""}. Cochez s'il en manque.`}</p></div>`;
@@ -285,7 +285,7 @@ function extraDialog(key,n){
   setN(n);
   $("#mn").onclick=()=>setN(n-1);$("#pl").onclick=()=>setN(n+1);
   $("#ings").addEventListener("click",e=>{const b=e.target.closest("[data-st]");if(!b)return;
-    const row=b.closest(".ing-row"),i=row.querySelector(".ing"),t=Qty.step(i.value||Qty.buy(row.dataset.base,1/B),+b.dataset.st);
+    const row=b.closest(".ing-row"),i=row.querySelector(".ing"),t=Qty.step(i.value||Qty.buy(row.dataset.base,1/B,B),+b.dataset.st);
     if(t){i.value=t;row.querySelector("[type=checkbox]").checked=true}});
   $("#ok").onclick=()=>{
     const ids=new Set(prev.ids||[]),items=[...prev.items];
@@ -303,7 +303,7 @@ function extraDialog(key,n){
 function addMealIngredients(key){
   const m=S.meals[key],r=m&&live(S.recipes).find(x=>x.name.toLowerCase()===m.text.toLowerCase());if(!r)return;
   const B=r.serves||BASE,n=m.servings||BASE,ids=new Set(),items=[];
-  for(const g of r.ingredients){const store=defaultStore(g.t,g.store);addToList(store,Qty.buy(g.t,n/B)).forEach(x=>ids.add(x));items.push({t:g.t,store})}
+  for(const g of r.ingredients){const store=defaultStore(g.t,g.store);addToList(store,Qty.buy(g.t,n/B,B)).forEach(x=>ids.add(x));items.push({t:g.t,store})}
   touch("meals",{...S.meals[key],added:{n,items,ids:[...ids],b:B}});
 }
 // 💡 : un plat pour chaque soir libre et pour les midis du week-end de la semaine affichée.
@@ -329,6 +329,7 @@ function suggestDialog(){
   // plat qui s'accompagne d'habitude d'un 2e plat (appris) : on le propose, d'un autre type, le plat principal ne change pas
   const side=(r,skip)=>{
     r.comp=r.sug?Data.companionFor(S,r.sug.name,today):null;if(!r.comp){r.side=null;return}
+    if(skip===undefined){r.side=null;return} // pas de plat présaisi : « à choisir », ↻ donne une idée
     const taken=[r.sug.name,...rows.filter(x=>x!==r&&x.side).map(x=>x.side.name),...(skip||[])];
     const fits=x=>Data.typeOf(x.name)!==Data.typeOf(r.sug.name);
     // de préférence un plat pas encore prévu cette semaine ; sinon on accepte d'en reprendre un
@@ -395,18 +396,17 @@ const habitWhen=h=>"le "+h.days.map(d=>DAYS[d-1]).join(" ou ")+(h.slot==="m"?" m
 const typeById=id=>id==="recette"?{icon:"📖",label:"Recette"}:Data.TYPES.find(t=>t.id===id)||{icon:"🍽️",label:id};
 // libellé d'une habitude : la recette visée, sinon le type de plat
 const habitWhat=h=>h.recipe?{icon:"📖",label:(S.recipes[h.recipe]&&!S.recipes[h.recipe].deleted)?S.recipes[h.recipe].name:"Recette supprimée"}:typeById(h.type);
-// 2e plat d'un repas (clé du repas + « 2 ») : sans nom donné, on suggère un plat d'un autre type que le principal.
+// 2e plat d'un repas (clé du repas + « 2 »), ajouté vide : c'est l'utilisateur qui choisit (saisie ou 💡).
 // Le plat principal garde son nombre de personnes.
 function addSecond(key,n,name){
-  const k2=key+"2",main=S.meals[key],avoid=main&&Data.typeOf(main.text);
-  if(name===undefined){const c=Data.suggest(S,todayKey(),12,[main?main.text:""],undefined,k2).find(x=>!avoid||Data.typeOf(x.name)!==avoid);name=c?c.name:""}
+  const k2=key+"2";name=name||"";
   touch("meals",{key:k2,text:name,servings:n||1});
   if(name)addMealIngredients(k2);
 }
 // Retire le 2e plat d'un repas (et ses ingrédients), sauf s'il a déjà été acheté.
 function removeSecond(key){
   const s=S.meals[key+"2"];if(!s||s.deleted||bought(s))return;
-  if(s.added)s.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,s.added.n/(s.added.b||BASE))));
+  if(s.added)s.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,s.added.n/(s.added.b||BASE),s.added.b||BASE)));
   touch("meals",{key:key+"2",text:"",deleted:true});
 }
 // Plat qui s'accompagne d'habitude d'un 2e plat (appris dans l'historique) : on l'ajoute tout seul.
@@ -418,12 +418,12 @@ function applyCompanion(key){
 function resizeMeal(m,n){
   if(!m.added||m.added.n===n)return{...m,servings:n};
   const ids=new Set(m.added.ids||[]);
-  m.added.items.forEach(g=>{const b=m.added.b||BASE;removeFromList(g.store,Qty.buy(g.t,m.added.n/b));addToList(g.store,Qty.buy(g.t,n/b)).forEach(x=>ids.add(x))});
+  m.added.items.forEach(g=>{const b=m.added.b||BASE;removeFromList(g.store,Qty.buy(g.t,m.added.n/b,b));addToList(g.store,Qty.buy(g.t,n/b,b)).forEach(x=>ids.add(x))});
   return{...m,servings:n,added:{...m.added,n,ids:[...ids]}};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v82";
+const BASE=4,VERSION="v83";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -451,11 +451,11 @@ function slotHtml(key,label,past){
 function secondHtml(k2,e,past){
   const n=e.servings||1,b=bought(e),who="+ 2ᵉ plat";
   const lock=past||b?"readonly":"";
-  const right=past?"":b?`<span class="lock" title="Ingrédients déjà achetés">🔒</span>`
-    :(e.text?"":`<button class="pill bulb" data-bulb="${k2}" aria-label="Suggestions">💡</button>`)+`<button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`;
-  const sub=!e.text||past?"":`<div class="sub">${b?`<span class="mut sm">${n} pers. · acheté</span>`
-    :`<div class="stp"><button data-sm="${k2}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${k2}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${k2}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`}</div>`;
-  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span>${who}</span><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div>${sub}</div>`;
+  // tout sur une ligne : champ, − n +, 🥕, ×
+  const right=past?"":b?`<span class="mut sm">${n} p.</span><span class="lock" title="Ingrédients déjà achetés">🔒</span>`
+    :e.text?`<span class="stp mini"><button data-sm="${k2}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${k2}" aria-label="Plus">+</button></span><button class="pill ing" data-i="${k2}" aria-label="Ingrédients" title="Ingrédients">🥕</button><button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`
+    :`<button class="pill bulb" data-bulb="${k2}" aria-label="Suggestions">💡</button><button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`;
+  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span>${who}</span><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div></div>`;
 }
 function renderMenus(){
   $("#title").innerHTML=`Menus <span class="hicon">${MENU_ICON}</span>`;
@@ -484,7 +484,7 @@ function renderMenus(){
       alert(`Les ingrédients de « ${o.text} » ont déjà été achetés : ce repas ne peut pas être supprimé ni remplacé. Utilisez ⇄ pour le déplacer.`);
       return;
     }
-    const dropOld=()=>{if(o.added&&norm(o.text||"")!==norm(t))o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE))))};
+    const dropOld=()=>{if(o.added&&norm(o.text||"")!==norm(t))o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)))};
     dropOld();
     if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});if(!Data.isSecond(key))removeSecond(key);render();return}
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
@@ -517,12 +517,12 @@ function renderMenus(){
     $(`[data-m="${b.dataset.bulb}"]`).tips();
   });
   document.querySelectorAll("[data-mv]").forEach(el=>el.onclick=()=>moveMeal(el.dataset.mv));
-  document.querySelectorAll("[data-add2]").forEach(el=>el.onclick=()=>{addSecond(el.dataset.add2,1);render()});
+  document.querySelectorAll("[data-add2]").forEach(el=>el.onclick=()=>{addSecond(el.dataset.add2,1);render();const i=$(`[data-m="${el.dataset.add2}2"]`);if(i)i.focus()});
   document.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{
     const key=el.dataset.del,m=S.meals[key];
     if(bought(m)){alert(`Les ingrédients de « ${m.text} » ont déjà été achetés : ce repas ne peut pas être supprimé. Utilisez ⇄ pour le déplacer.`);return}
     if(m.text&&!confirm(`Supprimer « ${m.text} »${m.added?" et retirer ses ingrédients des listes":""} ?`))return;
-    if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/(m.added.b||BASE))));
+    if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/(m.added.b||BASE),m.added.b||BASE)));
     if(Data.isSecond(key))touch("meals",{key,text:"",deleted:true});
     else{touch("meals",{key,text:"",servings:m.servings||BASE});removeSecond(key)}
     render();
@@ -547,7 +547,7 @@ function ingredientsDialog(name,mealKey,startN){
   const was=t=>prev&&prev.items.find(g=>g.t===t);
   const ov=document.createElement("div");ov.className="ov";
   const home=t=>prev&&t&&!was(t); // décoché lors de l'ajout : on l'avait à la maison
-  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}" ${home(i.t)?'data-home="1"':""}><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/B))}" data-shown="${esc(Qty.buy(i.t,n/B))}"><span class="stp sm"><button type="button" data-st="-1" aria-label="Moins">−</button><button type="button" data-st="1" aria-label="Plus">+</button></span><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select><p class="homewarn"></p></div>`;
+  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}" ${home(i.t)?'data-home="1"':""}><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/B,B))}" data-shown="${esc(Qty.buy(i.t,n/B,B))}"><span class="stp sm"><button type="button" data-st="-1" aria-label="Moins">−</button><button type="button" data-st="1" aria-label="Plus">+</button></span><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select><p class="homewarn"></p></div>`;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(name)}</h2>
    ${r&&meal&&meal.text&&!prev&&meal.ts<LEGACY_TS?`<p class="homewarn" style="margin:6px 0">⚠ Ce repas date d'avant le suivi des ajouts : vérifiez qu'il n'est pas déjà dans vos listes avant d'ajouter.</p>`:""}
    ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
@@ -561,8 +561,8 @@ function ingredientsDialog(name,mealKey,startN){
   ov.onclick=e=>{if(e.target===ov)close()};
   $("#no").onclick=close;
   if(r){
-    const missing=t=>{const a=Qty.parse(Qty.buy(t,prev.n/B)),b=Qty.parse(Qty.buy(t,n/B));
-      if(a.n==null||b.n==null||Qty.key(a)!==Qty.key(b))return Qty.buy(t,n/B);
+    const missing=t=>{const a=Qty.parse(Qty.buy(t,prev.n/B,B)),b=Qty.parse(Qty.buy(t,n/B,B));
+      if(a.n==null||b.n==null||Qty.key(a)!==Qty.key(b))return Qty.buy(t,n/B,B);
       return b.n-a.n>0?Qty.format({...b,n:b.n-a.n}):null};
     const setN=v=>{
       n=Math.max(1,Math.min(30,v));$("#nn").textContent=n;
@@ -575,7 +575,7 @@ function ingredientsDialog(name,mealKey,startN){
           return;
         }
         el.classList.remove("warn");w.textContent="";delete el.dataset.diff;
-        if(i.value===i.dataset.shown)i.value=i.dataset.shown=Qty.buy(el.dataset.base,n/B);
+        if(i.value===i.dataset.shown)i.value=i.dataset.shown=Qty.buy(el.dataset.base,n/B,B);
       });
     };
     setN(n);
@@ -598,7 +598,7 @@ function ingredientsDialog(name,mealKey,startN){
     const sig=(items,k)=>items.map(g=>g.t+"@"+g.store).sort().join("|")+"#"+k;
     const ids=new Set(prev?prev.ids||[]:[]);
     if(!prev||sig(prev.items,prev.n)!==sig(now,n)){
-      if(prev)prev.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,prev.n/(prev.b||BASE))));
+      if(prev)prev.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,prev.n/(prev.b||BASE),prev.b||BASE)));
       rows.filter(x=>x.on).forEach(x=>addToList(x.store,x.shown).forEach(i=>ids.add(i)));
     }
     // la recette ne change pas avec les quantités achetées ; seuls les ingrédients ajoutés (+ Ingrédient) s'y ajoutent
