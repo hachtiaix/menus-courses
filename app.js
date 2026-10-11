@@ -81,6 +81,7 @@ function render(){
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function renderList(id){
   $("#title").textContent=S.lists[id].name;
+  live(S.items).filter(i=>i.list===id&&!i.done&&/\s\+\s/.test(i.text)&&Qty.parse(i.text).kind==="box").forEach(i=>rebalanceBoxes(id,{...Qty.parse(i.text),n:0}));
   const items=live(S.items).filter(i=>i.list===id).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
   $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off"><button class="btn">+</button></form>`+
    (items.length?`<div class="card">${items.map(i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done&&Qty.parse(i.text).n!=null?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`).join("")}</div>
@@ -94,12 +95,29 @@ function renderList(id){
 }
 // Ajoute un article à une liste en cumulant avec un article identique non coché (« 1 oignon » + « 3 oignons » = « 4 oignons »).
 function addToList(list,text){
+  const p=Qty.parse(text);
+  if(p.kind==="box")return rebalanceBoxes(list,p);
   const same=live(S.items).find(i=>i.list===list&&!i.done&&Qty.key(Qty.parse(i.text))===Qty.key(Qty.parse(text)));
   if(same){const t=Qty.add(same.text,text);if(t&&t!==same.text)touch("items",{...same,text:t});return}
   touch("items",{id:uid(),list,text,done:false,c:Date.now()});
 }
+// Boîtes d'un même produit : on additionne tout (1 grosse = 2 moyennes = 4 petites), puis une ligne par taille,
+// pour pouvoir cocher ou retirer une taille déjà en stock.
+function rebalanceBoxes(list,extra){
+  const k=Qty.key(extra||{kind:"box",name:""});
+  const olds=live(S.items).filter(i=>i.list===list&&!i.done&&Qty.key(Qty.parse(i.text))===k);
+  const total=olds.reduce((s,i)=>s+Qty.parse(i.text).n,extra&&extra.n?extra.n:0);
+  const name=(olds[0]?Qty.parse(olds[0].text).name:extra.name);
+  const lines=Qty.boxLines({n:total,name}),used=new Set();
+  for(const l of lines){
+    const o=olds.find(i=>!used.has(i.id)&&Qty.parse(i.text).size===l.size);
+    if(o){used.add(o.id);if(o.text!==l.text)touch("items",{...o,text:l.text})}
+    else touch("items",{id:uid(),list,text:l.text,done:false,c:Date.now()});
+  }
+  olds.filter(i=>!used.has(i.id)).forEach(i=>touch("items",{...i,deleted:true}));
+}
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v17";
+const BASE=4,VERSION="v18";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);

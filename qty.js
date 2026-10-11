@@ -23,7 +23,12 @@ function num(s){
 const stripDe=s=>s.trim().replace(/^(de\s+|des\s+|d['’]\s*)/i,"").trim();
 
 function parse(text){
-  const t=String(text||"").trim(),m=t.match(NUM);
+  const t=String(text||"").trim();
+  if(/\s\+\s/.test(t)){ // ancienne ligne combinée : on additionne les boîtes
+    const parts=t.split(/\s\+\s/).map(x=>parse(x)),last=parts[parts.length-1];
+    if(parts.every(x=>x.kind==="box"))return{n:parts.reduce((a,x)=>a+x.n,0),kind:"box",name:last.name};
+  }
+  const m=t.match(NUM);
   if(!m)return{n:null,kind:"none",name:t};
   const n=num(m[1]);let rest=t.slice(m[0].length),u;
   if(!(n>0))return{n:null,kind:"none",name:t};
@@ -31,7 +36,7 @@ function parse(text){
   if((u=rest.match(VOL))){const x=u[1].toLowerCase(),k=x.startsWith("ml")||x.startsWith("milli")?1:x.startsWith("cl")||x.startsWith("centi")?10:x==="dl"?100:1000;
     return{n:n*k,kind:"vol",name:stripDe(rest.slice(u[0].length))}}
   if((u=rest.match(BOXRE))){const size=(u[1]||u[2]||"").toLowerCase().replace(/s$/,"");const name=stripDe(rest.slice(u[0].length));
-    return BOX[size]?{n:n*BOX[size],kind:"box",name}:{n,kind:"boxany",name}}
+    return BOX[size]?{n:n*BOX[size],kind:"box",size,name}:{n,kind:"boxany",name}}
   return{n,kind:"count",name:rest.trim()};
 }
 
@@ -48,6 +53,7 @@ function format(p){
     return (g>=1000?fr(g/1000)+" kg":g+" g")+de(p.name)}
   if(p.kind==="vol"){const ml=Math.ceil(p.n);
     return (ml>=1000?fr(ml/1000)+" l":ml%10===0?ml/10+" cl":ml+" ml")+de(p.name)}
+  if(p.kind==="box"&&p.size){const c=Math.max(1,Math.ceil(p.n/BOX[p.size]-1e-9));return c+" "+plural(p.size,c)+" "+plural("boîte",c)+de(p.name)}
   if(p.kind==="box"){let s=Math.ceil(p.n-1e-9);const parts=[];
     for(const [adj,k] of [["grosse",4],["moyenne",2],["petite",1]]){const c=Math.floor(s/k);s-=c*k;if(c)parts.push(c+" "+plural(adj,c)+" "+plural("boîte",c))}
     return parts.join(" + ")+de(p.name)}
@@ -56,6 +62,10 @@ function format(p){
   return c+(p.name?" "+pluralFirst(p.name,c):"");
 }
 
+// Boîtes : total en petites boîtes → une ligne par taille (grosse, moyenne, petite).
+function boxLines(p){let s=Math.ceil(p.n-1e-9);const out=[];
+  for(const [size,k] of [["grosse",4],["moyenne",2],["petite",1]]){const c=Math.floor(s/k);s-=c*k;if(c)out.push({size,text:format({kind:"box",size,n:c*k,name:p.name})})}
+  return out}
 // Clé de cumul : même nature de quantité + même nom, sans casse, accents ni pluriel.
 const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]+/g," ")
   .split(/\s+/).filter(Boolean).map(w=>w.length>3?w.replace(/[sx]$/,""):w).join(" ");
@@ -73,9 +83,9 @@ function add(aText,bText){
 // Pas du − / + dans la liste.
 function step(text,dir){
   const p=parse(text);if(p.n==null)return null;
-  const s=p.kind==="mass"?(p.n<1000?50:100):p.kind==="vol"?(p.n<1000?50:250):1;
+  const s=p.kind==="mass"?(p.n<1000?50:100):p.kind==="vol"?(p.n<1000?50:250):p.kind==="box"&&p.size?BOX[p.size]:1;
   const n=Math.ceil(p.n)+dir*s;
   return n>=s||dir>0?format({...p,n:Math.max(n,s)}):null;
 }
-window.Qty={parse,format,key,buy,add,step};
+window.Qty={parse,format,key,buy,add,step,boxLines};
 })();
