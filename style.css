@@ -212,3 +212,4 @@ section.day:has(.slotw.past) .dh{opacity:.5}
 #hlist{margin-top:6px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}#hlist:empty{display:none}
 #hlist button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;font-size:16px;color:var(--fg)}
 #hlist button:last-child{border:0}#hlist p{margin:10px 12px}
+header:has(#cfg[style*="none"]) #status{margin-right:6px}
