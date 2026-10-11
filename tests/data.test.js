@@ -45,3 +45,23 @@ test("champ technique _s (date serveur) ignoré à la lecture", () => {
   const S = Data.cleanAll({ items: { a: { list: "lidl", text: "lait", ts: 1, _s: 123 } } });
   assert.equal("_s" in S.items.a, false);
 });
+
+test("2e plat : gardé au nettoyage et reconnu par sa clé", () => {
+  const S = Data.cleanAll({ meals: { "2026-10-18-s": { text: "Velouté de potiron", ts: 1 }, "2026-10-18-s2": { text: "Pâtes", servings: 1, ts: 1 } } });
+  assert.equal(S.meals["2026-10-18-s2"].servings, 1);
+  assert.equal(Data.isSecond("2026-10-18-s2"), true); assert.equal(Data.isSecond("2026-10-18-s"), false);
+});
+test("2e plat appris : 2 des 3 dernières soupes avaient un 2e plat", () => {
+  const m = (k, text, n) => [k, { text, servings: n || 4, ts: 1 }];
+  const S = Data.cleanAll({ meals: Object.fromEntries([
+    m("2026-09-20-s", "Soupe de légumes"), m("2026-09-20-s2", "Pâtes", 1),
+    m("2026-09-27-s", "Velouté de potiron"),
+    m("2026-10-04-s", "Minestrone"), m("2026-10-04-s2", "Quiche", 2),
+    m("2026-10-11-s", "Carbonara"), m("2026-10-11-s2", "Pizza", 1), // pas une soupe : ne compte pas
+  ]) });
+  assert.deepEqual(Data.companionFor(S, "Velouté de champignons", "2026-10-15"), { n: 2 }); // la dernière fois : 2 pers.
+  assert.equal(Data.companionFor(S, "Lasagnes", "2026-10-15"), null);
+  // une seule soupe sur les 3 dernières avec un 2e plat → rien
+  const S2 = Data.cleanAll({ meals: Object.fromEntries([m("2026-09-20-s", "Soupe"), m("2026-09-27-s", "Soupe"), m("2026-10-04-s", "Soupe"), m("2026-10-04-s2", "Pâtes", 1)]) });
+  assert.equal(Data.companionFor(S2, "Soupe", "2026-10-15"), null);
+});

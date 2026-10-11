@@ -51,6 +51,19 @@ function typeOf(name){
   for(const t of TYPES)for(const w of t.words){const m=n.match(new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? "));if(m&&m.index<at){at=m.index;best=t.id}}
   return best;
 }
+// 2e plat appris : parmi les 3 dernières fois où ce plat (ou ce type de plat) a été mangé, au moins 2 avaient
+// un 2e plat → on en prévoit un, avec le nombre de personnes de la dernière fois. Sinon null.
+function companionFor(S,name,today){
+  const t=typeOf(name),same=x=>t?typeOf(x)===t:plain(x).trim()===plain(name).trim(),past=[];
+  for(const [k,m] of Object.entries(S.meals||{})){
+    if(m.deleted||!m.text||/\d$/.test(k)||k.slice(0,10)>=today||!same(m.text))continue;
+    const s=(S.meals||{})[k+"2"];past.push({d:k.slice(0,10),n:s&&!s.deleted&&s.text?s.servings||1:0});
+  }
+  const last3=past.sort((a,b)=>b.d.localeCompare(a.d)).slice(0,3),withSide=last3.filter(x=>x.n);
+  return withSide.length>=2?{n:withSide[0].n}:null;
+}
+// Clés : « AAAA-MM-JJ-s » repas principal, « AAAA-MM-JJ-s2 » 2e plat du même repas.
+const isSecond=key=>/\d$/.test(key);
 // Dates « AAAA-MM-JJ » : jour de la semaine 1 (lundi) … 7 (dimanche), décalage, lundi de la semaine.
 const addDays=(ymd,n)=>new Date(Date.parse(ymd)+n*DAY).toISOString().slice(0,10);
 const weekday=ymd=>((new Date(Date.parse(ymd)).getUTCDay()+6)%7)+1;
@@ -195,7 +208,7 @@ function clean(k,id,r){
     const ad=r.added&&typeof r.added==="object"&&Array.isArray(r.added.items)?{n:int(r.added.n,1,30,4),
       items:r.added.items.slice(0,80).map(g=>({t:str(g&&g.t,200),store:okId(g&&g.store)?g.store:"auchan"})),
       ids:(Array.isArray(r.added.ids)?r.added.ids:[]).filter(okId).slice(0,120),b:int(r.added.b,1,30,4)}:null;
-    return{key:id,text:str(r.text,120),servings:int(r.servings,1,30,4),added:ad,ts,deleted};
+    return{key:id,text:str(r.text,120),servings:int(r.servings,1,30,4),added:ad,for:str(r.for,30)||null,ts,deleted};
   }
   if(k==="stores")return{id,last:(Array.isArray(r.last)?r.last:[]).filter(okId).slice(-3),def:okId(r.def)?r.def:null,ts,deleted};
   if(k==="habits")return (TYPE_IDS.includes(r.type)||okId(r.recipe))&&(r.slot==="m"||r.slot==="s")?{id,
@@ -236,5 +249,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,companionFor,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

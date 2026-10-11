@@ -213,6 +213,11 @@ function moveMeal(from){
     const to=$("#mvto").value,o=S.meals[to];
     touch("meals",{...m,key:to});
     touch("meals",o&&o.text?{...o,key:from}:{key:from,text:"",servings:m.servings||BASE});
+    const s2=S.meals[from+"2"],t2=S.meals[to+"2"],on=x=>x&&!x.deleted; // les 2e plats suivent leur repas
+    if(on(s2)||on(t2)){
+      touch("meals",on(s2)?{...s2,key:to+"2"}:{key:to+"2",text:"",deleted:true});
+      touch("meals",on(t2)?{...t2,key:from+"2"}:{key:from+"2",text:"",deleted:true});
+    }
     close();render();
     if(n===was)return;
     // nombre de personnes changé : mêmes règles que − / + sur le repas
@@ -251,7 +256,7 @@ function planRecipe(r){
       if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE))));
     }
     const n=+LS.defN||r.serves||BASE;
-    touch("meals",{key,text:r.name,servings:n});close();
+    touch("meals",{key,text:r.name,servings:n});applyCompanion(key);close();
     tab=LS.tab="menus";const d=new Date(key.slice(0,10)+"T12:00"),m=monday();LS.wk=(+LS.wk||0)+Math.floor((d-m)/(7*864e5)+1e-9);
     render();ingredientsDialog(r.name,key);
   };
@@ -321,6 +326,16 @@ function suggestDialog(){
   const others=rows.filter(r=>!Data.habitsFor(S,r.key).length).map(r=>[Math.random(),r]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
   for(const r of [...rows.filter(r=>Data.habitsFor(S,r.key).length),...others])pickFor(r,[]);
   const live_=()=>rows.filter(r=>r.sug&&!r.off);
+  // plat qui s'accompagne d'habitude d'un 2e plat (appris) : on le propose, d'un autre type, le plat principal ne change pas
+  const side=(r,skip)=>{
+    r.comp=r.sug?Data.companionFor(S,r.sug.name,today):null;if(!r.comp){r.side=null;return}
+    const taken=[r.sug.name,...rows.filter(x=>x!==r&&x.side).map(x=>x.side.name),...(skip||[])];
+    const fits=x=>Data.typeOf(x.name)!==Data.typeOf(r.sug.name);
+    // de préférence un plat pas encore prévu cette semaine ; sinon on accepte d'en reprendre un
+    r.side=Data.suggest(withProposals(r),today,12,taken,undefined,r.key+"2").find(fits)
+      ||Data.suggest(S,today,12,taken,undefined,r.key+"2").find(fits)||null;
+  };
+  for(const r of rows)side(r);
   if(!live_().length){alert("Aucune recette à suggérer pour l'instant : ajoutez des recettes dans ⚙︎ Réglages.");return}
   const label=k=>new Date(k.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric"})+(k.endsWith("-m")?" midi":" soir");
   const note=x=>(x.habit?typeById(x.habit).icon+" comme d'habitude · ":"")+(x.days==null?"jamais cuisiné":`il y a ${x.days} jours`);
@@ -328,7 +343,8 @@ function suggestDialog(){
     <div class="sugday">${esc(label(r.key))}</div>
     <div class="sugtop"><span class="t"><b>${esc(r.sug.name)}</b><br><small class="mut">${note(r.sug)}</small></span>
       <button type="button" class="pill" data-re="${i}" aria-label="Autre suggestion">↻</button><button type="button" class="x" data-rm="${i}" aria-label="Retirer">×</button></div>
-    <div class="stp"><button type="button" data-n="${i}" data-d="-1" aria-label="Moins">−</button><b>${r.n}</b><button type="button" data-n="${i}" data-d="1" aria-label="Plus">+</button><em>pers.</em></div></div>`;
+    <div class="stp"><button type="button" data-n="${i}" data-d="-1" aria-label="Moins">−</button><b>${r.n}</b><button type="button" data-n="${i}" data-d="1" aria-label="Plus">+</button><em>pers.</em></div>
+    ${r.comp?`<div class="side"><span class="t">➕ 2ᵉ plat : <b>${r.side?esc(r.side.name):"à choisir"}</b> <small class="mut">${r.comp.n} pers.</small></span><button type="button" class="pill" data-re2="${i}" aria-label="Autre 2e plat">↻</button></div>`:""}</div>`;
   const ov=document.createElement("div");ov.className="ov";
   const paint=()=>{ov.querySelector("#sugs").innerHTML=rows.map(rowH).join("")||`<div class="empty">Plus aucune suggestion</div>`;
     ov.querySelector("#ok").textContent=`Placer ${live_().length} plat${live_().length>1?"s":""}`};
@@ -341,18 +357,20 @@ function suggestDialog(){
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
   const seen=new Set(rows.filter(r=>r.sug).map(r=>r.sug.name));
   $("#sugs").addEventListener("click",e=>{
-    const re=e.target.closest("[data-re]"),rm=e.target.closest("[data-rm]"),nb=e.target.closest("[data-n]");
+    const re=e.target.closest("[data-re]"),rm=e.target.closest("[data-rm]"),nb=e.target.closest("[data-n]"),re2=e.target.closest("[data-re2]");
+    if(re2){const r=rows[+re2.dataset.re2],prev=r.side;side(r,prev?[prev.name]:[]);if(!r.side)r.side=prev;paint();return}
     if(re){const r=rows[+re.dataset.re];
       const prev=r.sug;pickFor(r,[...seen]);
       if(!r.sug){seen.clear();live_().forEach(x=>x!==r&&seen.add(x.sug.name));seen.add(prev.name);pickFor(r,[...seen])}
-      if(!r.sug)r.sug=prev;seen.add(r.sug.name)}
+      if(!r.sug)r.sug=prev;seen.add(r.sug.name);side(r)}
     if(rm)rows[+rm.dataset.rm].off=true;
     if(nb){const r=rows[+nb.dataset.n];r.n=Math.max(1,Math.min(30,r.n+ +nb.dataset.d))}
     if(re||rm||nb)paint();
   });
   $("#ok").onclick=()=>{
     const keep=live_();if(!keep.length){close();return}
-    for(const r of keep){touch("meals",{key:r.key,text:r.sug.name,servings:r.n});addMealIngredients(r.key)}
+    for(const r of keep){touch("meals",{key:r.key,text:r.sug.name,servings:r.n});addMealIngredients(r.key);
+      if(r.comp)addSecond(r.key,r.comp.n,r.side?r.side.name:"")}
     close();render();
   };
 }
@@ -377,6 +395,26 @@ const habitWhen=h=>"le "+h.days.map(d=>DAYS[d-1]).join(" ou ")+(h.slot==="m"?" m
 const typeById=id=>id==="recette"?{icon:"📖",label:"Recette"}:Data.TYPES.find(t=>t.id===id)||{icon:"🍽️",label:id};
 // libellé d'une habitude : la recette visée, sinon le type de plat
 const habitWhat=h=>h.recipe?{icon:"📖",label:(S.recipes[h.recipe]&&!S.recipes[h.recipe].deleted)?S.recipes[h.recipe].name:"Recette supprimée"}:typeById(h.type);
+// 2e plat d'un repas (clé du repas + « 2 ») : sans nom donné, on suggère un plat d'un autre type que le principal.
+// Le plat principal garde son nombre de personnes.
+function addSecond(key,n,name){
+  const k2=key+"2",main=S.meals[key],avoid=main&&Data.typeOf(main.text);
+  if(name===undefined){const c=Data.suggest(S,todayKey(),12,[main?main.text:""],undefined,k2).find(x=>!avoid||Data.typeOf(x.name)!==avoid);name=c?c.name:""}
+  touch("meals",{key:k2,text:name,servings:n||1});
+  if(name)addMealIngredients(k2);
+}
+// Retire le 2e plat d'un repas (et ses ingrédients), sauf s'il a déjà été acheté.
+function removeSecond(key){
+  const s=S.meals[key+"2"];if(!s||s.deleted||bought(s))return;
+  if(s.added)s.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,s.added.n/(s.added.b||BASE))));
+  touch("meals",{key:key+"2",text:"",deleted:true});
+}
+// Plat qui s'accompagne d'habitude d'un 2e plat (appris dans l'historique) : on l'ajoute tout seul.
+function applyCompanion(key){
+  const m=S.meals[key];if(!m||!m.text||Data.isSecond(key))return;
+  const s=S.meals[key+"2"];if(s&&!s.deleted)return;
+  const c=Data.companionFor(S,m.text,todayKey());if(c)addSecond(key,c.n);
+}
 function resizeMeal(m,n){
   if(!m.added||m.added.n===n)return{...m,servings:n};
   const ids=new Set(m.added.ids||[]);
@@ -385,7 +423,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v81.1";
+const BASE=4,VERSION="v82";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -399,15 +437,25 @@ function scaleText(t,f){
 const todayKey=()=>{const x=new Date();x.setHours(12,0,0,0);return x.toISOString().slice(0,10)};
 // Un créneau du planning. Jour passé : plus rien à compléter, le repas reste visible et déplaçable.
 function slotHtml(key,label,past){
-  const e=S.meals[key]||{},n=e.servings||BASE,b=bought(e);
+  const e=S.meals[key]||{},n=e.servings||BASE,b=bought(e),s2=S.meals[key+"2"],has2=!!(s2&&!s2.deleted);
   const lock=past?(e.text?'readonly title="Jour passé"':"disabled"):b?'readonly title="Ingrédients déjà achetés : déplacez le repas avec ⇄"':"";
   const right=past?"":!e.text?`<button class="pill bulb" data-bulb="${key}" aria-label="Suggestions">💡</button>`:!b?`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`:`<span class="lock" title="Ingrédients déjà achetés">🔒</span>`;
   const sub=!e.text?"":`<div class="sub">${
     past?`<span class="mut sm">${n} pers.${b?" · acheté":""}</span>`
     :b?`<div class="stp"><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers. · acheté</em></div>`
     :`<div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`
-  }<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`;
-  return `<div class="slotw ${past?"past":""}"><div class="slot"><span>${label}</span><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div>${sub}</div>`;
+  }${!past&&!has2?`<button class="pill add2" data-add2="${key}" aria-label="Ajouter un 2e plat" title="Ajouter un 2e plat">🍽️</button>`:""}<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`;
+  return `<div class="slotw ${past?"past":""}"><div class="slot"><span>${label}</span><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div>${sub}</div>${has2?secondHtml(key+"2",s2,past):""}`;
+}
+// 2e plat d'un repas (pour qui, plat, personnes, ingrédients) ; il se déplace avec le repas principal.
+function secondHtml(k2,e,past){
+  const n=e.servings||1,b=bought(e),who="+ 2ᵉ plat";
+  const lock=past||b?"readonly":"";
+  const right=past?"":b?`<span class="lock" title="Ingrédients déjà achetés">🔒</span>`
+    :(e.text?"":`<button class="pill bulb" data-bulb="${k2}" aria-label="Suggestions">💡</button>`)+`<button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`;
+  const sub=!e.text||past?"":`<div class="sub">${b?`<span class="mut sm">${n} pers. · acheté</span>`
+    :`<div class="stp"><button data-sm="${k2}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${k2}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${k2}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`}</div>`;
+  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span>${who}</span><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div>${sub}</div>`;
 }
 function renderMenus(){
   $("#title").innerHTML=`Menus <span class="hicon">${MENU_ICON}</span>`;
@@ -438,9 +486,10 @@ function renderMenus(){
     }
     const dropOld=()=>{if(o.added&&norm(o.text||"")!==norm(t))o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE))))};
     dropOld();
-    if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});render();return}
+    if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});if(!Data.isSecond(key))removeSecond(key);render();return}
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
-    touch("meals",{key,text:known?known.name:t,servings:o.servings||(+LS.defN||BASE)});render();ingredientsDialog(known?known.name:t,key);
+    touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.defN||BASE)});
+    applyCompanion(key);render();ingredientsDialog(known?known.name:t,key);
   };
   const clearSug=()=>document.querySelectorAll(".sug").forEach(x=>x.remove());
   document.querySelectorAll("[data-m]").forEach(el=>{
@@ -468,15 +517,18 @@ function renderMenus(){
     $(`[data-m="${b.dataset.bulb}"]`).tips();
   });
   document.querySelectorAll("[data-mv]").forEach(el=>el.onclick=()=>moveMeal(el.dataset.mv));
+  document.querySelectorAll("[data-add2]").forEach(el=>el.onclick=()=>{addSecond(el.dataset.add2,1);render()});
   document.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{
     const key=el.dataset.del,m=S.meals[key];
     if(bought(m)){alert(`Les ingrédients de « ${m.text} » ont déjà été achetés : ce repas ne peut pas être supprimé. Utilisez ⇄ pour le déplacer.`);return}
-    if(!confirm(`Supprimer « ${m.text} »${m.added?" et retirer ses ingrédients des listes":""} ?`))return;
+    if(m.text&&!confirm(`Supprimer « ${m.text} »${m.added?" et retirer ses ingrédients des listes":""} ?`))return;
     if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/(m.added.b||BASE))));
-    touch("meals",{key,text:"",servings:m.servings||BASE});render();
+    if(Data.isSecond(key))touch("meals",{key,text:"",deleted:true});
+    else{touch("meals",{key,text:"",servings:m.servings||BASE});removeSecond(key)}
+    render();
   });
   // − / + sur un repas : ouvre la fenêtre des ingrédients au nouveau nombre de personnes (rien n'est appliqué sans valider).
-  const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));LS.defN=n;
+  const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));if(!Data.isSecond(key))LS.defN=n;
     if(bought(m)&&d>0)extraDialog(key,n);
     else if(live(S.recipes).some(r=>r.name.toLowerCase()===m.text.toLowerCase()))ingredientsDialog(m.text,key,n);
     else{touch("meals",{...m,servings:n});render()}};
@@ -585,6 +637,7 @@ function renderSettings(){
   document.querySelectorAll("[data-hdel]").forEach(el=>el.onclick=e=>{e.stopPropagation();touch("habits",{...S.habits[el.dataset.hdel],state:"off"});render()});
   document.querySelectorAll("[data-hedit]").forEach(el=>el.onclick=()=>habitEditor(S.habits[el.dataset.hedit]));
   on("#newh","onclick",()=>habitEditor());
+
   // Forcer la mise à jour : vide le cache de l'app ET celui de Safari (qui garde les fichiers jusqu'à 10 min), puis recharge.
   on("#upd","onclick",async e=>{e.preventDefault();LS.updFrom=VERSION;e.target.textContent="Mise à jour…";
     try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k);
@@ -619,32 +672,38 @@ function renderSettings(){
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=e=>{if(!e.target.closest("[data-plan]"))recipeEditor(S.recipes[el.dataset.r])});
   document.querySelectorAll("[data-plan]").forEach(el=>el.onclick=()=>planRecipe(S.recipes[el.dataset.plan]));
 }
+// Champ de recherche d'un plat (types et recettes) ; renvoie une fonction qui donne le choix {type, recipe} ou null.
+function dishPicker(ov,initial){
+  const q=ov.querySelector(".pick input"),list=ov.querySelector(".pick .plist");
+  const fold=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const all=[...Data.TYPES.map(t=>({type:t.id,recipe:null,icon:t.icon,label:t.label,find:fold(t.label+" "+t.words.join(" "))})),
+    ...live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>({type:null,recipe:r.id,icon:"📖",label:r.name,find:fold(r.name)}))];
+  let sel=initial&&(initial.type||initial.recipe)?{type:initial.type||null,recipe:initial.recipe||null}:null;
+  if(sel)q.value=habitWhat(sel).icon+" "+habitWhat(sel).label;
+  const show=()=>{const v=fold(q.value.trim());
+    const hits=(v?all.filter(x=>x.find.includes(v)):all.filter(x=>x.type)).slice(0,8);
+    list.innerHTML=hits.map((x,i)=>`<button type="button" data-h="${i}">${x.icon} ${esc(x.label)}</button>`).join("")||`<p class="mut">Aucun plat ne correspond</p>`;
+    list.onclick=e=>{const b=e.target.closest("[data-h]");if(!b)return;const x=hits[+b.dataset.h];
+      sel={type:x.type,recipe:x.recipe};q.value=x.icon+" "+x.label;list.innerHTML=""}};
+  q.oninput=()=>{sel=null;show()};q.onfocus=()=>{if(!sel)show()};
+  return()=>sel;
+}
 function habitEditor(h){
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${h?"Modifier l'habitude":"Nouvelle habitude"}</h2>
    <p class="mut">Plusieurs jours cochés = l'un ou l'autre dans la semaine.</p>
    <div class="days">${DAYS.map((d,i)=>`<label><input type="checkbox" value="${i+1}" ${h&&h.days.includes(i+1)?"checked":""}><span>${d.slice(0,3)}</span></label>`).join("")}</div>
    <div class="serv"><span>Moment</span><select id="hslot"><option value="s">Soir</option><option value="m" ${h&&h.slot==="m"?"selected":""}>Midi</option></select></div>
-   <div class="serv"><span>Plat</span><div class="pick"><input type="text" id="hq" placeholder="Tapez : pâtes, soupe, une recette…" autocomplete="off" value="${h?esc(habitWhat(h).icon+" "+habitWhat(h).label):""}"><div id="hlist"></div></div></div>
+   <div class="serv"><span>Plat</span><div class="pick"><input type="text" id="hq" placeholder="Tapez : pâtes, soupe, une recette…" autocomplete="off"><div class="plist"></div></div></div>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">${h?"Enregistrer":"Ajouter"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
-  // recherche dans les types de plats et les recettes (pratique avec beaucoup de recettes)
-  const fold=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-  const all=[...Data.TYPES.map(t=>({type:t.id,recipe:null,icon:t.icon,label:t.label,find:fold(t.label+" "+t.words.join(" "))})),
-    ...live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>({type:null,recipe:r.id,icon:"📖",label:r.name,find:fold(r.name)}))];
-  let sel=h?{type:h.type,recipe:h.recipe}:null;
-  const show=()=>{const q=fold($("#hq").value.trim());
-    const hits=(q?all.filter(x=>x.find.includes(q)):all.filter(x=>x.type)).slice(0,8);
-    $("#hlist").innerHTML=hits.map((x,i)=>`<button type="button" data-h="${i}">${x.icon} ${esc(x.label)}</button>`).join("")||`<p class="mut">Aucun plat ne correspond</p>`;
-    $("#hlist").onclick=e=>{const b=e.target.closest("[data-h]");if(!b)return;const x=hits[+b.dataset.h];
-      sel={type:x.type,recipe:x.recipe};$("#hq").value=x.icon+" "+x.label;$("#hlist").innerHTML=""}};
-  $("#hq").oninput=()=>{sel=null;show()};$("#hq").onfocus=()=>{if(!sel)show()};
+  const pick=dishPicker(ov,h);
   $("#ok").onclick=()=>{
     const days=[...ov.querySelectorAll(".days input:checked")].map(x=>+x.value);
     if(!days.length){alert("Cochez au moins un jour.");return}
-    if(!sel){alert("Choisissez un plat dans la liste.");$("#hq").focus();return}
-    const what=sel;
+    const what=pick();
+    if(!what){alert("Choisissez un plat dans la liste.");$("#hq").focus();return}
     // modifiée à la main : elle redevient une habitude « à vous », et l'année se recompte
     touch("habits",{...(h||{}),id:h?h.id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,adj:null,state:"on",since:todayKey()});close();render();
   };
