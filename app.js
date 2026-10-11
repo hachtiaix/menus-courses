@@ -86,6 +86,26 @@ function renderList(id){
   $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off"><button class="btn">+</button></form>`+
    (items.length?`<div class="card">${items.map(i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done&&Qty.parse(i.text).n!=null?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`).join("")}</div>
    ${items.some(i=>i.done)?`<button class="btn sec" id="clr">Retirer les articles cochés</button>`:""}`:`<div class="empty">Liste vide</div>`);
+  // Suggestions : articles déjà saisis (toutes listes, même retirés) et ingrédients des recettes,
+  // dont le nom commence par ce qui est tapé ; les plus fréquents d'abord.
+  const nm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const known=()=>{const m=new Map();
+    const put=(t,ts)=>{const p=Qty.parse(t),k=Qty.key(p);if(!p.name)return;const e=m.get(k)||{n:0,ts:0};e.n++;if(ts>=e.ts){e.ts=ts;e.text=t;e.name=p.name}m.set(k,e)};
+    Object.values(S.items).forEach(i=>put(i.text,i.ts||0));
+    live(S.recipes).forEach(r=>r.ingredients.forEach(g=>put(g.t,0)));
+    return [...m.values()]};
+  const inp=$("#new"),form=$("#add");
+  const closeSug=()=>form.querySelectorAll(".sug").forEach(x=>x.remove());
+  inp.oninput=()=>{
+    closeSug();const q=nm(inp.value.trim());if(!q)return;
+    const hits=known().filter(e=>nm(e.name).startsWith(q)||nm(e.text).startsWith(q)).sort((a,b)=>b.n-a.n||b.ts-a.ts).slice(0,8);
+    if(!hits.length)return;
+    const box=document.createElement("div");box.className="sug";
+    box.innerHTML=hits.map(e=>`<button type="button" data-t="${esc(e.text)}">${esc(e.text)}</button>`).join("");
+    box.onpointerdown=ev=>{const b=ev.target.closest("button");if(!b)return;ev.preventDefault();addToList(id,b.dataset.t);inp.value="";closeSug();render();$("#new").focus()};
+    form.appendChild(box);
+  };
+  inp.onblur=()=>setTimeout(closeSug,150);
   $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){addToList(id,t);render();$("#new").focus()}};
   document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.q],t=Qty.step(i.text,+el.dataset.dir);if(t){touch("items",{...i,text:t});render()}});
   document.querySelectorAll("[data-e]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.e];if(i.done)return;const t=prompt("Modifier l'article :",i.text);if(t&&t.trim()&&t.trim()!==i.text){touch("items",{...i,text:t.trim().slice(0,200)});render()}});
@@ -113,7 +133,7 @@ function addBoxes(list,p,except){
   }
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v21";
+const BASE=4,VERSION="v22";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
