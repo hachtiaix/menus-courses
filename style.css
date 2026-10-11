@@ -288,3 +288,4 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 .card.fam.wait{background:#f3f1ea;border-color:#d8d2bf;color:#5c5540}
 @media(prefers-color-scheme:dark){.card.fam.wait{background:#33302a;color:#d8d2bf}}
 .card.fam.wait .btn.sec{padding:6px 12px;font-size:14px}
+.row .pill.imv{flex:none;width:32px;height:32px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;margin-left:2px}

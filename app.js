@@ -87,7 +87,7 @@ function renderList(id){
   else $("#title").textContent=S.lists[id].name;
   live(S.items).filter(i=>i.list===id&&!i.done&&/\s\+\s/.test(i.text)&&Qty.parse(i.text).kind==="box").forEach(i=>{touch("items",{...i,deleted:true});addBoxes(id,Qty.parse(i.text),i.id)});
   const items=live(S.items).filter(i=>i.list===id&&!i.archived).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
-  const row=i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`;
+  const row=i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span><button class="pill imv" data-imv="${i.id}" aria-label="Changer de liste">⇄</button>`:""}<button class="x" data-d="${i.id}">×</button></div>`;
   $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off"><button class="btn">+</button></form>`+
    (items.length?rayonOrder(id).map(r=>{const g=items.filter(i=>!i.done&&rayonOf(i.text)===r.id);
       return g.length?`<h3 class="ray">${r.icon} ${esc(r.label)}</h3><div class="card">${g.map(row).join("")}</div>`:""}).join("")+
@@ -116,6 +116,7 @@ function renderList(id){
   $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){addToList(id,t);render();$("#new").focus()}};
 
   document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.q],t=Qty.step(i.text,+el.dataset.dir);if(t){touch("items",{...i,text:t});render()}});
+  document.querySelectorAll("[data-imv]").forEach(el=>el.onclick=()=>moveItemDialog(S.items[el.dataset.imv]));
   document.querySelectorAll("[data-e]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.e];if(!i.done)itemEditor(i)});
   document.querySelectorAll("[data-c]").forEach(el=>el.onchange=()=>{const i=S.items[el.dataset.c];touch("items",{...i,done:el.checked});recordPurchase(i.text,i.list,el.checked);render()});
   document.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.d];touch("items",i.done?{...i,archived:true}:{...i,deleted:true});render()});
@@ -160,16 +161,28 @@ function itemEditor(i){
   $("#ok").onclick=()=>{
     const t=$("#it").value.trim().slice(0,200)||i.text,r=$("#ir").value;
     const l=$("#il").value;
-    if(l!==i.list&&S.lists[l]){touch("items",{...i,deleted:true});const nids=addToList(l,t); // changement de liste : cumulé avec l'article s'il y est déjà
-      // les repas qui l'avaient ajouté le suivent dans sa nouvelle liste (supprimer le repas le retirera bien de là)
-      const k=Qty.key(Qty.parse(i.text));
-      for(const m of live(S.meals))if(m.added&&m.added.ids.includes(i.id))touch("meals",{...m,added:{...m.added,
-        ids:[...new Set(m.added.ids.map(x=>x===i.id?nids[0]:x))],
-        items:m.added.items.map(g=>g.store===i.list&&Qty.key(Qty.parse(g.t))===k?{...g,store:l}:g)}})}
+    if(l!==i.list&&S.lists[l])moveItem(i,l,t);
     else if(t!==i.text)touch("items",{...i,text:t});
     if(r!==rayonOf(t)){const k=Rayons.keyOf(Qty.parse(t).name||t);touch("aisles",{id:k,rayon:r})}
     close();render();
   };
+}
+// Change un article de liste (cumulé avec le même article s'il y est déjà). Les repas qui l'avaient ajouté
+// le suivent dans sa nouvelle liste : supprimer le repas le retirera bien de là.
+function moveItem(i,l,t){
+  t=t||i.text;touch("items",{...i,deleted:true});const nids=addToList(l,t),k=Qty.key(Qty.parse(i.text));
+  for(const m of live(S.meals))if(m.added&&m.added.ids.includes(i.id))touch("meals",{...m,added:{...m.added,
+    ids:[...new Set(m.added.ids.map(x=>x===i.id?nids[0]:x))],
+    items:m.added.items.map(g=>g.store===i.list&&Qty.key(Qty.parse(g.t))===k?{...g,store:l}:g)}});
+}
+// ⇄ sur un article : choix de la liste où l'envoyer
+function moveItemDialog(i){
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Déplacer « ${esc(i.text)} »</h2><p class="mut">Vers la liste :</p>
+   <div class="acts" style="flex-direction:column;gap:8px">${live(S.lists).sort(listSort).filter(l=>l.id!==i.list).map(l=>`<button class="btn sec" data-to="${l.id}">${esc(l.name)}</button>`).join("")}
+   <button class="btn sec" id="no">Annuler</button></div></div>`;
+  document.body.appendChild(ov);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  ov.querySelectorAll("[data-to]").forEach(b=>b.onclick=()=>{moveItem(i,b.dataset.to);close();render();toast(`✓ Envoyé dans ${S.lists[b.dataset.to].name}`)});
 }
 // Magasin par défaut d'un article : fixé seulement après 3 achats consécutifs au même endroit,
 // et il change si les 3 derniers achats se font ailleurs.
@@ -439,7 +452,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v117";
+const BASE=4,VERSION="v118";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
