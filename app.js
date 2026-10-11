@@ -255,7 +255,7 @@ function resizeMeal(m,n){
   return{...m,servings:n,added:{...m.added,n,ids:[...ids]}};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v39";
+const BASE=4,VERSION="v40";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -275,7 +275,7 @@ function renderMenus(){
     const d=new Date(m);d.setDate(m.getDate()+n);const k=d.toISOString().slice(0,10);
     const wd=d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".","");
     h+=`<section class="day ${k===today?"today":""}"><div class="dh"><b>${wd}</b><small>${d.getDate()}</small></div><div class="slots">`+
-      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const key=k+"-"+s,e=S.meals[key]||{},n=e.servings||BASE;return `<div class="slotw"><div class="slot"><span>${l}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}">${e.text?`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`:""}</div>${e.text?`<div class="sub"><div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button><button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`:""}</div>`}).join("")+`</div></section>`;
+      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const key=k+"-"+s,e=S.meals[key]||{},n=e.servings||BASE;return `<div class="slotw"><div class="slot"><span>${l}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${bought(e)?"readonly title=\"Ingrédients déjà achetés : déplacez le repas avec ⇄\"":""}>${e.text&&!bought(e)?`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`:e.text?`<span class="lock" title="Ingrédients déjà achetés">🔒</span>`:""}</div>${e.text?`<div class="sub"><div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button><button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`:""}</div>`}).join("")+`</div></section>`;
   }
   $("#view").innerHTML=h;
   const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
