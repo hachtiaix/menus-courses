@@ -109,3 +109,6 @@ h2.sec small{text-transform:none;letter-spacing:0;font-weight:400}
 /* suggestions en surimpression : ne poussent plus le contenu */
 .slotw{position:relative}
 .sug{position:absolute;left:0;right:0;top:46px;z-index:5;margin-left:40px}
+
+.stp.sm{flex:none;padding:1px}.stp.sm button{width:30px;height:30px;font-size:18px}
+.row .t[data-e]{cursor:pointer}

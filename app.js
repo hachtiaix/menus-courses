@@ -7,7 +7,7 @@ function clean(k,id,r){
   if(!okId(id)||!r||typeof r!=="object")return null;
   const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;
   if(k==="lists")return{id,name:str(r.name,60)||id,ts,deleted};
-  if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,ts,deleted}:null;
+  if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,c:Number.isFinite(r.c)?r.c:ts,ts,deleted}:null;
   if(k==="meals")return{key:id,text:str(r.text,120),servings:Math.max(1,Math.min(30,parseInt(r.servings,10)||4)),ts,deleted};
   if(k==="recipes")return{id,name:str(r.name,120),ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80)
     .map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
@@ -81,17 +81,25 @@ function render(){
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function renderList(id){
   $("#title").textContent=S.lists[id].name;
-  const items=live(S.items).filter(i=>i.list===id).sort((a,b)=>a.done-b.done||a.ts-b.ts);
+  const items=live(S.items).filter(i=>i.list===id).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
   $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off"><button class="btn">+</button></form>`+
-   (items.length?`<div class="card">${items.map(i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t">${esc(i.text)}</span><button class="x" data-d="${i.id}">×</button></div>`).join("")}</div>
+   (items.length?`<div class="card">${items.map(i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done&&Qty.parse(i.text).n!=null?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`).join("")}</div>
    ${items.some(i=>i.done)?`<button class="btn sec" id="clr">Retirer les articles cochés</button>`:""}`:`<div class="empty">Liste vide</div>`);
-  $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){touch("items",{id:uid(),list:id,text:t,done:false});render();$("#new").focus()}};
+  $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){addToList(id,t);render();$("#new").focus()}};
+  document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.q],t=Qty.step(i.text,+el.dataset.dir);if(t){touch("items",{...i,text:t});render()}});
+  document.querySelectorAll("[data-e]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.e];if(i.done)return;const t=prompt("Modifier l'article :",i.text);if(t&&t.trim()&&t.trim()!==i.text){touch("items",{...i,text:t.trim().slice(0,200)});render()}});
   document.querySelectorAll("[data-c]").forEach(el=>el.onchange=()=>{const i=S.items[el.dataset.c];touch("items",{...i,done:el.checked});render()});
   document.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{touch("items",{...S.items[el.dataset.d],deleted:true});render()});
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
 }
+// Ajoute un article à une liste en cumulant avec un article identique non coché (« 1 oignon » + « 3 oignons » = « 4 oignons »).
+function addToList(list,text){
+  const same=live(S.items).find(i=>i.list===list&&!i.done&&Qty.key(Qty.parse(i.text))===Qty.key(Qty.parse(text)));
+  if(same){const t=Qty.add(same.text,text);if(t&&t!==same.text)touch("items",{...same,text:t});return}
+  touch("items",{id:uid(),list,text,done:false,c:Date.now()});
+}
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v16";
+const BASE=4,VERSION="v17";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -151,7 +159,7 @@ function ingredientsDialog(name,mealKey){
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   let n=(mealKey&&S.meals[mealKey]&&S.meals[mealKey].servings)||BASE;
   const ov=document.createElement("div");ov.className="ov";
-  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}"><input type="checkbox" checked><input type="text" class="ing" value="${esc(scaleText(i.t,n/BASE))}" data-shown="${esc(scaleText(i.t,n/BASE))}"><select>${opts(i.store||"auchan")}</select></div>`;
+  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}"><input type="checkbox" checked><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/BASE))}" data-shown="${esc(Qty.buy(i.t,n/BASE))}"><select>${opts(i.store||"auchan")}</select></div>`;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(name)}</h2>
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
    <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. Recette de base : ${BASE} personnes.</p>
@@ -165,7 +173,7 @@ function ingredientsDialog(name,mealKey){
   if(r){
     const setN=v=>{
       n=Math.max(1,Math.min(30,v));$("#nn").textContent=n;
-      ov.querySelectorAll(".ing-row").forEach(el=>{const i=el.querySelector(".ing");if(i.value===i.dataset.shown){i.value=i.dataset.shown=scaleText(el.dataset.base,n/BASE)}});
+      ov.querySelectorAll(".ing-row").forEach(el=>{const i=el.querySelector(".ing");if(i.value===i.dataset.shown){i.value=i.dataset.shown=Qty.buy(el.dataset.base,n/BASE)}});
     };
     $("#mn").onclick=()=>setN(n-1);$("#pl").onclick=()=>setN(n+1);
     $("#more").onclick=()=>{$("#ings").insertAdjacentHTML("beforeend",rowH({t:""}));$("#ings").lastChild.querySelector(".ing").focus()};
@@ -177,7 +185,7 @@ function ingredientsDialog(name,mealKey){
     }
     const rows=[...ov.querySelectorAll(".ing-row")].map(el=>{const i=el.querySelector(".ing"),edited=i.value!==i.dataset.shown;
       return{on:el.querySelector("[type=checkbox]").checked,shown:i.value.trim(),base:edited?scaleText(i.value.trim(),BASE/n):el.dataset.base,store:el.querySelector("select").value}}).filter(x=>x.shown);
-    rows.filter(x=>x.on).forEach(x=>touch("items",{id:uid(),list:x.store,text:x.shown,done:false}));
+    rows.filter(x=>x.on).forEach(x=>addToList(x.store,x.shown));
     touch("recipes",{...r,ingredients:rows.map(x=>({t:x.base,store:x.store}))});
     if(mealKey&&S.meals[mealKey])touch("meals",{...S.meals[mealKey],servings:n});
     close();render();
