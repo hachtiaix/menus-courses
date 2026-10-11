@@ -9,12 +9,13 @@ function clean(k,id,r){
   if(k==="lists")return{id,name:str(r.name,60)||id,ts,deleted};
   if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,c:Number.isFinite(r.c)?r.c:ts,ts,deleted}:null;
   if(k==="meals")return{key:id,text:str(r.text,120),servings:Math.max(1,Math.min(30,parseInt(r.servings,10)||4)),ts,deleted};
+  if(k==="aisles")return Rayons.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80)
     .map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
   return null;
 }
 function cleanAll(src){
-  const out={lists:{},items:{},meals:{},recipes:{}};
+  const out={lists:{},items:{},meals:{},recipes:{},aisles:{}};
   for(const k in out)if(src&&src[k]&&typeof src[k]==="object")for(const [id,r] of Object.entries(src[k])){const c=clean(k,id,r);if(c)out[k][id]=c}
   return out;
 }
@@ -83,8 +84,11 @@ function renderList(id){
   $("#title").textContent=S.lists[id].name;
   live(S.items).filter(i=>i.list===id&&!i.done&&/\s\+\s/.test(i.text)&&Qty.parse(i.text).kind==="box").forEach(i=>{touch("items",{...i,deleted:true});addBoxes(id,Qty.parse(i.text),i.id)});
   const items=live(S.items).filter(i=>i.list===id).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
+  const row=i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`;
   $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off"><button class="btn">+</button></form>`+
-   (items.length?`<div class="card">${items.map(i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`).join("")}</div>
+   (items.length?Rayons.list.map(r=>{const g=items.filter(i=>!i.done&&rayonOf(i.text)===r.id);
+      return g.length?`<h3 class="ray">${r.icon} ${esc(r.label)}</h3><div class="card">${g.map(row).join("")}</div>`:""}).join("")+
+    (items.some(i=>i.done)?`<h3 class="ray">✅ Dans le caddie</h3><div class="card">${items.filter(i=>i.done).map(row).join("")}</div>`:"")+`
    ${items.some(i=>i.done)?`<button class="btn sec" id="clr">Retirer les articles cochés</button>`:""}`:`<div class="empty">Liste vide</div>`);
   // Suggestions : articles déjà saisis (toutes listes, même retirés) et ingrédients des recettes,
   // dont le nom commence par ce qui est tapé ; les plus fréquents d'abord.
@@ -108,7 +112,7 @@ function renderList(id){
   inp.onblur=()=>setTimeout(closeSug,150);
   $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){addToList(id,t);render();$("#new").focus()}};
   document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.q],t=Qty.step(i.text,+el.dataset.dir);if(t){touch("items",{...i,text:t});render()}});
-  document.querySelectorAll("[data-e]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.e];if(i.done)return;const t=prompt("Modifier l'article :",i.text);if(t&&t.trim()&&t.trim()!==i.text){touch("items",{...i,text:t.trim().slice(0,200)});render()}});
+  document.querySelectorAll("[data-e]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.e];if(!i.done)itemEditor(i)});
   document.querySelectorAll("[data-c]").forEach(el=>el.onchange=()=>{const i=S.items[el.dataset.c];touch("items",{...i,done:el.checked});render()});
   document.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{touch("items",{...S.items[el.dataset.d],deleted:true});render()});
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
@@ -132,8 +136,26 @@ function addBoxes(list,p,except){
     else touch("items",{id:uid(),list,text:l.text,done:false,c:Date.now()});
   }
 }
+// Rayon d'un article : celui choisi une fois par l'utilisateur, sinon deviné d'après le nom.
+function rayonOf(text){const n=Qty.parse(text).name||text,k=Rayons.keyOf(n);return (S.aisles[k]&&!S.aisles[k].deleted&&S.aisles[k].rayon)||Rayons.guess(n)}
+function itemEditor(i){
+  const cur=rayonOf(i.text),ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Modifier l'article</h2>
+   <input type="text" id="it" value="${esc(i.text)}" style="width:100%;margin-bottom:10px">
+   <p class="mut">Rayon (retenu pour la prochaine fois)</p>
+   <select id="ir" style="width:100%">${Rayons.list.map(r=>`<option value="${r.id}" ${r.id===cur?"selected":""}>${r.icon} ${esc(r.label)}</option>`).join("")}</select>
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  $("#ok").onclick=()=>{
+    const t=$("#it").value.trim().slice(0,200)||i.text,r=$("#ir").value;
+    if(t!==i.text)touch("items",{...i,text:t});
+    if(r!==rayonOf(t)){const k=Rayons.keyOf(Qty.parse(t).name||t);touch("aisles",{id:k,rayon:r})}
+    close();render();
+  };
+}
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v24";
+const BASE=4,VERSION="v25";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
