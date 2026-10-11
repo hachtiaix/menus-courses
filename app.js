@@ -221,7 +221,7 @@ function moveMeal(from){
     close();render();
     if(n===was)return;
     // nombre de personnes changé : mêmes règles que − / + sur le repas
-    const moved=S.meals[to],hasRecipe=live(S.recipes).some(r=>r.name.toLowerCase()===moved.text.toLowerCase());
+    const moved=S.meals[to],hasRecipe=!!recipeOf(moved.text);
     if(bought(moved))extraDialog(to,n);
     else if(moved.added&&hasRecipe)ingredientsDialog(moved.text,to,n);
     else{touch("meals",{...moved,servings:n});render()}
@@ -263,7 +263,7 @@ function planRecipe(r){
 }
 // Repas déjà acheté pour prev.n personnes : on passe à n et on n'achète que la différence.
 function extraDialog(key,n){
-  const m=S.meals[key],prev=m.added,r=live(S.recipes).find(x=>x.name.toLowerCase()===m.text.toLowerCase());
+  const m=S.meals[key],prev=m.added,r=recipeOf(m.text);
   if(!r){touch("meals",{...m,servings:n});render();return}
   const B=r.serves||BASE,lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
@@ -301,7 +301,7 @@ function extraDialog(key,n){
 }
 // Ajoute d'un coup les ingrédients de la recette d'un repas (magasin habituel, cumul) et s'en souvient.
 function addMealIngredients(key){
-  const m=S.meals[key],r=m&&live(S.recipes).find(x=>x.name.toLowerCase()===m.text.toLowerCase());if(!r)return;
+  const m=S.meals[key],r=m&&recipeOf(m.text);if(!r)return;
   const B=r.serves||BASE,n=m.servings||BASE,ids=new Set(),items=[];
   for(const g of r.ingredients){const store=defaultStore(g.t,g.store);addToList(store,Qty.buy(g.t,n/B,B)).forEach(x=>ids.add(x));items.push({t:g.t,store})}
   touch("meals",{...S.meals[key],added:{n,items,ids:[...ids],b:B}});
@@ -415,6 +415,8 @@ function applyCompanion(key){
   const s=S.meals[key+"2"];if(s&&!s.deleted)return;
   const c=Data.companionFor(S,m.text,todayKey());if(c)addSecond(key,c.n);
 }
+// Recette d'un plat : une recette enregistrée, sinon une suite d'aliments (« viande rouge, haricots verts »).
+const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function resizeMeal(m,n){
   if(!m.added||m.added.n===n)return{...m,servings:n};
   const ids=new Set(m.added.ids||[]);
@@ -423,7 +425,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v83";
+const BASE=4,VERSION="v84";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -445,9 +447,13 @@ function slotHtml(key,label,past){
     :b?`<div class="stp"><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers. · acheté</em></div>`
     :`<div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`
   }${!past&&!has2?`<button class="pill add2" data-add2="${key}" aria-label="Ajouter un 2e plat" title="Ajouter un 2e plat">🍽️</button>`:""}<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`;
-  return `<div class="slotw ${past?"past":""}"><div class="slot"><span>${label}</span><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div>${sub}</div>${has2?secondHtml(key+"2",s2,past):""}`;
+  return `<div class="slotw ${past?"past":""}"><div class="slot"><span>${label}</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text)}</span>${right}</div>${sub}</div>${has2?secondHtml(key+"2",s2,past):""}`;
 }
 // 2e plat d'un repas (pour qui, plat, personnes, ingrédients) ; il se déplace avec le repas principal.
+// Suite d'aliments : étiquettes colorées par-dessus le champ (le texte réapparaît quand on le touche).
+const tagsHtml=text=>{const real=live(S.recipes).some(r=>r.name.toLowerCase()===String(text||"").toLowerCase());
+  const tags=!real&&text?Data.suiteTags(S,text):null;
+  return tags?`<span class="tags" aria-hidden="true">${tags.map(x=>`<i class="tag ${x.cat}">${esc(x.t.charAt(0).toUpperCase()+x.t.slice(1))}</i>`).join("")}</span>`:""};
 function secondHtml(k2,e,past){
   const n=e.servings||1,b=bought(e),who="+ 2ᵉ plat";
   const lock=past||b?"readonly":"";
@@ -455,7 +461,7 @@ function secondHtml(k2,e,past){
   const right=past?"":b?`<span class="mut sm">${n} p.</span><span class="lock" title="Ingrédients déjà achetés">🔒</span>`
     :e.text?`<span class="stp mini"><button data-sm="${k2}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${k2}" aria-label="Plus">+</button></span><button class="pill ing" data-i="${k2}" aria-label="Ingrédients" title="Ingrédients">🥕</button><button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`
     :`<button class="pill bulb" data-bulb="${k2}" aria-label="Suggestions">💡</button><button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`;
-  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span>${who}</span><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div></div>`;
+  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span>${who}</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text)}</span>${right}</div></div>`;
 }
 function renderMenus(){
   $("#title").innerHTML=`Menus <span class="hicon">${MENU_ICON}</span>`;
@@ -487,6 +493,7 @@ function renderMenus(){
     const dropOld=()=>{if(o.added&&norm(o.text||"")!==norm(t))o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)))};
     dropOld();
     if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});if(!Data.isSecond(key))removeSecond(key);render();return}
+    t=t.replace(/[\s,+]+$/,"");
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
     touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.defN||BASE)});
     applyCompanion(key);render();ingredientsDialog(known?known.name:t,key);
@@ -496,17 +503,24 @@ function renderMenus(){
     const showBox=hits=>{
       clearSug();if(!hits.length)return;
       const box=document.createElement("div");box.className="sug";
-      box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}">${x.icon} ${esc(x.t)}${x.note?` <small class="mut">${esc(x.note)}</small>`:""}</button>`).join("");
-      box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el.value=b.dataset.t;clearSug();commit(el,b.dataset.t)};
+      box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}" ${x.food?'data-food="1"':""}>${x.icon} ${esc(x.food?x.t.split(/[,+]/).pop().trim():x.t)}${x.note?` <small class="mut">${esc(x.note)}</small>`:""}</button>`).join("");
+      box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();
+        if(b.dataset.food){el.value=b.dataset.t+", ";clearSug();el.focus();return} // on enchaîne avec l'aliment suivant
+        el.value=b.dataset.t;clearSug();commit(el,b.dataset.t)};
       el.closest(".slotw").appendChild(box);
     };
     // créneau vide touché sans rien taper : les meilleures suggestions (saison, pas faites depuis un mois)
     el.tips=()=>{if(el.readOnly||el.disabled||el.value.trim())return;
       showBox(Data.suggest(S,todayKey(),5,[],undefined,el.dataset.m).map(x=>({t:x.name,icon:x.habit?typeById(x.habit).icon:"💡",note:x.days==null?"jamais fait":`il y a ${x.days} j`})))};
     el.oninput=()=>{
-      const q=norm(el.value.trim());if(!q){clearSug();return}
-      showBox(names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,6)
-        .map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"})));
+      const v=el.value,q=norm(v.trim());if(!q){clearSug();return}
+      // suite d'aliments en cours (après une virgule ou un +) : on propose seulement des aliments pour le dernier morceau
+      const cut=Math.max(v.lastIndexOf(","),v.lastIndexOf("+")),seg=norm(v.slice(cut+1).trim()),head=cut>=0?v.slice(0,cut+1).trimEnd()+" ":"";
+      const foods=seg?Data.FOODS.flatMap(f=>f.words.filter(w=>w.startsWith(seg)||w.includes(" "+seg)).slice(0,1).map(w=>({f,w}))).slice(0,4)
+        .map(({f})=>({t:head+(f.id==="legboite"?"Haricots verts":f.label),icon:f.icon,food:true})):[];
+      if(cut>=0){showBox(foods);return}
+      showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,5)
+        .map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"}))]);
     };
     el.onblur=()=>setTimeout(clearSug,150);
     el.onchange=()=>{if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
@@ -530,7 +544,7 @@ function renderMenus(){
   // − / + sur un repas : ouvre la fenêtre des ingrédients au nouveau nombre de personnes (rien n'est appliqué sans valider).
   const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));if(!Data.isSecond(key))LS.defN=n;
     if(bought(m)&&d>0)extraDialog(key,n);
-    else if(live(S.recipes).some(r=>r.name.toLowerCase()===m.text.toLowerCase()))ingredientsDialog(m.text,key,n);
+    else if(recipeOf(m.text))ingredientsDialog(m.text,key,n);
     else{touch("meals",{...m,servings:n});render()}};
   document.querySelectorAll("[data-sm]").forEach(el=>el.onclick=()=>step(el.dataset.sm,-1));
   document.querySelectorAll("[data-sp]").forEach(el=>el.onclick=()=>step(el.dataset.sp,1));
@@ -538,7 +552,7 @@ function renderMenus(){
   $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
 }
 function ingredientsDialog(name,mealKey,startN){
-  const r=live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase());
+  const r=recipeOf(name);
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   const B=(r&&r.serves)||BASE; // la recette est écrite pour B personnes
@@ -552,7 +566,7 @@ function ingredientsDialog(name,mealKey,startN){
    ${r&&meal&&meal.text&&!prev&&meal.ts<LEGACY_TS?`<p class="homewarn" style="margin:6px 0">⚠ Ce repas date d'avant le suivi des ajouts : vérifiez qu'il n'est pas déjà dans vos listes avant d'ajouter.</p>`:""}
    ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
-   <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. Recette pour ${B} personne${B>1?"s":""}.</p>
+   <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans ⚙︎ → Aliments.":`Recette pour ${B} personne${B>1?"s":""}.`}</p>
    <div id="ings" class="card">${r.ingredients.map(rowH).join("")}</div><button class="btn sec" id="more">+ Ingrédient</button>`
    :`<p class="mut">Nouvelle recette : un ingrédient par ligne, quantité en premier (ex. « 400 g de pâtes »).</p><div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${n}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div><textarea id="ta" rows="7" placeholder="400 g de pâtes&#10;200 g de lardons&#10;2 oeufs&#10;crème fraîche"></textarea>`}
    <div class="acts"><button class="btn sec" id="no">Ignorer</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour les listes":"Ajouter aux listes"}</button></div></div>`;
@@ -603,7 +617,7 @@ function ingredientsDialog(name,mealKey,startN){
     }
     // la recette ne change pas avec les quantités achetées ; seuls les ingrédients ajoutés (+ Ingrédient) s'y ajoutent
     const extra=rows.filter(x=>!x.orig).map(x=>({t:x.base,store:x.store}));
-    if(extra.length)touch("recipes",{...r,ingredients:[...r.ingredients,...extra]});
+    if(extra.length&&!r.virtual)touch("recipes",{...r,ingredients:[...r.ingredients,...extra]});
     if(meal)touch("meals",{...S.meals[mealKey],servings:n,added:{n,items:now,ids:[...ids],b:B}});
     close();render();
   };
@@ -611,7 +625,7 @@ function ingredientsDialog(name,mealKey,startN){
 $("#tabs").onclick=e=>{const t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t){tab=LS.tab=t;render();scrollTo(0,0)}};
 $("#cfg").onclick=()=>{stab="recettes";tab=LS.tab="settings";render();scrollTo(0,0)};
 let stab="recettes"; // onglet des réglages ; « Recettes » à chaque ouverture
-const STABS=[["recettes","Recettes"],["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
+const STABS=[["recettes","Recettes"],["aliments","Ingrédients"],["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
 function renderSettings(){
   $("#title").textContent="Réglages";
   const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
@@ -620,6 +634,10 @@ function renderSettings(){
   const body={
    recettes:`<div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${{ete:" · ☀️ été",hiver:" · ❄️ hiver"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`,
+   aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
+   ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, poissons, œufs"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.FOODS.filter(f=>f.cat===c).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+     const v=f.kind==="g"?q+" g":f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
+     return `<div class="row"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}</div>`}).join("")}</div>`).join("")}`,
    habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
    <div class="card">${hs.length?hs.map(h=>`<div class="row link" data-hedit="${h.id}"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}${h.adj?" · ajustée":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
    <button class="btn" id="newh" style="width:100%">+ Habitude</button>`,
@@ -637,6 +655,10 @@ function renderSettings(){
   document.querySelectorAll("[data-hdel]").forEach(el=>el.onclick=e=>{e.stopPropagation();touch("habits",{...S.habits[el.dataset.hdel],state:"off"});render()});
   document.querySelectorAll("[data-hedit]").forEach(el=>el.onclick=()=>habitEditor(S.habits[el.dataset.hedit]));
   on("#newh","onclick",()=>habitEditor());
+  // portion d'un aliment : ± 10 g (grammes) ou ± 1 / ± ¼ (à l'unité)
+  document.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.FOODS.find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+    const st=f.kind==="g"?10:cur<1||(cur===1&&+el.dataset.d<0)?0.25:1,q=Math.max(f.kind==="g"?10:0.25,Math.round((cur+st*el.dataset.d)*100)/100);
+    touch("foods",{id:f.id,q});render()});
 
   // Forcer la mise à jour : vide le cache de l'app ET celui de Safari (qui garde les fichiers jusqu'à 10 min), puis recharge.
   on("#upd","onclick",async e=>{e.preventDefault();LS.updFrom=VERSION;e.target.textContent="Mise à jour…";

@@ -247,3 +247,23 @@ header:has(#cfg[style*="none"]) #status{margin-right:6px}
 .slotw.second .pill.ing{width:26px;height:26px;font-size:12px}
 .slotw.second .x{width:18px}.slotw.second .slot{gap:4px}
 .slotw.second .slot .stp.mini{width:auto;font-size:inherit;color:inherit}
+.seg button{font-size:13px;padding:9px 1px}
+/* suite d'aliments en étiquettes + familles d'ingrédients */
+.tagwrap{position:relative;flex:1;min-width:0;display:flex}.tagwrap input{flex:1;min-width:0;width:100%}
+.tagwrap.has input:not(:focus){color:transparent}
+.tagwrap .tags{position:absolute;inset:0;display:flex;align-items:center;gap:4px;padding:0 8px;overflow:hidden;pointer-events:none}
+.tagwrap input:focus+.tags{display:none}
+.tag{font-style:normal;font-size:13px;line-height:1;padding:5px 9px;border-radius:13px;border:1px solid;white-space:nowrap}
+.tag.prot,.card.fam.prot{background:#fbe4e4;border-color:#e8a9a9;color:#a32d2d}
+.tag.fec,.card.fam.fec{background:#f6ecd8;border-color:#dfc390;color:#855a0b}
+.tag.leg,.card.fam.leg{background:#e3f3e6;border-color:#a6d4b0;color:#2f6d3e}
+.tag.autre{background:#eef0f3;border-color:#c9ced6;color:#3d4450}
+.card.fam{border:1px solid}.card.fam .row{border-color:rgba(0,0,0,.08)}
+h3.fam{font-size:14px;margin:14px 4px 6px}
+@media(prefers-color-scheme:dark){.tag.prot,.card.fam.prot{background:#4a2020;color:#f3b3b3}.tag.fec,.card.fam.fec{background:#45371c;color:#ecd29c}.tag.leg,.card.fam.leg{background:#1f3a26;color:#a9dcb5}.tag.autre{background:#2c3038;color:#c9ced6}}
+.slot span.tagwrap,.slot span.tags{width:auto;color:inherit;font-size:inherit}
+.slot .tag{text-transform:none;letter-spacing:0;font-weight:500;width:auto;font-size:13px;padding:4px 8px}
+.tagwrap.has:not(:focus-within) .tags{position:static;flex-wrap:wrap;min-height:40px;padding:5px 6px;box-sizing:border-box;border:1px solid var(--line,#d9d9d9);border-radius:10px;background:var(--card,#fff);flex:1}
+.tagwrap.has:not(:focus-within) input{position:absolute;inset:0;opacity:0}
+.tagwrap.has:not(:focus-within) .tags{min-width:0;width:100%}
+.slot span.tagwrap{flex:1 1 0}

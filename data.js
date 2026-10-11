@@ -1,7 +1,7 @@
 // Données de l'app : nettoyage de ce qui arrive de l'extérieur, fusion et purge.
 // Sans accès au DOM, pour pouvoir être testé (tests/data.test.js).
 (function(root){
-const KINDS=["lists","items","meals","recipes","aisles","stores","habits"];
+const KINDS=["lists","items","meals","recipes","aisles","stores","habits","foods"];
 const ID=/^[\w-]{1,64}$/, okId=id=>typeof id==="string"&&ID.test(id)&&id!=="__proto__";
 const str=(v,n)=>typeof v==="string"?v.slice(0,n):"";
 const int=(v,min,max,def)=>Math.max(min,Math.min(max,parseInt(v,10)||def));
@@ -62,6 +62,66 @@ function companionFor(S,name,today){
   const last3=past.sort((a,b)=>b.d.localeCompare(a.d)).slice(0,3),withSide=last3.filter(x=>x.n);
   if(withSide.length>=2)return{n:withSide[0].n};
   return t==="soupe"?{n:1}:null; // une soupe est toujours proposée avec un 2e plat
+}
+// Aliments de base : portion par personne (q, en g ou en unités), rayon/magasin par défaut.
+// kind "g" : grammes ; "n" : à l'unité ; "box" : légumes en boîte (petite 1 pers., moyenne 2, grande 4) ; "text" : ligne fixe.
+const FOODS=[
+  {id:"viande",icon:"🥩",cat:"prot",label:"Viande rouge",words:["viande rouge","viande","steak","boeuf","bavette","entrecote","roti de boeuf"],kind:"g",q:150,store:"boucherie"},
+  {id:"hache",icon:"🥩",cat:"prot",label:"Steak haché",words:["steak hache","viande hachee","hache"],kind:"n",q:1,store:"boucherie"},
+  {id:"poulet",icon:"🍗",cat:"prot",label:"Poulet",words:["poulet","blanc de poulet","escalope de poulet"],kind:"g",q:150,store:"boucherie"},
+  {id:"dinde",icon:"🦃",cat:"prot",label:"Dinde",words:["dinde","escalope de dinde"],kind:"g",q:150,store:"boucherie"},
+  {id:"veau",icon:"🐄",cat:"prot",label:"Veau",words:["veau","escalope de veau","blanquette"],kind:"g",q:150,store:"boucherie"},
+  {id:"porc",icon:"🐖",cat:"prot",label:"Porc",words:["porc","cote de porc","filet mignon"],kind:"g",q:150,store:"boucherie"},
+  {id:"saucisse",icon:"🌭",cat:"prot",label:"Saucisses",words:["saucisse","chipolata","merguez"],kind:"n",q:2,store:"boucherie"},
+  {id:"poisson",icon:"🐟",cat:"prot",label:"Poisson",words:["poisson","saumon","cabillaud","colin","lieu","merlu"],kind:"g",q:150,store:"auchan"},
+  {id:"pdt-surg",icon:"🍟",cat:"fec",label:"Pommes de terre surgelées",words:["pdt surgele","pdt surgelee","pomme de terre surgele","pomme de terre surgelee","pommes de terre surgelee","frite","potatoes"],kind:"g",q:200,store:"auchan"},
+  {id:"pdt",icon:"🥔",cat:"fec",label:"Pommes de terre",words:["pdt","pomme de terre","patate"],kind:"g",q:250,store:"auchan"},
+  {id:"pates",icon:"🍝",cat:"fec",label:"Pâtes",words:["pate","spaghetti","tagliatelle","penne","coquillette"],kind:"g",q:100,store:"auchan"},
+  {id:"riz",icon:"🍚",cat:"fec",label:"Riz",words:["riz"],kind:"g",q:80,store:"auchan"},
+  {id:"semoule",icon:"🌾",cat:"fec",label:"Semoule",words:["semoule"],kind:"g",q:80,store:"auchan"},
+  {id:"lentilles",icon:"🫘",cat:"fec",label:"Lentilles",words:["lentille"],kind:"g",q:70,store:"auchan"},
+  {id:"legboite",icon:"🥫",cat:"leg",label:"Haricots verts, petits pois, flageolets (boîte)",words:["haricot vert","petit pois","flageolet"],kind:"box",store:"auchan"},
+  {id:"legsurg",icon:"🥦",cat:"leg",label:"Légumes surgelés",words:["haricot vert surgele","legume surgele","legumes surgelee","epinard"],kind:"g",q:150,store:"auchan"},
+  {id:"soupe",icon:"🍲",cat:"leg",label:"Soupe",words:["soupe","veloute","potage"],kind:"text",line:"légumes pour soupe (à choisir)",store:"fermiers"},
+  {id:"tomate",icon:"🍅",cat:"leg",label:"Tomates",words:["tomate"],kind:"n",q:1,store:"auchan"},
+  {id:"carotte",icon:"🥕",cat:"leg",label:"Carottes",words:["carotte"],kind:"g",q:100,store:"auchan"},
+  {id:"courgette",icon:"🥒",cat:"leg",label:"Courgettes",words:["courgette"],kind:"n",q:0.5,store:"auchan"},
+  {id:"concombre",icon:"🥒",cat:"leg",label:"Concombre",words:["concombre"],kind:"n",q:0.25,store:"auchan"},
+  {id:"poivron",icon:"🫑",cat:"leg",label:"Poivrons",words:["poivron"],kind:"n",q:0.5,store:"auchan"},
+  {id:"aubergine",icon:"🍆",cat:"leg",label:"Aubergines",words:["aubergine"],kind:"n",q:0.5,store:"auchan"},
+  {id:"champignon",icon:"🍄",cat:"leg",label:"Champignons",words:["champignon"],kind:"g",q:100,store:"auchan"},
+  {id:"brocoli",icon:"🥦",cat:"leg",label:"Brocoli",words:["brocoli"],kind:"g",q:150,store:"auchan"},
+  {id:"avocat",icon:"🥑",cat:"leg",label:"Avocats",words:["avocat"],kind:"n",q:0.5,store:"auchan"},
+  {id:"salade",icon:"🥬",cat:"leg",label:"Salade",words:["salade verte","salade"],kind:"n",q:0.25,store:"auchan"},
+  {id:"oeufs",icon:"🥚",cat:"prot",label:"Œufs",words:["oeuf","omelette"],kind:"n",q:2,store:"auchan"},
+];
+// Aliment reconnu dans un morceau de texte : l'expression la plus longue qui correspond.
+// exact : le texte entier doit être l'aliment (« Soupe » oui, « Pommes de terre vache qui rit » non).
+function foodFor(name,exact){
+  const n=words(name);let best=null,len=0;
+  for(const f of FOODS)for(const w of f.words){const re=" "+w.replace(/ /g,"[sx]? ")+"[sx]? ";
+    if(w.length>len&&new RegExp(exact?"^"+re+"$":re).test(n)){best=f;len=w.length}}
+  return best;
+}
+// Ingrédient « pour 1 personne » d'un aliment (portion réglée dans S.foods, sinon par défaut).
+function foodLine(S,f,name){
+  const q=(S.foods&&S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+  const nm=name.trim().replace(/^(\p{Lu})(?=\p{Ll})/u,c=>c.toLowerCase()); // « Poulet » → « poulet », « PDT » inchangé
+  if(f.kind==="g")return q+" g de "+nm;
+  if(f.kind==="n")return String(q).replace(".",",")+" "+nm;
+  if(f.kind==="text")return f.line;
+  return nm; // boîte : comptée par personne par Qty.buy
+}
+// Morceaux d'une suite d'aliments avec leur famille (affichage en étiquettes), ou null si ce n'est pas une suite.
+function suiteTags(S,text){
+  if(!suite(S,text))return null;
+  return String(text).split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean).map(p=>{const f=foodFor(p);return{t:p,cat:f?f.cat:"autre"}});
+}
+// Suite d'aliments (« viande rouge, haricots verts, PDT surgelés ») → recette virtuelle pour 1 personne, ou null.
+function suite(S,text){
+  const parts=String(text||"").split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
+  if(!parts.length||(parts.length===1&&!foodFor(parts[0],true)))return null;
+  return{name:text,serves:1,virtual:true,ingredients:parts.map(p=>{const f=foodFor(p);return{t:f?foodLine(S,f,p):p,store:f?f.store:"auchan"}})};
 }
 // Clés : « AAAA-MM-JJ-s » repas principal, « AAAA-MM-JJ-s2 » 2e plat du même repas.
 const isSecond=key=>/\d$/.test(key);
@@ -218,6 +278,7 @@ function clean(k,id,r){
     state:r.state==="off"?"off":"on",auto:r.auto===true,
     last:/^\d{4}-\d{2}-\d{2}$/.test(r.last)?r.last:null,since:/^\d{4}-\d{2}-\d{2}$/.test(r.since)?r.since:null,
     adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,ts,deleted}:null;
+  if(k==="foods")return FOODS.some(f=>f.id===id)?{id,q:Math.max(1,Math.min(2000,+r.q||0))||null,ts,deleted}:null;
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
@@ -250,5 +311,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,companionFor,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,companionFor,FOODS,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

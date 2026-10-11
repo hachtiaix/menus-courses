@@ -57,7 +57,7 @@ begin
   if pg_column_size(p_data) > 1000000 then raise exception 'donnees trop volumineuses'; end if;
   select data into cur from households where code = p_code and length(p_code) >= 10 for update;
   if not found then raise exception 'code inconnu'; end if;
-  foreach k in array array['lists', 'items', 'meals', 'recipes', 'aisles', 'stores', 'habits'] loop
+  foreach k in array array['lists', 'items', 'meals', 'recipes', 'aisles', 'stores', 'habits', 'foods'] loop
     res := res || jsonb_build_object(k, prune_kind(k, merge_kind(cur->k, stamp_kind(p_data->k, now_ms))));
   end loop;
   update households set data = res, updated_at = now() where code = p_code;

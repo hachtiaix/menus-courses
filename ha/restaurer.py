@@ -18,7 +18,7 @@ import urllib.request
 DIR = pathlib.Path(__file__).resolve().parent
 API = "https://qazrxepqfdmbtxyfeesg.supabase.co/rest/v1/rpc/"
 KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhenJ4ZXBxZmRtYnR4eWZlZXNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2NTQ0MjcsImV4cCI6MjEwNzIzMDQyN30.fmJhXiHZ8-ZVZk4Xi-w67dRM9vaY30yT8d1JySnScvI"
-KINDS = ("lists", "items", "meals", "recipes", "aisles", "stores", "habits")
+KINDS = ("lists", "items", "meals", "recipes", "aisles", "stores", "habits", "foods")
 
 
 def call(fn, body):
