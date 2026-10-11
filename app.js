@@ -199,10 +199,8 @@ function removeFromList(list,text){
 const bought=m=>!!(m&&m.added&&(m.added.ids||[]).some(id=>S.items[id]&&S.items[id].done));
 // Déplace un repas (avec ses ingrédients déjà ajoutés) ; si la place est prise, les deux repas s'échangent.
 function moveMeal(from){
-  const m=S.meals[from],today=new Date();today.setHours(12);
-  const slots=[];for(let d=-7;d<=28;d++){const x=new Date(today);x.setDate(today.getDate()+d);const k=x.toISOString().slice(0,10);
-    for(const [s,l] of [["m","midi"],["s","soir"]]){const key=k+"-"+s;if(key===from)continue;const o=S.meals[key];
-      slots.push(`<option value="${key}" ${d===1&&s===from.slice(-1)?"selected":""}>${x.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})} ${l}${o&&o.text?" — "+esc(o.text)+" (échange)":""}</option>`)}}
+  const m=S.meals[from],nx=new Date(from.slice(0,10)+"T12:00");nx.setDate(nx.getDate()+1);
+  const slots=[slotOptions(from,nx.toISOString().slice(0,10)+"-"+from.slice(-1)," (échange)")];
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Déplacer « ${esc(m.text)} »</h2>
    <select id="mvto" style="width:100%">${slots.join("")}</select>
@@ -216,6 +214,40 @@ function moveMeal(from){
     close();render();
   };
 }
+// Créneaux proposés (d'une semaine avant à 4 semaines après) ; les créneaux occupés sont signalés.
+function slotOptions(exclude,selected,busyLabel){
+  const today=new Date();today.setHours(12);const out=[];
+  for(let d=-7;d<=28;d++){const x=new Date(today);x.setDate(today.getDate()+d);const k=x.toISOString().slice(0,10);
+    for(const [s,l] of [["m","midi"],["s","soir"]]){const key=k+"-"+s;if(key===exclude)continue;const o=S.meals[key];
+      out.push(`<option value="${key}" ${key===selected?"selected":""}>${x.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})} ${l}${o&&o.text?" — "+esc(o.text)+busyLabel:""}</option>`)}}
+  return out.join("");
+}
+// Prochain créneau libre à partir d'aujourd'hui.
+function nextFreeSlot(){const t=new Date();t.setHours(12);
+  for(let d=0;d<=28;d++){const x=new Date(t);x.setDate(t.getDate()+d);const k=x.toISOString().slice(0,10);
+    for(const s of ["m","s"]){const o=S.meals[k+"-"+s];if(!o||!o.text)return k+"-"+s}}
+  return t.toISOString().slice(0,10)+"-s"}
+// « + » sur une recette : on choisit le jour, le repas est créé puis la fenêtre des ingrédients s'ouvre.
+function planRecipe(r){
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Ajouter « ${esc(r.name)} » aux menus</h2>
+   <select id="plto" style="width:100%">${slotOptions(null,nextFreeSlot()," (remplace)")}</select>
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  $("#ok").onclick=()=>{
+    const key=$("#plto").value,o=S.meals[key];
+    if(o&&o.text){
+      if(bought(o)){alert(`Les ingrédients de « ${o.text} » ont déjà été achetés : choisissez un autre créneau.`);return}
+      if(!confirm(`Remplacer « ${o.text} » ?`))return;
+      if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE))));
+    }
+    const n=+LS.defN||r.serves||BASE;
+    touch("meals",{key,text:r.name,servings:n});close();
+    tab=LS.tab="menus";const d=new Date(key.slice(0,10)+"T12:00"),m=monday();LS.wk=(+LS.wk||0)+Math.floor((d-m)/(7*864e5)+1e-9);
+    render();ingredientsDialog(r.name,key);
+  };
+}
 function resizeMeal(m,n){
   if(!m.added||m.added.n===n)return{...m,servings:n};
   const ids=new Set(m.added.ids||[]);
@@ -223,7 +255,7 @@ function resizeMeal(m,n){
   return{...m,servings:n,added:{...m.added,n,ids:[...ids]}};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v38";
+const BASE=4,VERSION="v39";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -377,7 +409,7 @@ function renderSettings(){
    ${status==="ok"?`<div class="row"><span class="t">Changer le code du foyer<br><small class="mut">Les autres appareils devront saisir le nouveau</small></span><button class="btn sec" id="rencode">Changer</button></div>`:""}</div>
    ${status==="unk"?`<p class="warn">Ce code ne correspond à aucun foyer. Vérifiez-le (majuscules, espaces) ou demandez-le à un autre membre du foyer.</p>`:""}
    <h2 class="sec">Recettes</h2>
-   <div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
+   <div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>
    <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`;
   $("#upd").onclick=async e=>{e.preventDefault();try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(_){}location.reload()};
@@ -402,7 +434,8 @@ function renderSettings(){
     alert(e.message==="code deja utilise"?"Ce code est déjà pris, choisissez-en un autre.":"Impossible de changer le code pour l'instant (hors ligne ?).");
   };
   $("#newr").onclick=()=>recipeEditor(null);
-  document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>recipeEditor(S.recipes[el.dataset.r]));
+  document.querySelectorAll("[data-r]").forEach(el=>el.onclick=e=>{if(!e.target.closest("[data-plan]"))recipeEditor(S.recipes[el.dataset.r])});
+  document.querySelectorAll("[data-plan]").forEach(el=>el.onclick=()=>planRecipe(S.recipes[el.dataset.plan]));
 }
 function recipeEditor(r){
   const lists=live(S.lists).sort(listSort);
