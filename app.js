@@ -108,11 +108,13 @@ function renderList(id){
     if(!hits.length)return;
     const box=document.createElement("div");box.className="sug";
     box.innerHTML=hits.map(e=>`<button type="button" data-t="${esc(e.text)}">${esc(e.text)}</button>`).join("");
-    box.onpointerdown=ev=>{const b=ev.target.closest("button");if(!b)return;ev.preventDefault();addToList(id,b.dataset.t);inp.value="";closeSug();render();$("#new").focus()};
+    box.onpointerdown=ev=>{const b=ev.target.closest("button");if(!b)return;ev.preventDefault();addToList(id,b.dataset.t);inp.value="";closeSug();render();$("#new").focus();scrollTo(0,0)};
     form.appendChild(box);
   };
   inp.onblur=()=>setTimeout(closeSug,150);
-  $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){addToList(id,t);render();$("#new").focus()}};
+  $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){addToList(id,t);render();$("#new").focus();scrollTo(0,0)}};
+  // iPhone : le clavier fait descendre la page ; on remonte pour voir le champ et ce qu'on tape
+  inp.addEventListener("focus",()=>{scrollTo(0,0);setTimeout(()=>scrollTo(0,0),350)});
   document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.q],t=Qty.step(i.text,+el.dataset.dir);if(t){touch("items",{...i,text:t});render()}});
   document.querySelectorAll("[data-e]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.e];if(!i.done)itemEditor(i)});
   document.querySelectorAll("[data-c]").forEach(el=>el.onchange=()=>{const i=S.items[el.dataset.c];touch("items",{...i,done:el.checked});recordPurchase(i.text,i.list,el.checked);render()});
@@ -428,7 +430,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v107";
+const BASE=4,VERSION="v108";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
