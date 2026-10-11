@@ -273,7 +273,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v59";
+const BASE=4,VERSION="v60";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -288,14 +288,14 @@ const todayKey=()=>{const x=new Date();x.setHours(12,0,0,0);return x.toISOString
 // Un créneau du planning. Jour passé : plus rien à compléter, le repas reste visible et déplaçable.
 function slotHtml(key,label,past){
   const e=S.meals[key]||{},n=e.servings||BASE,b=bought(e);
-  const lock=past?(e.text?'readonly title="Jour passé"':'disabled placeholder="—"'):b?'readonly title="Ingrédients déjà achetés : déplacez le repas avec ⇄"':"";
+  const lock=past?(e.text?'readonly title="Jour passé"':"disabled"):b?'readonly title="Ingrédients déjà achetés : déplacez le repas avec ⇄"':"";
   const right=past||!e.text?"":!b?`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`:`<span class="lock" title="Ingrédients déjà achetés">🔒</span>`;
   const sub=!e.text?"":`<div class="sub">${
     past?`<span class="mut sm">${n} pers.${b?" · acheté":""}</span>`
     :b?`<div class="stp"><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers. · acheté</em></div>`
     :`<div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`
   }<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`;
-  return `<div class="slotw ${past?"past":""}"><div class="slot"><span>${label}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div>${sub}</div>`;
+  return `<div class="slotw ${past?"past":""}"><div class="slot"><span>${label}</span><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${right}</div>${sub}</div>`;
 }
 function renderMenus(){
   $("#title").innerHTML=`Menus <span class="hicon">${MENU_ICON}</span>`;
