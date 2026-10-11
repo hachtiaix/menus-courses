@@ -180,17 +180,29 @@ const bought=m=>!!(m&&m.added&&(m.added.ids||[]).some(id=>S.items[id]&&S.items[i
 function moveMeal(from){
   const m=S.meals[from],nx=new Date(from.slice(0,10)+"T12:00");nx.setDate(nx.getDate()+1);
   const slots=[slotOptions(from,nx.toISOString().slice(0,10)+"-"+from.slice(-1)," (échange)")];
+  const was=m.servings||BASE,min=bought(m)?was:1; // ingrédients achetés : on ne peut qu'augmenter
+  let n=was;
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Déplacer « ${esc(m.text)} »</h2>
    <select id="mvto" style="width:100%">${slots.join("")}</select>
+   <div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
+   ${bought(m)?`<p class="mut">Ingrédients déjà achetés pour ${was} : on peut seulement augmenter, la différence sera ajoutée aux listes.</p>`:""}
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Déplacer</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  const setN=v=>{n=Math.max(min,Math.min(30,v));$("#nn").textContent=n};
+  $("#mn").onclick=()=>setN(n-1);$("#pl").onclick=()=>setN(n+1);
   $("#ok").onclick=()=>{
     const to=$("#mvto").value,o=S.meals[to];
     touch("meals",{...m,key:to});
     touch("meals",o&&o.text?{...o,key:from}:{key:from,text:"",servings:m.servings||BASE});
     close();render();
+    if(n===was)return;
+    // nombre de personnes changé : mêmes règles que − / + sur le repas
+    const moved=S.meals[to],hasRecipe=live(S.recipes).some(r=>r.name.toLowerCase()===moved.text.toLowerCase());
+    if(bought(moved))extraDialog(to,n);
+    else if(moved.added&&hasRecipe)ingredientsDialog(moved.text,to,n);
+    else{touch("meals",{...moved,servings:n});render()}
   };
 }
 // Créneaux proposés (d'aujourd'hui à 4 semaines) : jamais un jour passé ; les créneaux occupés sont signalés.
@@ -273,7 +285,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v60";
+const BASE=4,VERSION="v61";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
