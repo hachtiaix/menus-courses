@@ -120,6 +120,13 @@ function addToList(list,text){
   const same=live(S.items).find(i=>i.list===list&&!i.done&&Qty.key(Qty.parse(i.text))===Qty.key(Qty.parse(text)));
   if(same){const t=Qty.add(same.text,text);if(t&&t!==same.text)touch("items",{...same,text:t});return}
   touch("items",{id:uid(),list,text,done:false,c:Date.now()});
+  if(Qty.parse(text).n==null)setTimeout(defaultQty,10500);
+}
+// Article sans quantité depuis plus de 10 s : on met 1 (« lait » → « 1 lait »).
+function defaultQty(){
+  let n=0;
+  live(S.items).forEach(i=>{if(!i.done&&Date.now()-(i.c||i.ts)>=10000&&Qty.parse(i.text).n==null){touch("items",{...i,text:"1 "+i.text});n++}});
+  if(n&&tab!=="menus"&&tab!=="settings")safeRender();
 }
 // Boîtes : la quantité ajoutée (une recette) est répartie par taille (1 grosse = 2 moyennes = 4 petites),
 // puis chaque taille s'ajoute à la ligne de même taille. Pas de conversion entre recettes :
@@ -133,7 +140,7 @@ function addBoxes(list,p,except){
   }
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v22";
+const BASE=4,VERSION="v23";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -296,5 +303,5 @@ if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update());
   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had)location.reload()});
 }
-render();sync();
+render();defaultQty();sync();
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>$("#cfg").click(),300);

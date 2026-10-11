@@ -119,3 +119,7 @@ input,select,textarea{font-size:16px!important}
 
 #add{position:relative}
 #add .sug{position:absolute;left:0;right:56px;top:52px;margin:0;z-index:6}
+
+/* − / + plus grands et espacés dans les listes */
+.stp.sm{gap:10px;padding:3px;background:none}
+.stp.sm button{width:40px;height:40px;font-size:22px}
