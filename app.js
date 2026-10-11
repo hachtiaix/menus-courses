@@ -428,7 +428,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v104";
+const BASE=4,VERSION="v105";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -663,8 +663,9 @@ function renderSettings(){
    recettes:`<div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${{ete:" · ☀️ été",hiver:" · ❄️ hiver"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`,
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
+   <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
    ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
-     const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^boîte/,q>1?"boîtes":"boîte"):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
+     const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
      return `<div class="row"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}${f.custom?`<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button>`:""}</div>`}).join("")}<button class="row add-food" data-fadd="${c}">+ Ajouter un ingrédient</button></div>`).join("")}`,
    habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
    <div class="card">${hs.length?hs.map(h=>`<div class="row link" data-hedit="${h.id}"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}${h.adj?" · ajustée":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
@@ -684,6 +685,10 @@ function renderSettings(){
   document.querySelectorAll("[data-hedit]").forEach(el=>el.onclick=()=>habitEditor(S.habits[el.dataset.hedit]));
   on("#newh","onclick",()=>habitEditor());
   // portion d'un aliment : ± 10 g (grammes) ou ± 1 / ± ¼ (à l'unité)
+  on("#fsearch","oninput",e=>{const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""),q=norm(e.target.value.trim());
+    document.querySelectorAll(".card.fam").forEach(c=>{let any=false;
+      c.querySelectorAll(".row:not(.add-food)").forEach(r=>{const ok=!q||norm(r.querySelector(".t").textContent).includes(q);r.style.display=ok?"":"none";any=any||ok});
+      c.querySelector(".add-food").style.display=q?"none":"";c.style.display=any||!q?"":"none";c.previousElementSibling.style.display=c.style.display})});
   document.querySelectorAll("[data-fadd]").forEach(el=>el.onclick=()=>foodEditor(el.dataset.fadd));
   document.querySelectorAll("[data-fdel]").forEach(el=>el.onclick=()=>{const r=S.foods[el.dataset.fdel];if(r&&confirm(`Retirer « ${r.label} » ?`)){touch("foods",{...r,deleted:true});render()}});
   document.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.allFoods().find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
@@ -818,10 +823,27 @@ function recipeEditor(r){
     touch("recipes",{id:r?r.id:uid(),name,season:$("#ssn").value,serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings});close();render();
   };
 }
+// Mise à jour automatique : à l'ouverture et au retour dans l'app, si une nouvelle version est en ligne, on recharge
+// (jamais pendant une saisie ; une seule tentative par version, au cas où le serveur tarde à servir les nouveaux fichiers).
+async function autoUpdate(){
+  try{const a=document.activeElement;if(document.hidden||(a&&a.matches("input,textarea,select"))||document.querySelector(".ov"))return;
+    const t=await (await fetch("sw.js?v="+Date.now(),{cache:"no-store"})).text(),v=(t.match(/V="([^"]+)"/)||[])[1];
+    if(!v||v===VERSION||LS.autoTried===v)return;
+    if(tab!=="menus"&&tab!=="settings")return; // en magasin, sur une liste : pas de rechargement, ça attendra
+    LS.autoTried=v;LS.autoFrom=VERSION;
+    const r=await navigator.serviceWorker?.getRegistration();if(r)await r.update();
+    location.replace(location.pathname+"?maj="+Date.now());
+  }catch(e){}
+}
+setTimeout(autoUpdate,1500);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(autoUpdate,500)});
 addEventListener("online",sync);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});
 // Récupère les changements des autres appareils ; les siens partent tout de suite (touch).
-setInterval(()=>{const a=document.activeElement;if(!document.hidden&&!(a&&a.matches("input,textarea,select")))sync()},60000);
+// Sur une liste (courses à deux, chacun son caddie) : toutes les 10 s pour voir vite ce que l'autre a coché ; sinon toutes les minutes.
+let lastSync=0;
+setInterval(()=>{const a=document.activeElement,onList=tab!=="menus"&&tab!=="settings";
+  if(document.hidden||(a&&a.matches("input,textarea,select"))||Date.now()-lastSync<(onList?10000:60000))return;lastSync=Date.now();sync()},5000);
 if("serviceWorker" in navigator){
   const had=!!navigator.serviceWorker.controller;
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update());
@@ -831,6 +853,7 @@ if(Data.prune(S,Date.now()))save();
 runLearning();
 // Après « Forcer la mise à jour » : retour sur l'onglet Foyer et confirmation de la version.
 if(/[?&]maj=/.test(location.search))history.replaceState(null,"",location.pathname);
+if(LS.autoFrom){const from=LS.autoFrom;delete LS.autoFrom;if(from!==VERSION)setTimeout(()=>toast(`✓ Application mise à jour (${VERSION})`),300)}
 if(LS.updFrom){const from=LS.updFrom;delete LS.updFrom;tab=LS.tab="settings";stab="foyer";
   setTimeout(()=>toast(from===VERSION?`✓ Déjà à jour : version ${VERSION}`:`✓ Mise à jour installée : version ${VERSION}`),300)}
 function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}

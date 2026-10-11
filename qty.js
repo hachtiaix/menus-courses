@@ -60,8 +60,10 @@ const plural=(w,n)=>n>1&&!/[sxz]$/i.test(w)?w+"s":w;
 const single=w=>w.length>4&&/[^saiu]s$/i.test(w)?w.slice(0,-1):w;
 // accorde le premier mot, et le suivant si le premier est un adjectif (« 1 grosse pomme de terre »)
 const ADJ=/^(grosses?|petites?|moyennes?|grandes?|belles?|beaux?|bel|jeunes?|vieilles?|vieux|gros|petits?|grands?)$/i;
+// adjectif après le nom, accordé aussi (« 3 boudins blancs », « 4 steaks hachés », « 2 cordons bleus »)
+const POST=/^(hach[ée]e?s?|blancs?|noirs?|rouges?|verts?|bleus?|fum[ée]e?s?|frais|panée?s?|entiers?|entières?)$/i;
 const pluralFirst=(name,n)=>{const w=name.split(" "),f=x=>n>1?plural(x,n):single(x);
-  w[0]=f(w[0]);if(w.length>1&&ADJ.test(w[0]))w[1]=f(w[1]);return w.join(" ")};
+  w[0]=f(w[0]);if(w.length>1&&(ADJ.test(w[0])||POST.test(w[1])))w[1]=f(w[1]);return w.join(" ")};
 
 function format(p){
   if(p.n==null)return p.name;

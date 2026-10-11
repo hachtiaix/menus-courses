@@ -280,3 +280,4 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 @media(prefers-color-scheme:dark){.tag.pois,.card.fam.pois{background:#1c3047;color:#a9cbef}}
 .row.add-food{width:100%;background:none;border:none;border-top:1px solid rgba(0,0,0,.08);font:inherit;color:inherit;opacity:.8;text-align:left;padding:12px 0;cursor:pointer}
 .ico{width:1.25em;height:1.25em;vertical-align:-.25em}
+#fsearch{box-sizing:border-box;height:42px;padding:0 12px;font-size:16px;border:1px solid #d5d9df;border-radius:10px;background:var(--card,#fff);color:inherit;margin:4px 0 8px}

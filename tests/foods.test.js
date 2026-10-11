@@ -6,7 +6,7 @@ const buy = (t, n) => Qty.buy(t, n, 1);
 
 test("suite d'aliments : viande rouge, haricots verts, PDT surgelés pour 3", () => {
   const r = Data.suite(S, "viande rouge, haricots verts, PDT surgelés");
-  assert.deepEqual(r.ingredients.map(i => buy(i.t, 3)), ["450 g de viande rouge", "1 moyenne boîte + 1 petite boîte de haricots verts", "600 g de PDT surgelés"]);
+  assert.deepEqual(r.ingredients.map(i => buy(i.t, 3)), ["450 g de viande rouge", "1 moyenne boîte + 1 petite boîte de haricots verts", "600 g de pommes de terre surgelées"]);
   assert.deepEqual(r.ingredients.map(i => i.store), ["boucherie", "auchan", "auchan"]);
 });
 test("soupe seule : légumes à choisir", () => {
@@ -25,11 +25,11 @@ test("portion réglée par l'utilisateur", () => {
 });
 test("salade : un quart par personne, arrondi au supérieur", () => {
   assert.equal(buy(Data.suite(S, "steak haché, salade").ingredients[1].t, 3), "1 salade");
-  assert.equal(buy(Data.suite(S, "steak haché, salade").ingredients[0].t, 3), "3 steaks haché");
+  assert.equal(buy(Data.suite(S, "steak haché, salade").ingredients[0].t, 3), "3 steaks hachés");
 });
 
 test("surgelés au féminin aussi (PDT surgelées)", () => {
-  assert.equal(Qty.buy(Data.suite(S, "PDT surgelées").ingredients[0].t, 3, 1), "600 g de PDT surgelées");
+  assert.equal(Qty.buy(Data.suite(S, "PDT surgelées").ingredients[0].t, 3, 1), "600 g de pommes de terre surgelées");
 });
 
 test("image d'un ingrédient ajouté : d'après son nom, sinon famille", () => {

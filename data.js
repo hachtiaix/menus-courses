@@ -165,11 +165,14 @@ function suiteTags(S,text){
   if(!suite(S,text))return null;
   return String(text).split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean).map(p=>{const f=foodFor(p);return{t:p,cat:f?f.cat:"autre"}});
 }
+// Sur la liste : le nom complet de l'ingrédient (« Épinards » → « épinards surgelés »), sauf pour les familles larges
+// où le mot tapé est plus précis (« bavette » reste « bavette » plutôt que « viande rouge »).
+const GENERIC=["viande","poisson","porc"];
 // Suite d'aliments (« viande rouge, haricots verts, PDT surgelés ») → recette virtuelle pour 1 personne, ou null.
 function suite(S,text){
   const parts=String(text||"").split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
   if(!parts.length||(parts.length===1&&!foodFor(parts[0],true)))return null;
-  return{name:text,serves:1,virtual:true,ingredients:parts.map(p=>{const f=foodFor(p);return{t:f?foodLine(S,f,p):p,store:f?f.store:"auchan"}})};
+  return{name:text,serves:1,virtual:true,ingredients:parts.map(p=>{const f=foodFor(p);return{t:f?foodLine(S,f,GENERIC.includes(f.id)?p:f.label):p,store:f?f.store:"auchan"}})};
 }
 // Clés : « AAAA-MM-JJ-s » repas principal, « AAAA-MM-JJ-s2 » 2e plat du même repas.
 const isSecond=key=>/\d$/.test(key);
