@@ -452,7 +452,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v122";
+const BASE=4,VERSION="v123";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -524,12 +524,10 @@ function renderMenus(){
     t=t.replace(/[\s,+]+$/,"");
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
     touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.defN||BASE)});
-    for(const p of Data.unknownFoods(S,t))touch("foods",{id:"c-"+uid(),label:p.charAt(0).toUpperCase()+p.slice(1),cat:"wait",kind:"g",q:null,store:"auchan"}); // ⏳ à classer
     applyCompanion(key);render();if(quiet)return;
-    // Entrée pour finir : chaque aliment encore « à classer » de ce repas est décrit tout de suite (famille, quantité,
-    // unité, magasin ; « Plus tard » le laisse à classer), puis la fenêtre des ingrédients s'ouvre avec les bonnes quantités.
-    const waiting=t.split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean)
-      .map(p=>live(S.foods).find(f=>f.cat==="wait"&&f.label.toLowerCase()===p.toLowerCase())).filter(Boolean);
+    // Entrée pour finir : chaque aliment inconnu de ce repas est décrit tout de suite (famille, quantité, unité, magasin ;
+    // « Plus tard » : il reste une simple ligne et sera redemandé), puis la fenêtre des ingrédients s'ouvre avec les quantités.
+    const waiting=Data.unknownFoods(S,t).map(p=>({id:"c-"+uid(),label:p.charAt(0).toUpperCase()+p.slice(1)}));
     const next=i=>i<waiting.length?foodEditor(null,waiting[i],()=>next(i+1),`${i+1}/${waiting.length}`):ingredientsDialog(known?known.name:t,key);
     next(0);
   };
@@ -706,7 +704,7 @@ function renderSettings(){
    <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
    ${(()=>{const w=live(S.foods).filter(r=>r.cat==="wait"&&!Data.foodFor(r.label,true)&&!live(S.recipes).some(x=>x.name.toLowerCase()===r.label.toLowerCase())) // devenu recette ou ingrédient : plus à classer.sort((a,b)=>a.label.localeCompare(b.label));
      return w.length?`<h3 class="fam wait">⏳ À classer</h3><div class="card fam wait">${w.map(r=>`<div class="row"><span class="t">${esc(r.label)}<br><small class="mut">tapé dans un repas</small></span><button class="btn sec" data-fwait="${r.id}">Classer</button><button class="x" data-fdel="${r.id}" aria-label="Écarter">×</button></div>`).join("")}</div>`:""})()}
-   ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+   ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"],["autre","🍽️ Autres"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
      const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
      return `<div class="row"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}${f.custom?`<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button>`:""}</div>`}).join("")}<button class="row add-food" data-fadd="${c}">+ Ajouter un ingrédient</button></div>`).join("")}`,
    habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
@@ -810,9 +808,9 @@ function habitEditor(h){
 }
 // Nouvel ingrédient dans une famille (réglages) : nom, quantité par personne en grammes ou en pièces, magasin.
 function foodEditor(cat,rec,done,step){ // rec : un aliment « à classer » dont on choisit la famille ; done : appelé ensuite (même « Plus tard »)
-  const lists=live(S.lists).sort(listSort),FAM={leg:"Légumes",fec:"Féculents",prot:"Viandes, œufs",pois:"Poissons, crustacés"},fam=FAM[cat];
+  const lists=live(S.lists).sort(listSort),FAM={leg:"Légumes",fec:"Féculents",prot:"Viandes, œufs",pois:"Poissons, crustacés",autre:"Autres"},fam=FAM[cat];
   const ov=document.createElement("div");ov.className="ov";
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${rec?(step?"Nouvel ingrédient"+(step.endsWith("/1")?"":" "+step):"Classer l'ingrédient"):"Nouvel ingrédient · "+fam}</h2>
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${rec?"Nouvel ingrédient"+(step&&!step.endsWith("/1")?" "+step:""):"Nouvel ingrédient · "+fam}</h2>
    <input type="text" id="fn" placeholder="Nom (ex. Haricots beurre)" autocapitalize="sentences" value="${rec?esc(rec.label):""}" style="width:100%;margin-bottom:10px">
    ${rec?`<div class="serv"><span>Famille</span><select id="fc">${Object.entries(FAM).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>`:""}
    <div class="serv"><span>Par personne</span><input type="text" id="fqv" value="150" inputmode="decimal" style="width:80px">

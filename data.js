@@ -126,7 +126,7 @@ const FOODS=[
 // Aliment reconnu dans un morceau de texte : l'expression la plus longue qui correspond.
 // exact : le texte entier doit être l'aliment (« Soupe » oui, « Pommes de terre vache qui rit » non).
 // Ingrédients ajoutés dans les réglages (S.foods avec un nom) : mêmes règles que ceux de base.
-const FOOD_CATS=["leg","fec","prot","pois"],CAT_ICON={leg:"🥦",fec:"🥔",prot:"🥩",pois:"🐟"};
+const FOOD_CATS=["leg","fec","prot","pois","autre"],CAT_ICON={leg:"🥦",fec:"🥔",prot:"🥩",pois:"🐟",autre:"🍽️"};
 // Image d'un ingrédient ajouté à la main, d'après son nom (sinon celle de sa famille).
 const EMOJI=[["tomate","🍅"],["carotte","🥕"],["courgette","🥒"],["concombre","🥒"],["cornichon","🥒"],["poivron","🫑"],["piment","🌶️"],["aubergine","🍆"],
  ["champignon","🍄"],["brocoli","🥦"],["chou","🥬"],["salade","🥬"],["laitue","🥬"],["epinard","🥬"],["poireau","🥬"],["blette","🥬"],["avocat","🥑"],["mais","🌽"],
