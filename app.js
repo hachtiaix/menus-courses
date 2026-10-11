@@ -223,7 +223,7 @@ function resizeMeal(m,n){
   return{...m,servings:n,added:{...m.added,n,ids:[...ids]}};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v34";
+const BASE=4,VERSION="v36";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -304,7 +304,8 @@ function ingredientsDialog(name,mealKey,startN){
   let n=startN||(meal&&meal.servings)||BASE;
   const was=t=>prev&&prev.items.find(g=>g.t===t);
   const ov=document.createElement("div");ov.className="ov";
-  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}"><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/BASE))}" data-shown="${esc(Qty.buy(i.t,n/BASE))}"><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select></div>`;
+  const home=t=>prev&&t&&!was(t); // décoché lors de l'ajout : on l'avait à la maison
+  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}" ${home(i.t)?'data-home="1"':""}><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/BASE))}" data-shown="${esc(Qty.buy(i.t,n/BASE))}"><span class="stp sm"><button type="button" data-st="-1" aria-label="Moins">−</button><button type="button" data-st="1" aria-label="Plus">+</button></span><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select><p class="homewarn"></p></div>`;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(name)}</h2>
    ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
@@ -317,10 +318,28 @@ function ingredientsDialog(name,mealKey,startN){
   ov.onclick=e=>{if(e.target===ov)close()};
   $("#no").onclick=close;
   if(r){
+    const missing=t=>{const a=Qty.parse(Qty.buy(t,prev.n/BASE)),b=Qty.parse(Qty.buy(t,n/BASE));
+      if(a.n==null||b.n==null||Qty.key(a)!==Qty.key(b))return Qty.buy(t,n/BASE);
+      return b.n-a.n>0?Qty.format({...b,n:b.n-a.n}):null};
     const setN=v=>{
       n=Math.max(1,Math.min(30,v));$("#nn").textContent=n;
-      ov.querySelectorAll(".ing-row").forEach(el=>{const i=el.querySelector(".ing");if(i.value===i.dataset.shown){i.value=i.dataset.shown=Qty.buy(el.dataset.base,n/BASE)}});
+      ov.querySelectorAll(".ing-row").forEach(el=>{
+        const i=el.querySelector(".ing"),w=el.querySelector(".homewarn");
+        if(el.dataset.home&&n>prev.n){
+          const m=missing(el.dataset.base);el.classList.toggle("warn",!!m);
+          w.textContent=m?`⚠ Vous l'aviez à la maison pour ${prev.n} personne${prev.n>1?"s":""} : il en manque peut-être ${m} pour ${n}. Cochez pour l'ajouter.`:"";
+          if(m&&i.value===i.dataset.shown){i.value=i.dataset.shown=m;el.dataset.diff="1"}
+          return;
+        }
+        el.classList.remove("warn");w.textContent="";delete el.dataset.diff;
+        if(i.value===i.dataset.shown)i.value=i.dataset.shown=Qty.buy(el.dataset.base,n/BASE);
+      });
     };
+    setN(n);
+    // − / + sur un ingrédient : n'acheter qu'une partie (ou plus)
+    $("#ings").addEventListener("click",e=>{const b=e.target.closest("[data-st]");if(!b)return;
+      const row=b.closest(".ing-row"),i=row.querySelector(".ing"),t=Qty.step(i.value,+b.dataset.st);
+      if(t){i.value=t;row.querySelector("[type=checkbox]").checked=true}});
     $("#mn").onclick=()=>setN(n-1);$("#pl").onclick=()=>setN(n+1);
     $("#more").onclick=()=>{$("#ings").insertAdjacentHTML("beforeend",rowH({t:""}));$("#ings").lastChild.querySelector(".ing").focus()};
   }
@@ -330,7 +349,7 @@ function ingredientsDialog(name,mealKey,startN){
       close();if(ings.length){touch("recipes",{id:uid(),name,ingredients:ings});ingredientsDialog(name,mealKey)}return;
     }
     const rows=[...ov.querySelectorAll(".ing-row")].map(el=>{const i=el.querySelector(".ing"),edited=i.value!==i.dataset.shown;
-      return{on:el.querySelector("[type=checkbox]").checked,shown:i.value.trim(),base:edited?scaleText(i.value.trim(),BASE/n):el.dataset.base,store:el.querySelector("select").value}}).filter(x=>x.shown);
+      return{orig:el.dataset.base,on:el.querySelector("[type=checkbox]").checked,shown:i.value.trim(),base:edited||el.dataset.diff?scaleText(i.value.trim(),BASE/n):el.dataset.base,store:el.querySelector("select").value}}).filter(x=>x.shown);
     const now=rows.filter(x=>x.on).map(x=>({t:x.base,store:x.store}));
     const sig=(items,k)=>items.map(g=>g.t+"@"+g.store).sort().join("|")+"#"+k;
     const ids=new Set(prev?prev.ids||[]:[]);
@@ -338,7 +357,9 @@ function ingredientsDialog(name,mealKey,startN){
       if(prev)prev.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,prev.n/BASE)));
       rows.filter(x=>x.on).forEach(x=>addToList(x.store,x.shown).forEach(i=>ids.add(i)));
     }
-    touch("recipes",{...r,ingredients:rows.map(x=>({t:x.base,store:(r.ingredients.find(g=>g.t===x.base)||x).store}))});
+    // la recette ne change pas avec les quantités achetées ; seuls les ingrédients ajoutés (+ Ingrédient) s'y ajoutent
+    const extra=rows.filter(x=>!x.orig).map(x=>({t:x.base,store:x.store}));
+    if(extra.length)touch("recipes",{...r,ingredients:[...r.ingredients,...extra]});
     if(meal)touch("meals",{...S.meals[mealKey],servings:n,added:{n,items:now,ids:[...ids]}});
     close();render();
   };
