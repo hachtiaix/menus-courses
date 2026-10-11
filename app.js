@@ -7,10 +7,11 @@ function clean(k,id,r){
   if(!okId(id)||!r||typeof r!=="object")return null;
   const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;
   if(k==="lists")return{id,name:str(r.name,60)||id,ts,deleted};
-  if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,c:Number.isFinite(r.c)?r.c:ts,ts,deleted}:null;
+  if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,archived:r.archived===true,c:Number.isFinite(r.c)?r.c:ts,ts,deleted}:null;
   if(k==="meals"){
     const ad=r.added&&typeof r.added==="object"&&Array.isArray(r.added.items)?{n:Math.max(1,Math.min(30,parseInt(r.added.n,10)||4)),
-      items:r.added.items.slice(0,80).map(g=>({t:str(g&&g.t,200),store:okId(g&&g.store)?g.store:"auchan"}))}:null;
+      items:r.added.items.slice(0,80).map(g=>({t:str(g&&g.t,200),store:okId(g&&g.store)?g.store:"auchan"})),
+      ids:(Array.isArray(r.added.ids)?r.added.ids:[]).filter(okId).slice(0,120)}:null;
     return{key:id,text:str(r.text,120),servings:Math.max(1,Math.min(30,parseInt(r.servings,10)||4)),added:ad,ts,deleted};
   }
   if(k==="stores")return{id,last:(Array.isArray(r.last)?r.last:[]).filter(okId).slice(-3),def:okId(r.def)?r.def:null,ts,deleted};
@@ -88,7 +89,7 @@ const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&qu
 function renderList(id){
   $("#title").textContent=S.lists[id].name;
   live(S.items).filter(i=>i.list===id&&!i.done&&/\s\+\s/.test(i.text)&&Qty.parse(i.text).kind==="box").forEach(i=>{touch("items",{...i,deleted:true});addBoxes(id,Qty.parse(i.text),i.id)});
-  const items=live(S.items).filter(i=>i.list===id).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
+  const items=live(S.items).filter(i=>i.list===id&&!i.archived).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
   const row=i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-d="${i.id}">×</button></div>`;
   $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off"><button class="btn">+</button></form>`+
    (items.length?Rayons.list.map(r=>{const g=items.filter(i=>!i.done&&rayonOf(i.text)===r.id);
@@ -119,27 +120,28 @@ function renderList(id){
   document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.q],t=Qty.step(i.text,+el.dataset.dir);if(t){touch("items",{...i,text:t});render()}});
   document.querySelectorAll("[data-e]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.e];if(!i.done)itemEditor(i)});
   document.querySelectorAll("[data-c]").forEach(el=>el.onchange=()=>{const i=S.items[el.dataset.c];touch("items",{...i,done:el.checked});recordPurchase(i.text,i.list,el.checked);render()});
-  document.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{touch("items",{...S.items[el.dataset.d],deleted:true});render()});
-  const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,deleted:true}));render()};
+  document.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.d];touch("items",i.done?{...i,archived:true}:{...i,deleted:true});render()});
+  const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,archived:true}));render()};
 }
 // Ajoute un article à une liste en cumulant avec un article identique non coché (« 1 oignon » + « 3 oignons » = « 4 oignons »).
 function addToList(list,text){
   const p=Qty.parse(text);
   if(p.kind==="box")return addBoxes(list,p);
   const same=live(S.items).find(i=>i.list===list&&!i.done&&Qty.key(Qty.parse(i.text))===Qty.key(Qty.parse(text)));
-  if(same){const t=Qty.add(same.text,text);if(t&&t!==same.text)touch("items",{...same,text:t});return}
-  touch("items",{id:uid(),list,text,done:false,c:Date.now()});
+  if(same){const t=Qty.add(same.text,text);if(t&&t!==same.text)touch("items",{...same,text:t});return[same.id]}
+  const nid=uid();touch("items",{id:nid,list,text,done:false,c:Date.now()});return[nid];
 }
 // Boîtes : la quantité ajoutée (une recette) est répartie par taille (1 grosse = 2 moyennes = 4 petites),
 // puis chaque taille s'ajoute à la ligne de même taille. Pas de conversion entre recettes :
 // elles ne sont pas forcément cuisinées en même temps.
 function addBoxes(list,p,except){
-  const k=Qty.key(p);
+  const k=Qty.key(p),ids=[];
   for(const l of Qty.boxLines(p)){
     const o=live(S.items).find(i=>i.list===list&&!i.done&&i.id!==except&&Qty.key(Qty.parse(i.text))===k&&Qty.parse(i.text).size===l.size);
-    if(o)touch("items",{...o,text:Qty.format({...Qty.parse(o.text),n:Qty.parse(o.text).n+Qty.parse(l.text).n})});
-    else touch("items",{id:uid(),list,text:l.text,done:false,c:Date.now()});
+    if(o){touch("items",{...o,text:Qty.format({...Qty.parse(o.text),n:Qty.parse(o.text).n+Qty.parse(l.text).n})});ids.push(o.id)}
+    else{const nid=uid();touch("items",{id:nid,list,text:l.text,done:false,c:Date.now()});ids.push(nid)}
   }
+  return ids;
 }
 // Rayon d'un article : celui choisi une fois par l'utilisateur, sinon deviné d'après le nom.
 function rayonOf(text){const n=Qty.parse(text).name||text,k=Rayons.keyOf(n);return (S.aisles[k]&&!S.aisles[k].deleted&&S.aisles[k].rayon)||Rayons.guess(n)}
@@ -170,10 +172,14 @@ function recordPurchase(text,store,bought){
   touch("stores",{id:k,last,def});
 }
 const defaultStore=(text,fallback)=>{const s=S.stores[Rayons.keyOf(Qty.parse(text).name||text)];return (s&&s.def&&S.lists[s.def]&&s.def)||fallback||"auchan"};
-// Articles cochés depuis plus de 2 h : les courses sont finies, on les retire de la liste.
+// Articles cochés depuis plus de 2 h : les courses sont finies, on les masque (gardés en historique).
 const DONE_TTL=2*3600*1000;
+const HISTORY_TTL=30*24*3600*1000; // historique des achats gardé 30 jours
 function purgeDone(){
-  let n=0;live(S.items).forEach(i=>{if(i.done&&Date.now()-i.ts>DONE_TTL){touch("items",{...i,deleted:true});n++}});
+  let n=0;live(S.items).forEach(i=>{
+    if(i.done&&!i.archived&&Date.now()-i.ts>DONE_TTL){touch("items",{...i,archived:true});n++}       // masqué après 2 h
+    else if(i.archived&&Date.now()-i.ts>HISTORY_TTL)touch("items",{...i,deleted:true});              // oublié après 30 j
+  });
   if(n&&tab!=="menus"&&tab!=="settings")safeRender();
 }
 // Retire une quantité d'un article non coché (supprimé s'il tombe à zéro).
@@ -189,13 +195,35 @@ function removeFromList(list,text){
   }
 }
 // Repas dont les ingrédients sont déjà dans les listes : on n'ajoute que la différence de personnes.
+// Ingrédients du repas déjà achetés (au moins un article lié coché) : le repas ne peut plus être supprimé, seulement déplacé.
+const bought=m=>!!(m&&m.added&&(m.added.ids||[]).some(id=>S.items[id]&&S.items[id].done));
+// Déplace un repas (avec ses ingrédients déjà ajoutés) ; si la place est prise, les deux repas s'échangent.
+function moveMeal(from){
+  const m=S.meals[from],today=new Date();today.setHours(12);
+  const slots=[];for(let d=-7;d<=28;d++){const x=new Date(today);x.setDate(today.getDate()+d);const k=x.toISOString().slice(0,10);
+    for(const [s,l] of [["m","midi"],["s","soir"]]){const key=k+"-"+s;if(key===from)continue;const o=S.meals[key];
+      slots.push(`<option value="${key}" ${d===1&&s===from.slice(-1)?"selected":""}>${x.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})} ${l}${o&&o.text?" — "+esc(o.text)+" (échange)":""}</option>`)}}
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Déplacer « ${esc(m.text)} »</h2>
+   <select id="mvto" style="width:100%">${slots.join("")}</select>
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Déplacer</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  $("#ok").onclick=()=>{
+    const to=$("#mvto").value,o=S.meals[to];
+    touch("meals",{...m,key:to});
+    touch("meals",o&&o.text?{...o,key:from}:{key:from,text:"",servings:m.servings||BASE});
+    close();render();
+  };
+}
 function resizeMeal(m,n){
   if(!m.added||m.added.n===n)return{...m,servings:n};
-  m.added.items.forEach(g=>{removeFromList(g.store,Qty.buy(g.t,m.added.n/BASE));addToList(g.store,Qty.buy(g.t,n/BASE))});
-  return{...m,servings:n,added:{...m.added,n}};
+  const ids=new Set(m.added.ids||[]);
+  m.added.items.forEach(g=>{removeFromList(g.store,Qty.buy(g.t,m.added.n/BASE));addToList(g.store,Qty.buy(g.t,n/BASE)).forEach(x=>ids.add(x))});
+  return{...m,servings:n,added:{...m.added,n,ids:[...ids]}};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v30";
+const BASE=4,VERSION="v31";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -215,7 +243,7 @@ function renderMenus(){
     const d=new Date(m);d.setDate(m.getDate()+n);const k=d.toISOString().slice(0,10);
     const wd=d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".","");
     h+=`<section class="day ${k===today?"today":""}"><div class="dh"><b>${wd}</b><small>${d.getDate()}</small></div><div class="slots">`+
-      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const key=k+"-"+s,e=S.meals[key]||{},n=e.servings||BASE;return `<div class="slotw"><div class="slot"><span>${l}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}"></div>${e.text?`<div class="sub"><div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}">🛒 Ingrédients</button></div>`:""}</div>`}).join("")+`</div></section>`;
+      [["m","Midi"],["s","Soir"]].map(([s,l])=>{const key=k+"-"+s,e=S.meals[key]||{},n=e.servings||BASE;return `<div class="slotw"><div class="slot"><span>${l}</span><input type="text" data-m="${key}" placeholder="Choisir un plat…" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}"></div>${e.text?`<div class="sub"><div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}">🛒 Ingrédients</button><button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button></div>`:""}</div>`}).join("")+`</div></section>`;
   }
   $("#view").innerHTML=h;
   const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -226,6 +254,11 @@ function renderMenus(){
   const commit=(el,t)=>{
     const key=el.dataset.m,o=S.meals[key]||{};
     // plat remplacé ou effacé : on retire des listes ce que l'ancien plat y avait ajouté
+    if(bought(o)&&norm(o.text||"")!==norm(t)){
+      el.value=o.text;
+      alert(`Les ingrédients de « ${o.text} » ont déjà été achetés : ce repas ne peut pas être supprimé ni remplacé. Utilisez ⇄ pour le déplacer.`);
+      return;
+    }
     const dropOld=()=>{if(o.added&&norm(o.text||"")!==norm(t))o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/BASE)))};
     dropOld();
     if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});render();return}
@@ -247,6 +280,7 @@ function renderMenus(){
     el.onchange=()=>{if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
+  document.querySelectorAll("[data-mv]").forEach(el=>el.onclick=()=>moveMeal(el.dataset.mv));
   const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));LS.defN=n;touch("meals",resizeMeal(m,n));render()};
   document.querySelectorAll("[data-sm]").forEach(el=>el.onclick=()=>step(el.dataset.sm,-1));
   document.querySelectorAll("[data-sp]").forEach(el=>el.onclick=()=>step(el.dataset.sp,1));
@@ -289,12 +323,13 @@ function ingredientsDialog(name,mealKey){
       return{on:el.querySelector("[type=checkbox]").checked,shown:i.value.trim(),base:edited?scaleText(i.value.trim(),BASE/n):el.dataset.base,store:el.querySelector("select").value}}).filter(x=>x.shown);
     const now=rows.filter(x=>x.on).map(x=>({t:x.base,store:x.store}));
     const sig=(items,k)=>items.map(g=>g.t+"@"+g.store).sort().join("|")+"#"+k;
+    const ids=new Set(prev?prev.ids||[]:[]);
     if(!prev||sig(prev.items,prev.n)!==sig(now,n)){
       if(prev)prev.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,prev.n/BASE)));
-      rows.filter(x=>x.on).forEach(x=>addToList(x.store,x.shown));
+      rows.filter(x=>x.on).forEach(x=>addToList(x.store,x.shown).forEach(i=>ids.add(i)));
     }
     touch("recipes",{...r,ingredients:rows.map(x=>({t:x.base,store:(r.ingredients.find(g=>g.t===x.base)||x).store}))});
-    if(meal)touch("meals",{...S.meals[mealKey],servings:n,added:{n,items:now}});
+    if(meal)touch("meals",{...S.meals[mealKey],servings:n,added:{n,items:now,ids:[...ids]}});
     close();render();
   };
 }
