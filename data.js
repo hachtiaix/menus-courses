@@ -86,7 +86,7 @@ const FOODS=[
   {id:"boudin-blanc",icon:"svg:saucisse",cat:"prot",label:"Boudin blanc",words:["boudin blanc"],kind:"n",q:1,store:"boucherie"},
   {id:"poisson",icon:"🐟",cat:"pois",label:"Poisson",words:["poisson","saumon","cabillaud","colin","lieu","merlu"],kind:"g",q:150,store:"auchan"},
   {id:"saumon-fume",icon:"svg:saumon-fume",cat:"pois",label:"Saumon fumé",words:["saumon fume"],kind:"n",q:2,as:"tranche de saumon fumé",store:"auchan"},
-  {id:"truite-fumee",icon:"svg:saumon-fume",cat:"pois",label:"Truite fumée",words:["truite fume","truite fumee"],kind:"n",q:2,as:"tranche de truite fumée",store:"auchan"},
+  {id:"truite-fumee",icon:"svg:truite-fumee",cat:"pois",label:"Truite fumée",words:["truite fume","truite fumee"],kind:"n",q:2,as:"tranche de truite fumée",store:"auchan"},
   {id:"crevettes",icon:"🦐",cat:"pois",label:"Crevettes",words:["crevette","gambas"],kind:"g",q:150,store:"auchan"},
   {id:"st-jacques",icon:"🐚",cat:"pois",label:"Noix de Saint-Jacques",words:["saint jacques","st jacques","noix de saint jacques","noix de st jacques"],kind:"n",q:3,store:"auchan"},
   {id:"moules",icon:"🦪",cat:"pois",label:"Moules",words:["moule"],kind:"g",q:1000,store:"auchan"},
