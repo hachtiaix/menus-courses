@@ -271,3 +271,4 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 .tagwrap.has:not(:focus-within) .tags:has(.rcp){flex-wrap:nowrap}
 .slot .rcp{display:inline-block;max-width:100%;background:#fff;border:1px solid #c9ced6;border-radius:5px;padding:4px 9px;font-size:14px;color:#1f2329;box-shadow:0 1px 1px rgba(0,0,0,.06)}
 @media(prefers-color-scheme:dark){.slot .rcp{background:#2c3038;border-color:#4a505b;color:#eef0f3}}
+#paste{width:100%;box-sizing:border-box;margin:0 0 10px;font:inherit;font-size:16px;padding:10px;border:1px dashed #b9c0ca;border-radius:10px;background:transparent;color:inherit;resize:vertical}

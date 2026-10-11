@@ -425,7 +425,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v87";
+const BASE=4,VERSION="v88";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -742,6 +742,7 @@ function recipeEditor(r){
    <div class="serv"><span>Saison</span><select id="ssn">${[["all","Toute l'année"],["ete","Été (pas de novembre à mars)"],["hiver","Hiver (pas de mai à septembre)"]]
      .map(([v,l])=>`<option value="${v}" ${v===Data.recipeSeason(r||{name:""})?"selected":""}>${l}</option>`).join("")}</select></div>
    <p class="mut">Ingrédients pour ce nombre de personnes, avec la quantité en premier. Le magasin est celui proposé par défaut.</p>
+   <textarea id="paste" rows="3" placeholder="📋 Collez ici toute la liste d'ingrédients : une ligne par ingrédient"></textarea>
    <div id="eds">${(r?r.ingredients:[{t:""},{t:""},{t:""}]).map(rowH).join("")}</div>
    <button class="btn sec" id="more">+ Ingrédient</button>
    <div class="acts">${r?`<button class="btn sec danger" id="del">Supprimer</button>`:""}<button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
@@ -749,6 +750,17 @@ function recipeEditor(r){
   const close=()=>ov.remove();
   ov.onclick=e=>{if(e.target===ov)close();const x=e.target.closest(".x");if(x)x.parentNode.remove()};
   $("#no").onclick=close;
+  // Texte collé : une ligne d'ingrédient par ligne (puces, titres et étapes ignorés), « pour 6 personnes » règle le nombre.
+  $("#paste").oninput=()=>{const v=$("#paste").value;if(!/\n/.test(v.trim()))return;
+    const lines=[];
+    for(let l of v.split(/\r?\n/)){l=l.replace(/^\s*(?:[-•*·▪◦–—]|\d+[.)](?=\s))\s*/,"").trim();
+      if(/^(pr[ée]paration|[ée]tapes?|instructions?)\b/i.test(l))break;
+      const p=l.match(/pour\s+(\d+)\s*(?:pers|parts?|couverts?)/i);if(p){$("#sv").value=p[1];continue}
+      if(!l||/^ingr[ée]dients?\s*:?$/i.test(l)||l.length>80)continue;lines.push(l)}
+    if(!lines.length)return;
+    [...ov.querySelectorAll(".ed-row")].filter(el=>!el.querySelector(".ing").value.trim()).forEach(el=>el.remove());
+    $("#eds").insertAdjacentHTML("beforeend",lines.map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(Qty.parse(t).name||t)||{}).store)})).join(""));
+    $("#paste").value="";toast(`✓ ${lines.length} ingrédient${lines.length>1?"s":""} ajouté${lines.length>1?"s":""}`)};
   $("#more").onclick=()=>{$("#eds").insertAdjacentHTML("beforeend",rowH({t:""}));$("#eds").lastChild.querySelector(".ing").focus()};
   if(r)$("#del").onclick=()=>{if(confirm("Supprimer cette recette ?")){touch("recipes",{...r,deleted:true});close();render()}};
   $("#ok").onclick=()=>{
