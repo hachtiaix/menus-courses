@@ -160,3 +160,4 @@ nav i:has(.logo-auchan) b{right:-4px;top:-10px}
 nav button{flex:1 1 0;min-width:0}
 nav i img.logo-lidl{height:42px;width:42px}
 nav i img.logo-auchan{height:auto;width:50px;max-width:50px}
+#title .hicon{margin-left:6px}
