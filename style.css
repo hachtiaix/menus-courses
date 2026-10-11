@@ -189,3 +189,17 @@ section.day:has(.slotw.past) .dh{opacity:.5}
 /* engrenage des réglages plus gros, zone de toucher confortable */
 #cfg{font-size:34px;line-height:1;width:48px;height:48px;padding:0;display:inline-flex;align-items:center;justify-content:center;margin-right:-8px}
 #status{width:12px;height:12px}
+.wk #sugg{width:48px;padding:0;font-size:20px}
+.sugrow{padding:10px 0;border-bottom:1px solid var(--line)}.sugrow:last-child{border:0}
+.sugtop{display:flex;align-items:center;gap:8px;margin-bottom:6px}.sugtop .t{flex:1}
+.sugtop .pill{flex:none;width:38px;height:38px;padding:0;border-radius:50%;font-size:18px}
+.sugrow select{width:100%}
+.sug small.mut{font-size:12px}
+/* onglets des réglages */
+.seg{display:flex;background:var(--line);border-radius:12px;padding:3px;margin:4px 0 14px;gap:2px}
+.seg button{flex:1;border:0;background:none;padding:9px 2px;border-radius:9px;font-size:14px;color:var(--fg);font-weight:500}
+.seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700}
+.days{display:flex;gap:6px;margin:8px 0}
+.days label{flex:1}.days input{display:none}
+.days span{display:block;text-align:center;padding:10px 0;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:14px;text-transform:capitalize}
+.days input:checked+span{background:var(--accent);color:#fff;border-color:var(--accent)}

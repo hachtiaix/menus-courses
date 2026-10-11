@@ -4,6 +4,8 @@ const {cleanAll}=Data;
 let S=cleanAll(JSON.parse(LS.s||"null"));
 const ORDER=["auchan","lidl","drive","boucherie","fermiers"];
 for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"],["boucherie","Boucherie"],["fermiers","Au pré des fermiers"]]) S.lists[id]=S.lists[id]||{id,name,ts:0};
+for(const h of [{id:"h-pates-lundi",type:"pates",days:[1],slot:"s"},{id:"h-soupe-dimanche",type:"soupe",days:[7],slot:"s"},
+  {id:"h-burger-vensam",type:"burger",days:[5,6],slot:"s"}]) if(!S.habits[h.id])S.habits[h.id]={...h,state:"on",auto:false,ts:0};
 let tab=LS.tab||"auchan", code=LS.code||"", dirty=!!LS.dirty;
 
 function save(){LS.s=JSON.stringify(S);LS.dirty=dirty?"1":""}
@@ -277,6 +279,81 @@ function extraDialog(key,n){
     close();render();
   };
 }
+// Ajoute d'un coup les ingrédients de la recette d'un repas (magasin habituel, cumul) et s'en souvient.
+function addMealIngredients(key){
+  const m=S.meals[key],r=m&&live(S.recipes).find(x=>x.name.toLowerCase()===m.text.toLowerCase());if(!r)return;
+  const B=r.serves||BASE,n=m.servings||BASE,ids=new Set(),items=[];
+  for(const g of r.ingredients){const store=defaultStore(g.t,g.store);addToList(store,Qty.buy(g.t,n/B)).forEach(x=>ids.add(x));items.push({t:g.t,store})}
+  touch("meals",{...S.meals[key],added:{n,items,ids:[...ids],b:B}});
+}
+// 💡 : 3 plats suggérés pour la semaine affichée ; on choisit le créneau de chacun.
+function suggestDialog(){
+  const today=todayKey(),mon=monday(),slots=[];
+  for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);const k=d.toISOString().slice(0,10);if(k<today)continue;
+    for(const [s,l] of [["m","midi"],["s","soir"]]){const key=k+"-"+s;if(!(S.meals[key]&&S.meals[key].text))
+      slots.push({key,label:d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric"})+" "+l})}}
+  const monKey=mon.toISOString().slice(0,10),free=new Set(slots.map(s=>s.key)),picks=[],seen=new Set();
+  // 1. créneaux d'habitude libres (un seul jour pour « vendredi ou samedi »)
+  for(const h of live(S.habits).filter(h=>h.state==="on").sort((a,b)=>a.days[0]-b.days[0])){
+    if(picks.length>=3)break;
+    const k=h.days.map(d=>Data.addDays(monKey,d-1)+"-"+h.slot).find(k=>free.has(k)&&Data.habitTypesFor(S,k).includes(h.type));
+    const s=k&&Data.suggest(S,today,1,[...seen],undefined,k)[0];
+    if(!s||s.habit!==h.type)continue;
+    picks.push({key:k,sug:s});seen.add(s.name);free.delete(k);
+  }
+  // 2. compléter jusqu'à 3, soirs d'abord
+  for(const sl of [...slots.filter(s=>s.key.endsWith("-s")),...slots.filter(s=>s.key.endsWith("-m"))]){
+    if(picks.length>=3)break;if(!free.has(sl.key))continue;
+    const s=Data.suggest(S,today,1,[...seen],undefined,sl.key)[0];if(!s)break;
+    picks.push({key:sl.key,sug:s});seen.add(s.name);free.delete(sl.key);
+  }
+  if(!picks.length){alert(slots.length?"Aucune recette à suggérer pour l'instant : ajoutez des recettes dans ⚙︎ Réglages.":"Plus aucun créneau libre cette semaine : passez à la semaine suivante avec ›.");return}
+  const shown=picks.map(p=>p.sug),byDefault=picks.map(p=>({key:p.key}));
+  let n=+LS.defN||BASE;
+  const note=x=>(x.habit?typeById(x.habit).icon+" comme d'habitude · ":"")+(x.days==null?"jamais cuisiné":`dernière fois il y a ${x.days} jours`);
+  const rowH=(x,i)=>`<div class="sugrow" data-i="${i}"><div class="sugtop"><span class="t"><b>${esc(x.name)}</b><br><small class="mut">${note(x)}</small></span>
+    <button type="button" class="pill" data-re="${i}" aria-label="Autre suggestion">↻</button></div>
+    <select data-slot="${i}"><option value="">— ne pas placer</option>${slots.map(s=>`<option value="${s.key}" ${byDefault[i]&&byDefault[i].key===s.key?"selected":""}>${esc(s.label)}</option>`).join("")}</select></div>`;
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>💡 Suggestions</h2>
+   <p class="mut">De saison, pas cuisinés depuis plus d'un mois. Choisissez le jour et le moment de chacun.</p>
+   <div class="card" id="sugs">${shown.map(rowH).join("")}</div>
+   <div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
+   <p class="mut">Les ingrédients seront ajoutés aux listes.</p>
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Placer les plats</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  const setN=v=>{n=Math.max(1,Math.min(30,v));$("#nn").textContent=n};$("#mn").onclick=()=>setN(n-1);$("#pl").onclick=()=>setN(n+1);
+  $("#sugs").addEventListener("click",e=>{const b=e.target.closest("[data-re]");if(!b)return;const i=+b.dataset.re;
+    const slotKey=ov.querySelector(`[data-slot="${i}"]`).value||undefined;
+    let next=Data.suggest(S,today,1,[...seen],undefined,slotKey);
+    if(!next.length){seen.clear();shown.forEach(x=>seen.add(x.name));next=Data.suggest(S,today,1,[...seen],undefined,slotKey)} // on a tout vu : on recommence
+    if(!next.length)return;
+    const row=ov.querySelector(`.sugrow[data-i="${i}"]`),slot=row.querySelector("select").value;
+    shown[i]=next[0];seen.add(next[0].name);row.outerHTML=rowH(next[0],i);ov.querySelector(`[data-slot="${i}"]`).value=slot});
+  $("#ok").onclick=()=>{
+    const picks=shown.map((x,i)=>({name:x.name,key:ov.querySelector(`[data-slot="${i}"]`).value})).filter(p=>p.key);
+    if(new Set(picks.map(p=>p.key)).size!==picks.length){alert("Deux plats sont sur le même créneau : choisissez des créneaux différents.");return}
+    LS.defN=n;
+    for(const p of picks){touch("meals",{key:p.key,text:p.name,servings:n});addMealIngredients(p.key)}
+    close();render();
+  };
+}
+// Habitudes apprises : ajoutées ou oubliées en silence (une fois par jour) ; l'admin les voit dans Réglages → Habitudes.
+// Une habitude retirée à la main n'est pas réapprise avant 3 mois.
+function runLearning(){
+  if(LS.learnDay===todayKey())return;LS.learnDay=todayKey();
+  const {add,drop}=Data.learnHabits(S,todayKey());
+  for(const c of add){
+    const same=live(S.habits).find(h=>h.type===c.type&&h.slot===c.slot&&h.days.some(d=>c.days.includes(d)));
+    if(same&&(same.state==="on"||Date.now()-same.ts<90*864e5))continue;
+    touch("habits",{id:same?same.id:"h-"+c.type+"-"+c.slot+"-"+c.days.join(""),days:c.days,slot:c.slot,type:c.type,auto:true,state:"on"});
+  }
+  for(const id of drop)touch("habits",{...S.habits[id],state:"off",auto:true});
+}
+const DAYS=["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+const habitWhen=h=>"le "+h.days.map(d=>DAYS[d-1]).join(" ou ")+(h.slot==="m"?" midi":" soir");
+const typeById=id=>Data.TYPES.find(t=>t.id===id)||{icon:"🍽️",label:id};
 function resizeMeal(m,n){
   if(!m.added||m.added.n===n)return{...m,servings:n};
   const ids=new Set(m.added.ids||[]);
@@ -285,7 +362,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v63";
+const BASE=4,VERSION="v64";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -314,7 +391,7 @@ function renderMenus(){
   const m=monday(),today=todayKey();
   const end=new Date(m);end.setDate(m.getDate()+6);
   const f=d=>d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-  let h=`<div class="wk"><button class="btn sec" id="pv">‹</button><div>${f(m)} – ${f(end)}</div><button class="btn sec" id="nx">›</button></div>`;
+  let h=`<div class="wk"><button class="btn sec" id="pv">‹</button><div>${f(m)} – ${f(end)}</div><button class="btn sec" id="sugg" aria-label="Suggestions de plats">💡</button><button class="btn sec" id="nx">›</button></div>`;
   for(let n=0;n<7;n++){
     const d=new Date(m);d.setDate(m.getDate()+n);const k=d.toISOString().slice(0,10);
     const wd=d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".","");
@@ -344,14 +421,20 @@ function renderMenus(){
   };
   const clearSug=()=>document.querySelectorAll(".sug").forEach(x=>x.remove());
   document.querySelectorAll("[data-m]").forEach(el=>{
-    el.oninput=()=>{
-      clearSug();const q=norm(el.value.trim());if(!q)return;
-      const hits=names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,6);
-      if(!hits.length)return;
+    const showBox=hits=>{
+      clearSug();if(!hits.length)return;
       const box=document.createElement("div");box.className="sug";
-      box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}">${x.recipe?"📖":"🕘"} ${esc(x.t)}</button>`).join("");
+      box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}">${x.icon} ${esc(x.t)}${x.note?` <small class="mut">${esc(x.note)}</small>`:""}</button>`).join("");
       box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el.value=b.dataset.t;clearSug();commit(el,b.dataset.t)};
       el.closest(".slotw").appendChild(box);
+    };
+    // créneau vide touché sans rien taper : les meilleures suggestions (saison, pas faites depuis un mois)
+    el.onfocus=()=>{if(el.readOnly||el.disabled||el.value.trim())return;
+      showBox(Data.suggest(S,todayKey(),5,[],undefined,el.dataset.m).map(x=>({t:x.name,icon:x.habit?typeById(x.habit).icon:"💡",note:x.days==null?"jamais fait":`il y a ${x.days} j`})))};
+    el.oninput=()=>{
+      const q=norm(el.value.trim());if(!q){el.onfocus();return}
+      showBox(names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,6)
+        .map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"})));
     };
     el.onblur=()=>setTimeout(clearSug,150);
     el.onchange=()=>{if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
@@ -372,6 +455,7 @@ function renderMenus(){
     else{touch("meals",{...m,servings:n});render()}};
   document.querySelectorAll("[data-sm]").forEach(el=>el.onclick=()=>step(el.dataset.sm,-1));
   document.querySelectorAll("[data-sp]").forEach(el=>el.onclick=()=>step(el.dataset.sp,1));
+  $("#sugg").onclick=suggestDialog;
   $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
 }
 function ingredientsDialog(name,mealKey,startN){
@@ -446,23 +530,34 @@ function ingredientsDialog(name,mealKey,startN){
   };
 }
 $("#tabs").onclick=e=>{const t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t){tab=LS.tab=t;render();scrollTo(0,0)}};
-$("#cfg").onclick=()=>{tab=LS.tab="settings";render();scrollTo(0,0)};
+$("#cfg").onclick=()=>{stab="recettes";tab=LS.tab="settings";render();scrollTo(0,0)};
+let stab="recettes"; // onglet des réglages ; « Recettes » à chaque ouverture
+const STABS=[["recettes","Recettes"],["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Foyer"]];
 function renderSettings(){
   $("#title").textContent="Réglages";
   const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
-  $("#view").innerHTML=`<h2 class="sec">Synchronisation</h2>
-   <div class="card"><div class="row"><span class="t">Code de cet appareil<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"} · ${STATE[status]}</small></span><button class="btn sec" id="setcode">Saisir</button></div>
+  const hs=live(S.habits).filter(h=>h.state==="on").sort((a,b)=>a.days[0]-b.days[0]||b.slot.localeCompare(a.slot));
+  const tabs=`<div class="seg">${STABS.map(([id,l])=>`<button data-stab="${id}" class="${stab===id?"on":""}">${l}</button>`).join("")}</div>`;
+  const body={
+   recettes:`<div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${{ete:" · ☀️ été",hiver:" · ❄️ hiver"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
+   <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`,
+   habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
+   <div class="card">${hs.length?hs.map(h=>`<div class="row"><span class="t">${typeById(h.type).icon} ${esc(typeById(h.type).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
+   <button class="btn" id="newh" style="width:100%">+ Habitude</button>`,
+   rayons:`<div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
+   ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>`,
+   foyer:`<div class="card"><div class="row"><span class="t">Code de cet appareil<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"} · ${STATE[status]}</small></span><button class="btn sec" id="setcode">Saisir</button></div>
    ${code?`<div class="row"><span class="t">Copier le code<br><small class="mut">Pour le coller sur un autre appareil</small></span><button class="btn sec" id="cpcode">Copier</button></div>`:""}
    ${status==="ok"?`<div class="row"><span class="t">Changer le code du foyer<br><small class="mut">Les autres appareils devront saisir le nouveau</small></span><button class="btn sec" id="rencode">Changer</button></div>`:""}</div>
    ${status==="unk"?`<p class="warn">Ce code ne correspond à aucun foyer. Vérifiez-le (majuscules, espaces) ou demandez-le à un autre membre du foyer.</p>`:""}
-   <h2 class="sec">Recettes</h2>
-   <div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
-   <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>
-   <h2 class="sec">Ordre des rayons</h2>
-   <div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
-   ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>
-   <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`;
-  $("#upd").onclick=async e=>{e.preventDefault();try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(_){}location.reload()};
+   <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`,
+  }[stab];
+  $("#view").innerHTML=tabs+body;
+  document.querySelectorAll("[data-stab]").forEach(b=>b.onclick=()=>{stab=b.dataset.stab;render();scrollTo(0,0)});
+  const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
+  document.querySelectorAll("[data-hdel]").forEach(el=>el.onclick=()=>{touch("habits",{...S.habits[el.dataset.hdel],state:"off"});render()});
+  on("#newh","onclick",()=>habitEditor());
+  on("#upd","onclick",async e=>{e.preventDefault();try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(_){}location.reload()});
   const askCode=(msg,def)=>{
     let c=prompt(msg,def);
     while(c!==null&&c.trim().length<MIN_CODE)c=prompt(`Trop court : au moins ${MIN_CODE} caractères. Par exemple trois mots et un nombre.`,c.trim());
@@ -470,10 +565,10 @@ function renderSettings(){
   };
   // Rejoindre un foyer existant : ne change que cet appareil.
   const cp=$("#cpcode");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(code);cp.textContent="Copié ✓"}catch(_){alert("Copie impossible sur cet appareil.")}};
-  $("#setcode").onclick=()=>{
+  on("#setcode","onclick",()=>{
     const c=askCode("Code du foyer (le même que sur les autres appareils) :",code);
     if(c!==null){code=LS.code=c;dirty=true;save();sync();render()}
-  };
+  });
   // Renommer le foyer côté serveur : il faut que le code actuel soit valide.
   const ren=$("#rencode");if(ren)ren.onclick=async()=>{
     const n=askCode(`Nouveau code du foyer, au moins ${MIN_CODE} caractères. Gardez-le secret :`,"");
@@ -483,14 +578,30 @@ function renderSettings(){
     const e=r?await r.json().catch(()=>({})):{};
     alert(e.message==="code deja utilise"?"Ce code est déjà pris, choisissez-en un autre.":"Impossible de changer le code pour l'instant (hors ligne ?).");
   };
-  $("#newr").onclick=()=>recipeEditor(null);
+  on("#newr","onclick",()=>recipeEditor(null));
   const ol=()=>LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan";
-  $("#ordl").onchange=e=>{LS.ordl=e.target.value;render()};
+  on("#ordl","onchange",e=>{LS.ordl=e.target.value;render()});
   const moveR=(i,d)=>{const ids=rayonOrder(ol()).map(r=>r.id);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];touch("lists",{...S.lists[ol()],order:ids});render()};
   document.querySelectorAll("[data-up]").forEach(el=>el.onclick=()=>moveR(+el.dataset.up,-1));
   document.querySelectorAll("[data-dn]").forEach(el=>el.onclick=()=>moveR(+el.dataset.dn,1));
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=e=>{if(!e.target.closest("[data-plan]"))recipeEditor(S.recipes[el.dataset.r])});
   document.querySelectorAll("[data-plan]").forEach(el=>el.onclick=()=>planRecipe(S.recipes[el.dataset.plan]));
+}
+function habitEditor(){
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Nouvelle habitude</h2>
+   <p class="mut">Plusieurs jours cochés = l'un ou l'autre dans la semaine.</p>
+   <div class="days">${DAYS.map((d,i)=>`<label><input type="checkbox" value="${i+1}"><span>${d.slice(0,3)}</span></label>`).join("")}</div>
+   <div class="serv"><span>Moment</span><select id="hslot"><option value="s">Soir</option><option value="m">Midi</option></select></div>
+   <div class="serv"><span>Plat</span><select id="htype">${Data.TYPES.map(t=>`<option value="${t.id}">${t.icon} ${esc(t.label)}</option>`).join("")}</select></div>
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  $("#ok").onclick=()=>{
+    const days=[...ov.querySelectorAll(".days input:checked")].map(x=>+x.value);
+    if(!days.length){alert("Cochez au moins un jour.");return}
+    touch("habits",{id:"h-"+uid(),days,slot:$("#hslot").value,type:$("#htype").value,auto:false,state:"on"});close();render();
+  };
 }
 function recipeEditor(r){
   const lists=live(S.lists).sort(listSort);
@@ -500,6 +611,8 @@ function recipeEditor(r){
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${r?"Modifier la recette":"Nouvelle recette"}</h2>
    <input type="text" id="rn" placeholder="Nom du plat" value="${esc(r?r.name:"")}" style="width:100%;margin-bottom:10px">
    <div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${r?r.serves||BASE:BASE}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div>
+   <div class="serv"><span>Saison</span><select id="ssn">${[["all","Toute l'année"],["ete","Été (pas de novembre à mars)"],["hiver","Hiver (pas de mai à septembre)"]]
+     .map(([v,l])=>`<option value="${v}" ${v===Data.recipeSeason(r||{name:""})?"selected":""}>${l}</option>`).join("")}</select></div>
    <p class="mut">Ingrédients pour ce nombre de personnes, avec la quantité en premier. Le magasin est celui proposé par défaut.</p>
    <div id="eds">${(r?r.ingredients:[{t:""},{t:""},{t:""}]).map(rowH).join("")}</div>
    <button class="btn sec" id="more">+ Ingrédient</button>
@@ -514,7 +627,7 @@ function recipeEditor(r){
     const name=$("#rn").value.trim();
     const ings=[...ov.querySelectorAll(".ed-row")].map(el=>({t:el.querySelector(".ing").value.trim(),store:el.querySelector("select").value})).filter(x=>x.t);
     if(!name){$("#rn").focus();return}
-    touch("recipes",{id:r?r.id:uid(),name,serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings});close();render();
+    touch("recipes",{id:r?r.id:uid(),name,season:$("#ssn").value,serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings});close();render();
   };
 }
 addEventListener("online",sync);
@@ -527,6 +640,7 @@ if("serviceWorker" in navigator){
   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had)location.reload()});
 }
 if(Data.prune(S,Date.now()))save();
+runLearning();
 purgeDone();render();sync();
 setInterval(purgeDone,5*60*1000);
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>$("#cfg").click(),300);
