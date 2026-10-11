@@ -82,3 +82,27 @@ test("habitude sur une recette : nettoyée et gardée", () => {
   const S = Data.cleanAll({ habits: { h: { recipe: "r1", days: [7], slot: "s" }, ko: { days: [7], slot: "s" } } });
   assert.deepEqual(Object.keys(S.habits), ["h"]); assert.equal(S.habits.h.recipe, "r1"); assert.equal(S.habits.h.type, null);
 });
+
+// 8 semaines avant le 07/12/2026 : pizza le lundi soir, burgers le jeudi soir, plus de pâtes ni de burgers vendredi/samedi
+const changed = {};
+weeks.forEach((mon, i) => {
+  if (i % 4 !== 3) changed[Data.addDays(mon, 0) + "-s"] = { text: "Pizza", ts: 1 };
+  if (i % 3 !== 2) changed[Data.addDays(mon, 3) + "-s"] = { text: "Burgers maison", ts: 1 };
+});
+test("habitude manuelle plus suivie : le plat change (pâtes → pizza le lundi)", () => {
+  const S = Data.cleanAll({ meals: changed, habits: { p: { type: "pates", days: [1], slot: "s", since: "2026-01-01", ts: 1 } } });
+  const r = Data.learnHabits(S, "2026-12-09");
+  assert.deepEqual(r.change.find(c => c.id === "p"), { id: "p", type: "pizza", recipe: null, days: [1] });
+  assert.ok(!r.add.some(a => a.type === "pizza"));
+});
+test("habitude manuelle plus suivie : les jours changent (burger vendredi/samedi → jeudi)", () => {
+  const S = Data.cleanAll({ meals: changed, habits: { b: { type: "burger", days: [5, 6], slot: "s", since: "2026-01-01", ts: 1 } } });
+  assert.deepEqual(Data.learnHabits(S, "2026-12-09").change.find(c => c.id === "b"), { id: "b", days: [4] });
+});
+test("habitude encore suivie : jamais modifiée, la nouvelle s'ajoute à côté", () => {
+  const m = { ...changed, "2026-11-23-s": { text: "Carbonara", ts: 1 } }; // encore des pâtes un lundi récent
+  const S = Data.cleanAll({ meals: m, habits: { p: { type: "pates", days: [1], slot: "s", ts: 1 } } });
+  const r = Data.learnHabits(S, "2026-12-09");
+  assert.ok(!r.change.some(c => c.id === "p"));
+  assert.ok(r.add.some(a => a.type === "pizza" && a.days.join() === "1"));
+});

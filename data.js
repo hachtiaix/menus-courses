@@ -120,7 +120,20 @@ function learnHabits(S,today){
     const ref=[last,h.last,h.since].filter(Boolean).sort().pop();
     if(ref&&Date.parse(today)-Date.parse(ref)>HABIT_TTL)drop.push(h.id);
   }
-  return{add,drop,seen};
+  // Habitudes qui évoluent : un nouveau rythme détecté remplace une habitude qui n'est plus suivie depuis 8 semaines
+  // (même plat à d'autres jours → nouveaux jours ; autre plat aux mêmes jours → nouveau plat). Sinon, nouvelle habitude.
+  const recent=id=>seen[id]&&seen[id]>=start,change=[],fresh=[];
+  for(const c of add){
+    const active=Object.values(S.habits||{}).filter(h=>!h.deleted&&h.state==="on"&&h.slot===c.slot&&!change.some(x=>x.id===h.id));
+    const same=active.find(h=>!h.recipe&&h.type===c.type&&h.days.some(d=>c.days.includes(d)));
+    if(same){if(same.days.join()!==c.days.join()&&!recent(same.id))change.push({id:same.id,days:c.days});continue}
+    const moved=active.find(h=>!h.recipe&&h.type===c.type&&!recent(h.id));
+    if(moved){change.push({id:moved.id,days:c.days});continue}
+    const replaced=active.find(h=>h.days.some(d=>c.days.includes(d))&&!recent(h.id));
+    if(replaced){change.push({id:replaced.id,type:c.type,recipe:null,days:c.days});continue}
+    fresh.push(c);
+  }
+  return{add:fresh,drop:drop.filter(id=>!change.some(x=>x.id===id)),seen,change};
 }
 
 // Tirage pseudo-aléatoire reproductible (ordre propre à chaque créneau quand des plats sont à égalité).
@@ -189,7 +202,8 @@ function clean(k,id,r){
     type:TYPE_IDS.includes(r.type)?r.type:null,recipe:okId(r.recipe)?r.recipe:null,slot:r.slot,
     days:[...new Set((Array.isArray(r.days)?r.days:[]).map(x=>parseInt(x,10)).filter(x=>x>=1&&x<=7))].sort().slice(0,7),
     state:r.state==="off"?"off":"on",auto:r.auto===true,
-    last:/^\d{4}-\d{2}-\d{2}$/.test(r.last)?r.last:null,since:/^\d{4}-\d{2}-\d{2}$/.test(r.since)?r.since:null,ts,deleted}:null;
+    last:/^\d{4}-\d{2}-\d{2}$/.test(r.last)?r.last:null,since:/^\d{4}-\d{2}-\d{2}$/.test(r.since)?r.since:null,
+    adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,ts,deleted}:null;
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};

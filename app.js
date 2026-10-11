@@ -240,7 +240,7 @@ function planRecipe(r){
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Ajouter « ${esc(r.name)} » aux menus</h2>
    <select id="plto" style="width:100%">${slotOptions(null,nextFreeSlot()," (remplace)")}</select>
-   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">${h?"Enregistrer":"Ajouter"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
   $("#ok").onclick=()=>{
@@ -360,7 +360,8 @@ function suggestDialog(){
 // Une habitude retirée à la main n'est pas réapprise avant 3 mois.
 function runLearning(){
   if(LS.learnDay===todayKey())return;LS.learnDay=todayKey();
-  const {add,drop,seen}=Data.learnHabits(S,todayKey());
+  const {add,drop,seen,change}=Data.learnHabits(S,todayKey());
+  for(const c of change){const h=S.habits[c.id];if(h)touch("habits",{...h,...c,adj:todayKey()})} // l'habitude suit vos nouvelles habitudes
   // dernière fois suivie (pour l'oubli à 12 mois) ; date de création si aucune
   for(const [id,ymd] of Object.entries(seen))if(S.habits[id]&&(S.habits[id].last||"")<ymd)touch("habits",{...S.habits[id],last:ymd});
   for(const h of live(S.habits))if(h.state==="on"&&!h.last&&!h.since)touch("habits",{...h,since:todayKey()});
@@ -384,7 +385,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v80";
+const BASE=4,VERSION="v81";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -568,7 +569,7 @@ function renderSettings(){
    recettes:`<div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${{ete:" · ☀️ été",hiver:" · ❄️ hiver"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`,
    habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
-   <div class="card">${hs.length?hs.map(h=>`<div class="row"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
+   <div class="card">${hs.length?hs.map(h=>`<div class="row link" data-hedit="${h.id}"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}${h.adj?" · ajustée":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
    <button class="btn" id="newh" style="width:100%">+ Habitude</button>`,
    rayons:`<div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
    ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>`,
@@ -581,7 +582,8 @@ function renderSettings(){
   $("#view").innerHTML=tabs+body;
   document.querySelectorAll("[data-stab]").forEach(b=>b.onclick=()=>{stab=b.dataset.stab;render();scrollTo(0,0)});
   const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
-  document.querySelectorAll("[data-hdel]").forEach(el=>el.onclick=()=>{touch("habits",{...S.habits[el.dataset.hdel],state:"off"});render()});
+  document.querySelectorAll("[data-hdel]").forEach(el=>el.onclick=e=>{e.stopPropagation();touch("habits",{...S.habits[el.dataset.hdel],state:"off"});render()});
+  document.querySelectorAll("[data-hedit]").forEach(el=>el.onclick=()=>habitEditor(S.habits[el.dataset.hedit]));
   on("#newh","onclick",()=>habitEditor());
   // Forcer la mise à jour : vide le cache de l'app ET celui de Safari (qui garde les fichiers jusqu'à 10 min), puis recharge.
   on("#upd","onclick",async e=>{e.preventDefault();LS.updFrom=VERSION;e.target.textContent="Mise à jour…";
@@ -617,13 +619,13 @@ function renderSettings(){
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=e=>{if(!e.target.closest("[data-plan]"))recipeEditor(S.recipes[el.dataset.r])});
   document.querySelectorAll("[data-plan]").forEach(el=>el.onclick=()=>planRecipe(S.recipes[el.dataset.plan]));
 }
-function habitEditor(){
+function habitEditor(h){
   const ov=document.createElement("div");ov.className="ov";
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Nouvelle habitude</h2>
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${h?"Modifier l'habitude":"Nouvelle habitude"}</h2>
    <p class="mut">Plusieurs jours cochés = l'un ou l'autre dans la semaine.</p>
-   <div class="days">${DAYS.map((d,i)=>`<label><input type="checkbox" value="${i+1}"><span>${d.slice(0,3)}</span></label>`).join("")}</div>
-   <div class="serv"><span>Moment</span><select id="hslot"><option value="s">Soir</option><option value="m">Midi</option></select></div>
-   <div class="serv"><span>Plat</span><div class="pick"><input type="text" id="hq" placeholder="Tapez : pâtes, soupe, une recette…" autocomplete="off"><div id="hlist"></div></div></div>
+   <div class="days">${DAYS.map((d,i)=>`<label><input type="checkbox" value="${i+1}" ${h&&h.days.includes(i+1)?"checked":""}><span>${d.slice(0,3)}</span></label>`).join("")}</div>
+   <div class="serv"><span>Moment</span><select id="hslot"><option value="s">Soir</option><option value="m" ${h&&h.slot==="m"?"selected":""}>Midi</option></select></div>
+   <div class="serv"><span>Plat</span><div class="pick"><input type="text" id="hq" placeholder="Tapez : pâtes, soupe, une recette…" autocomplete="off" value="${h?esc(habitWhat(h).icon+" "+habitWhat(h).label):""}"><div id="hlist"></div></div></div>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
@@ -631,7 +633,7 @@ function habitEditor(){
   const fold=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   const all=[...Data.TYPES.map(t=>({type:t.id,recipe:null,icon:t.icon,label:t.label,find:fold(t.label+" "+t.words.join(" "))})),
     ...live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>({type:null,recipe:r.id,icon:"📖",label:r.name,find:fold(r.name)}))];
-  let sel=null;
+  let sel=h?{type:h.type,recipe:h.recipe}:null;
   const show=()=>{const q=fold($("#hq").value.trim());
     const hits=(q?all.filter(x=>x.find.includes(q)):all.filter(x=>x.type)).slice(0,8);
     $("#hlist").innerHTML=hits.map((x,i)=>`<button type="button" data-h="${i}">${x.icon} ${esc(x.label)}</button>`).join("")||`<p class="mut">Aucun plat ne correspond</p>`;
@@ -643,7 +645,8 @@ function habitEditor(){
     if(!days.length){alert("Cochez au moins un jour.");return}
     if(!sel){alert("Choisissez un plat dans la liste.");$("#hq").focus();return}
     const what=sel;
-    touch("habits",{id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,state:"on",since:todayKey()});close();render();
+    // modifiée à la main : elle redevient une habitude « à vous », et l'année se recompte
+    touch("habits",{...(h||{}),id:h?h.id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,adj:null,state:"on",since:todayKey()});close();render();
   };
 }
 function recipeEditor(r){
