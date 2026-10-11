@@ -208,3 +208,7 @@ section.day:has(.slotw.past) .dh{opacity:.5}
 .sugrow .stp{display:inline-flex;margin-top:2px}
 .sugtop .x{flex:none;width:32px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top));background:var(--accent);color:#fff;padding:12px 18px;border-radius:14px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:30;white-space:nowrap}
+.pick{flex:1;min-width:0}.pick input{width:100%}
+#hlist{margin-top:6px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}#hlist:empty{display:none}
+#hlist button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;font-size:16px;color:var(--fg)}
+#hlist button:last-child{border:0}#hlist p{margin:10px 12px}

@@ -380,7 +380,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v73";
+const BASE=4,VERSION="v74";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -579,7 +579,11 @@ function renderSettings(){
   const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
   document.querySelectorAll("[data-hdel]").forEach(el=>el.onclick=()=>{touch("habits",{...S.habits[el.dataset.hdel],state:"off"});render()});
   on("#newh","onclick",()=>habitEditor());
-  on("#upd","onclick",async e=>{e.preventDefault();LS.updFrom=VERSION;try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(_){}location.reload()});
+  // Forcer la mise à jour : vide le cache de l'app ET celui de Safari (qui garde les fichiers jusqu'à 10 min), puis recharge.
+  on("#upd","onclick",async e=>{e.preventDefault();LS.updFrom=VERSION;e.target.textContent="Mise à jour…";
+    try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k);
+      await Promise.all(["./","index.html","app.js","data.js","qty.js","rayons.js","style.css","config.js","sw.js"].map(f=>fetch(f,{cache:"reload"}).catch(()=>{})))}catch(_){}
+    location.replace(location.pathname+"?maj="+Date.now())});
   const askCode=(msg,def)=>{
     let c=prompt(msg,def);
     while(c!==null&&c.trim().length<MIN_CODE)c=prompt(`Trop court : au moins ${MIN_CODE} caractères. Par exemple trois mots et un nombre.`,c.trim());
@@ -615,15 +619,26 @@ function habitEditor(){
    <p class="mut">Plusieurs jours cochés = l'un ou l'autre dans la semaine.</p>
    <div class="days">${DAYS.map((d,i)=>`<label><input type="checkbox" value="${i+1}"><span>${d.slice(0,3)}</span></label>`).join("")}</div>
    <div class="serv"><span>Moment</span><select id="hslot"><option value="s">Soir</option><option value="m">Midi</option></select></div>
-   <div class="serv"><span>Plat</span><select id="htype"><optgroup label="Type de plat">${Data.TYPES.map(t=>`<option value="${t.id}">${t.icon} ${esc(t.label)}</option>`).join("")}</optgroup>
-     ${live(S.recipes).length?`<optgroup label="Une de mes recettes">${live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<option value="r:${r.id}">📖 ${esc(r.name)}</option>`).join("")}</optgroup>`:""}</select></div>
+   <div class="serv"><span>Plat</span><div class="pick"><input type="text" id="hq" placeholder="Tapez : pâtes, soupe, une recette…" autocomplete="off"><div id="hlist"></div></div></div>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  // recherche dans les types de plats et les recettes (pratique avec beaucoup de recettes)
+  const fold=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const all=[...Data.TYPES.map(t=>({type:t.id,recipe:null,icon:t.icon,label:t.label,find:fold(t.label+" "+t.words.join(" "))})),
+    ...live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>({type:null,recipe:r.id,icon:"📖",label:r.name,find:fold(r.name)}))];
+  let sel=null;
+  const show=()=>{const q=fold($("#hq").value.trim());
+    const hits=(q?all.filter(x=>x.find.includes(q)):all.filter(x=>x.type)).slice(0,8);
+    $("#hlist").innerHTML=hits.map((x,i)=>`<button type="button" data-h="${i}">${x.icon} ${esc(x.label)}</button>`).join("")||`<p class="mut">Aucun plat ne correspond</p>`;
+    $("#hlist").onclick=e=>{const b=e.target.closest("[data-h]");if(!b)return;const x=hits[+b.dataset.h];
+      sel={type:x.type,recipe:x.recipe};$("#hq").value=x.icon+" "+x.label;$("#hlist").innerHTML=""}};
+  $("#hq").oninput=()=>{sel=null;show()};$("#hq").onfocus=()=>{if(!sel)show()};
   $("#ok").onclick=()=>{
     const days=[...ov.querySelectorAll(".days input:checked")].map(x=>+x.value);
     if(!days.length){alert("Cochez au moins un jour.");return}
-    const v=$("#htype").value,what=v.startsWith("r:")?{recipe:v.slice(2),type:null}:{type:v,recipe:null};
+    if(!sel){alert("Choisissez un plat dans la liste.");$("#hq").focus();return}
+    const what=sel;
     touch("habits",{id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,state:"on"});close();render();
   };
 }
@@ -666,6 +681,7 @@ if("serviceWorker" in navigator){
 if(Data.prune(S,Date.now()))save();
 runLearning();
 // Après « Forcer la mise à jour » : retour sur l'onglet Foyer et confirmation de la version.
+if(/[?&]maj=/.test(location.search))history.replaceState(null,"",location.pathname);
 if(LS.updFrom){const from=LS.updFrom;delete LS.updFrom;tab=LS.tab="settings";stab="foyer";
   setTimeout(()=>toast(from===VERSION?`✓ Déjà à jour : version ${VERSION}`:`✓ Mise à jour installée : version ${VERSION}`),300)}
 function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
