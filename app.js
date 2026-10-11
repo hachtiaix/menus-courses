@@ -332,6 +332,7 @@ function suggestDialog(){
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>💡 Suggestions</h2>
    <p class="mut">De saison, pas cuisinés depuis plus d'un mois. Les ingrédients seront ajoutés aux listes.</p>
    <div class="card" id="sugs"></div>
+   ${rows.some(r=>!r.sug)?`<p class="mut">${rows.filter(r=>!r.sug).length} créneau${rows.filter(r=>!r.sug).length>1?"x":""} sans suggestion : plus de recettes donneront plus de choix.</p>`:""}
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok"></button></div></div>`;
   document.body.appendChild(ov);paint();
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
@@ -375,7 +376,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v68";
+const BASE=4,VERSION="v69";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
