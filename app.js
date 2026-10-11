@@ -452,7 +452,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v121";
+const BASE=4,VERSION="v122";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -525,7 +525,13 @@ function renderMenus(){
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
     touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.defN||BASE)});
     for(const p of Data.unknownFoods(S,t))touch("foods",{id:"c-"+uid(),label:p.charAt(0).toUpperCase()+p.slice(1),cat:"wait",kind:"g",q:null,store:"auchan"}); // ⏳ à classer
-    applyCompanion(key);render();if(!quiet)ingredientsDialog(known?known.name:t,key);
+    applyCompanion(key);render();if(quiet)return;
+    // Entrée pour finir : chaque aliment encore « à classer » de ce repas est décrit tout de suite (famille, quantité,
+    // unité, magasin ; « Plus tard » le laisse à classer), puis la fenêtre des ingrédients s'ouvre avec les bonnes quantités.
+    const waiting=t.split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean)
+      .map(p=>live(S.foods).find(f=>f.cat==="wait"&&f.label.toLowerCase()===p.toLowerCase())).filter(Boolean);
+    const next=i=>i<waiting.length?foodEditor(null,waiting[i],()=>next(i+1),`${i+1}/${waiting.length}`):ingredientsDialog(known?known.name:t,key);
+    next(0);
   };
   const clearSug=()=>document.querySelectorAll(".sug").forEach(x=>x.remove());
   document.querySelectorAll("[data-m]").forEach(el=>{
@@ -803,23 +809,24 @@ function habitEditor(h){
   };
 }
 // Nouvel ingrédient dans une famille (réglages) : nom, quantité par personne en grammes ou en pièces, magasin.
-function foodEditor(cat,rec,done){ // rec : un aliment « à classer » dont on choisit la famille
+function foodEditor(cat,rec,done,step){ // rec : un aliment « à classer » dont on choisit la famille ; done : appelé ensuite (même « Plus tard »)
   const lists=live(S.lists).sort(listSort),FAM={leg:"Légumes",fec:"Féculents",prot:"Viandes, œufs",pois:"Poissons, crustacés"},fam=FAM[cat];
   const ov=document.createElement("div");ov.className="ov";
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${rec?(S.foods[rec.id]?"Classer l'ingrédient":"Nouvel ingrédient"):"Nouvel ingrédient · "+fam}</h2>
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${rec?(step?"Nouvel ingrédient"+(step.endsWith("/1")?"":" "+step):"Classer l'ingrédient"):"Nouvel ingrédient · "+fam}</h2>
    <input type="text" id="fn" placeholder="Nom (ex. Haricots beurre)" autocapitalize="sentences" value="${rec?esc(rec.label):""}" style="width:100%;margin-bottom:10px">
    ${rec?`<div class="serv"><span>Famille</span><select id="fc">${Object.entries(FAM).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>`:""}
-   <div class="serv"><span>Par personne</span><input type="number" id="fqv" value="150" min="0.25" step="any" inputmode="decimal" style="width:80px">
-   <select id="fk"><option value="g">grammes</option><option value="n">pièce(s)</option></select></div>
+   <div class="serv"><span>Par personne</span><input type="text" id="fqv" value="150" inputmode="decimal" style="width:80px">
+   <select id="fk"><option value="g">grammes</option><option value="kg">kilos</option><option value="n">pièce(s)</option></select></div>
    <div class="serv"><span>Magasin</span><select id="fs">${lists.map(l=>`<option value="${l.id}" ${l.id==="auchan"?"selected":""}>${esc(SHORT[l.id]||l.name)}</option>`).join("")}</select></div>
-   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">${rec?"Enregistrer":"Ajouter"}</button></div></div>`;
+   <div class="acts"><button class="btn sec" id="no">${done?"Plus tard":"Annuler"}</button><button class="btn" id="ok">${rec?"Enregistrer":"Ajouter"}</button></div></div>`;
   document.body.appendChild(ov);
-  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
-  $("#fk").onchange=()=>{$("#fqv").value=$("#fk").value==="n"?1:150};
+  const close=()=>ov.remove(),later=()=>{close();if(done)done()};ov.onclick=e=>{if(e.target===ov)later()};$("#no").onclick=later;
+  $("#fk").onchange=()=>{$("#fqv").value={n:1,kg:1,g:150}[$("#fk").value]};
   $("#ok").onclick=()=>{const label=$("#fn").value.trim(),q=parseFloat(String($("#fqv").value).replace(",","."));
     if(!label){$("#fn").focus();return}if(!(q>0)){$("#fqv").focus();return}
     if(Data.foodFor(label,true)&&!confirm(`« ${label} » ressemble à un ingrédient existant. L'ajouter quand même ?`))return;
-    touch("foods",{id:rec?rec.id:"c-"+uid(),label:label.charAt(0).toUpperCase()+label.slice(1),cat:rec?$("#fc").value:cat,kind:$("#fk").value,q,store:$("#fs").value,deleted:false});close();render();if(done)done()};
+    const kg=$("#fk").value==="kg"; // les kilos sont gardés en grammes
+    touch("foods",{id:rec?rec.id:"c-"+uid(),label:label.charAt(0).toUpperCase()+label.slice(1),cat:rec?$("#fc").value:cat,kind:kg?"g":$("#fk").value,q:kg?Math.round(q*1000):q,store:$("#fs").value,deleted:false});close();render();if(done)done()};
   if(!rec)setTimeout(()=>$("#fn").focus(),50);
 }
 function recipeEditor(r){
