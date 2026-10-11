@@ -272,7 +272,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v49";
+const BASE=4,VERSION="v50";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
