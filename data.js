@@ -111,7 +111,7 @@ const FOODS=[
 const FOOD_CATS=["leg","fec","prot","pois"],CAT_ICON={leg:"🥦",fec:"🥔",prot:"🥩",pois:"🐟"};
 let CUSTOM=[];
 function setCustom(S){CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
-  .map(r=>({id:r.id,icon:r.icon||CAT_ICON[r.cat]||"🍽️",cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
+  .map(r=>({id:r.id,icon:CAT_ICON[r.cat],cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
 const allFoods=()=>[...FOODS,...CUSTOM];
 function foodFor(name,exact){
   const n=words(name);let best=null,len=0;
