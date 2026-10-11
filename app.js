@@ -8,7 +8,11 @@ function clean(k,id,r){
   const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;
   if(k==="lists")return{id,name:str(r.name,60)||id,ts,deleted};
   if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,c:Number.isFinite(r.c)?r.c:ts,ts,deleted}:null;
-  if(k==="meals")return{key:id,text:str(r.text,120),servings:Math.max(1,Math.min(30,parseInt(r.servings,10)||4)),ts,deleted};
+  if(k==="meals"){
+    const ad=r.added&&typeof r.added==="object"&&Array.isArray(r.added.items)?{n:Math.max(1,Math.min(30,parseInt(r.added.n,10)||4)),
+      items:r.added.items.slice(0,80).map(g=>({t:str(g&&g.t,200),store:okId(g&&g.store)?g.store:"auchan"}))}:null;
+    return{key:id,text:str(r.text,120),servings:Math.max(1,Math.min(30,parseInt(r.servings,10)||4)),added:ad,ts,deleted};
+  }
   if(k==="stores")return{id,last:(Array.isArray(r.last)?r.last:[]).filter(okId).slice(-3),def:okId(r.def)?r.def:null,ts,deleted};
   if(k==="aisles")return Rayons.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80)
@@ -172,8 +176,26 @@ function purgeDone(){
   let n=0;live(S.items).forEach(i=>{if(i.done&&Date.now()-i.ts>DONE_TTL){touch("items",{...i,deleted:true});n++}});
   if(n&&tab!=="menus"&&tab!=="settings")safeRender();
 }
+// Retire une quantité d'un article non coché (supprimé s'il tombe à zéro).
+function removeFromList(list,text){
+  const p=Qty.parse(text),k=Qty.key(p);
+  const same=live(S.items).filter(i=>i.list===list&&!i.done&&Qty.key(Qty.parse(i.text))===k).sort((a,b)=>Qty.parse(a.text).n-Qty.parse(b.text).n);
+  let need=Math.ceil(p.n==null?1:p.n);
+  for(const i of same){
+    if(need<=0)break;
+    const q=Qty.parse(i.text),have=Math.ceil(q.n==null?1:q.n);
+    if(have<=need){touch("items",{...i,deleted:true});need-=have}
+    else{touch("items",{...i,text:Qty.format({...q,kind:q.kind==="none"?"count":q.kind,n:have-need})});need=0}
+  }
+}
+// Repas dont les ingrédients sont déjà dans les listes : on n'ajoute que la différence de personnes.
+function resizeMeal(m,n){
+  if(!m.added||m.added.n===n)return{...m,servings:n};
+  m.added.items.forEach(g=>{removeFromList(g.store,Qty.buy(g.t,m.added.n/BASE));addToList(g.store,Qty.buy(g.t,n/BASE))});
+  return{...m,servings:n,added:{...m.added,n}};
+}
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v28";
+const BASE=4,VERSION="v29";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -222,7 +244,7 @@ function renderMenus(){
     el.onchange=()=>{if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
-  const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));LS.defN=n;touch("meals",{...m,servings:n});render()};
+  const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));LS.defN=n;touch("meals",resizeMeal(m,n));render()};
   document.querySelectorAll("[data-sm]").forEach(el=>el.onclick=()=>step(el.dataset.sm,-1));
   document.querySelectorAll("[data-sp]").forEach(el=>el.onclick=()=>step(el.dataset.sp,1));
   $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
@@ -231,15 +253,18 @@ function ingredientsDialog(name,mealKey){
   const r=live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase());
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
-  let n=(mealKey&&S.meals[mealKey]&&S.meals[mealKey].servings)||BASE;
+  const meal=mealKey&&S.meals[mealKey],prev=meal&&meal.text===name&&meal.added;
+  let n=(meal&&meal.servings)||BASE;
+  const was=t=>prev&&prev.items.find(g=>g.t===t);
   const ov=document.createElement("div");ov.className="ov";
-  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}"><input type="checkbox" checked><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/BASE))}" data-shown="${esc(Qty.buy(i.t,n/BASE))}"><select>${opts(defaultStore(i.t,i.store))}</select></div>`;
+  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}"><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/BASE))}" data-shown="${esc(Qty.buy(i.t,n/BASE))}"><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select></div>`;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(name)}</h2>
+   ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
    <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. Recette de base : ${BASE} personnes.</p>
    <div id="ings" class="card">${r.ingredients.map(rowH).join("")}</div><button class="btn sec" id="more">+ Ingrédient</button>`
    :`<p class="mut">Nouvelle recette : un ingrédient par ligne, <b>quantités pour ${BASE} personnes</b> (ex. « 400 g de pâtes »).</p><textarea id="ta" rows="7" placeholder="400 g de pâtes&#10;200 g de lardons&#10;2 oeufs&#10;crème fraîche"></textarea>`}
-   <div class="acts"><button class="btn sec" id="no">Ignorer</button><button class="btn" id="ok">${r?"Ajouter aux listes":"Continuer"}</button></div></div>`;
+   <div class="acts"><button class="btn sec" id="no">Ignorer</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour les listes":"Ajouter aux listes"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();
   ov.onclick=e=>{if(e.target===ov)close()};
@@ -259,9 +284,14 @@ function ingredientsDialog(name,mealKey){
     }
     const rows=[...ov.querySelectorAll(".ing-row")].map(el=>{const i=el.querySelector(".ing"),edited=i.value!==i.dataset.shown;
       return{on:el.querySelector("[type=checkbox]").checked,shown:i.value.trim(),base:edited?scaleText(i.value.trim(),BASE/n):el.dataset.base,store:el.querySelector("select").value}}).filter(x=>x.shown);
-    rows.filter(x=>x.on).forEach(x=>addToList(x.store,x.shown));
+    const now=rows.filter(x=>x.on).map(x=>({t:x.base,store:x.store}));
+    const sig=(items,k)=>items.map(g=>g.t+"@"+g.store).sort().join("|")+"#"+k;
+    if(!prev||sig(prev.items,prev.n)!==sig(now,n)){
+      if(prev)prev.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,prev.n/BASE)));
+      rows.filter(x=>x.on).forEach(x=>addToList(x.store,x.shown));
+    }
     touch("recipes",{...r,ingredients:rows.map(x=>({t:x.base,store:(r.ingredients.find(g=>g.t===x.base)||x).store}))});
-    if(mealKey&&S.meals[mealKey])touch("meals",{...S.meals[mealKey],servings:n});
+    if(meal)touch("meals",{...S.meals[mealKey],servings:n,added:{n,items:now}});
     close();render();
   };
 }
