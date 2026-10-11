@@ -272,3 +272,7 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 .slot .rcp{display:inline-block;max-width:100%;background:#fff;border:1px solid #c9ced6;border-radius:5px;padding:4px 9px;font-size:14px;color:#1f2329;box-shadow:0 1px 1px rgba(0,0,0,.06)}
 @media(prefers-color-scheme:dark){.slot .rcp{background:#2c3038;border-color:#4a505b;color:#eef0f3}}
 #paste{width:100%;box-sizing:border-box;margin:0 0 10px;font:inherit;font-size:16px;padding:10px;border:1px dashed #b9c0ca;border-radius:10px;background:transparent;color:inherit;resize:vertical}
+.slot span.chips{display:contents}
+.tagwrap.editing{flex-wrap:wrap;gap:4px;align-items:center;padding:4px 6px;border:1px solid var(--acc,#2f6d3e);border-radius:10px;background:var(--card,#fff)}
+.tagwrap.editing input[type=text]{flex:1 1 80px;min-width:80px;height:30px;border:none;padding:0 4px;background:transparent;outline:none}
+.chips .tag b{margin-left:6px;font-weight:400;opacity:.6;padding:0 2px}

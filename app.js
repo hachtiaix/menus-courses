@@ -425,7 +425,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v88";
+const BASE=4,VERSION="v89";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -506,25 +506,44 @@ function renderMenus(){
       const box=document.createElement("div");box.className="sug";
       box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}" ${x.food?'data-food="1"':""}>${x.icon} ${esc(x.food?x.t.split(/[,+]/).pop().trim():x.t)}${x.note?` <small class="mut">${esc(x.note)}</small>`:""}</button>`).join("");
       box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();
-        if(b.dataset.food){el.value=b.dataset.t+", ";clearSug();el.focus();return} // on enchaîne avec l'aliment suivant
+        if(b.dataset.food){addChip(b.dataset.t.split(/[,+]/).pop().trim());clearSug();el.focus();return} // pastille, puis l'aliment suivant
         el.value=b.dataset.t;clearSug();commit(el,b.dataset.t)};
       el.closest(".slotw").appendChild(box);
     };
     // créneau vide touché sans rien taper : les meilleures suggestions (saison, pas faites depuis un mois)
     el.tips=()=>{if(el.readOnly||el.disabled||el.value.trim())return;
       showBox(Data.suggest(S,todayKey(),5,[],undefined,el.dataset.m).map(x=>({t:x.name,icon:x.habit?typeById(x.habit).icon:"💡",note:x.days==null?"jamais fait":`il y a ${x.days} j`})))};
+    // Suite d'aliments en cours de saisie : pastilles devant le champ, Entrée valide l'aliment et passe au suivant.
+    el._items=[];
+    const drawChips=()=>{const w=el.parentElement;let c=w.querySelector(".chips");
+      if(!c){c=document.createElement("span");c.className="chips";w.insertBefore(c,el)}
+      w.classList.toggle("editing",el._items.length>0);el.placeholder=el._items.length?"Ajouter…":el.dataset.ph;
+      c.innerHTML=el._items.map((t,i)=>{const f=Data.foodFor(t);return `<i class="tag ${f?f.cat:"autre"}">${esc(t.charAt(0).toUpperCase()+t.slice(1))}<b data-ci="${i}">×</b></i>`}).join("");
+      c.onpointerdown=e=>{const x=e.target.closest("[data-ci]");e.preventDefault();if(x){el._items.splice(+x.dataset.ci,1);drawChips()}el.focus()}};
+    const addChip=t=>{t=t.trim();if(!t)return;el._items.push(t);el.value="";drawChips()};
+    el.dataset.ph=el.placeholder;
+    el.onfocus=()=>{el._orig=el.value;const tags=live(S.recipes).some(r=>norm(r.name)===norm(el.value.trim()))?null:Data.suiteTags(S,el.value);
+      if(tags&&!el.readOnly&&!el.disabled){el._items=tags.map(x=>x.t);el.value="";drawChips()}};
+    el.onkeydown=e=>{
+      if(e.key==="Backspace"&&!el.value&&el._items.length){el._items.pop();drawChips();e.preventDefault();return}
+      if(e.key!=="Enter")return;e.preventDefault();
+      const seg=el.value.trim(),recipe=live(S.recipes).some(r=>norm(r.name)===norm(seg));
+      if(seg&&(el._items.length||(!recipe&&Data.foodFor(seg)))){addChip(seg);clearSug();return}
+      el.blur()};
     el.oninput=()=>{
       const v=el.value,q=norm(v.trim());if(!q){clearSug();return}
       // suite d'aliments en cours (après une virgule ou un +) : on propose seulement des aliments pour le dernier morceau
-      const cut=Math.max(v.lastIndexOf(","),v.lastIndexOf("+")),seg=norm(v.slice(cut+1).trim()),head=cut>=0?v.slice(0,cut+1).trimEnd()+" ":"";
+      const cut=el._items.length?-1:Math.max(v.lastIndexOf(","),v.lastIndexOf("+")),seg=norm(v.slice(cut+1).trim()),head=cut>=0?v.slice(0,cut+1).trimEnd()+" ":"";
       const foods=seg?Data.FOODS.flatMap(f=>f.words.filter(w=>w.startsWith(seg)||w.includes(" "+seg)).slice(0,1).map(w=>({f,w}))).slice(0,4)
         .map(({f})=>({t:head+(f.id==="legboite"?"Haricots verts":f.label),icon:f.icon,food:true})):[];
-      if(cut>=0){showBox(foods);return}
+      if(cut>=0||el._items.length){showBox(foods);return}
       showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,5)
         .map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"}))]);
     };
-    el.onblur=()=>setTimeout(clearSug,150);
-    el.onchange=()=>{if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
+    el.onblur=()=>{setTimeout(clearSug,150);if(!el._items.length&&!el.parentElement.querySelector(".chips"))return;
+      const full=[...el._items,el.value.trim()].filter(Boolean).join(", ");el._items=[];el.value=full;
+      if(norm(full)!==norm(el._orig||""))commit(el,full);else render()};
+    el.onchange=()=>{if(el.parentElement.querySelector(".chips"))return;if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
   document.querySelectorAll("[data-bulb]").forEach(b=>b.onclick=()=>{
