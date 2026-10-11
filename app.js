@@ -380,7 +380,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v72";
+const BASE=4,VERSION="v73";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -579,7 +579,7 @@ function renderSettings(){
   const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
   document.querySelectorAll("[data-hdel]").forEach(el=>el.onclick=()=>{touch("habits",{...S.habits[el.dataset.hdel],state:"off"});render()});
   on("#newh","onclick",()=>habitEditor());
-  on("#upd","onclick",async e=>{e.preventDefault();try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(_){}location.reload()});
+  on("#upd","onclick",async e=>{e.preventDefault();LS.updFrom=VERSION;try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(_){}location.reload()});
   const askCode=(msg,def)=>{
     let c=prompt(msg,def);
     while(c!==null&&c.trim().length<MIN_CODE)c=prompt(`Trop court : au moins ${MIN_CODE} caractères. Par exemple trois mots et un nombre.`,c.trim());
@@ -665,6 +665,11 @@ if("serviceWorker" in navigator){
 }
 if(Data.prune(S,Date.now()))save();
 runLearning();
+// Après « Forcer la mise à jour » : retour sur l'onglet Foyer et confirmation de la version.
+if(LS.updFrom){const from=LS.updFrom;delete LS.updFrom;tab=LS.tab="settings";stab="foyer";
+  setTimeout(()=>toast(from===VERSION?`✓ Déjà à jour : version ${VERSION}`:`✓ Mise à jour installée : version ${VERSION}`),300)}
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
 purgeDone();render();sync();
 setInterval(purgeDone,5*60*1000);
-if(!code&&cfg.SUPABASE_URL)setTimeout(()=>$("#cfg").click(),300);
+// pas encore de code (nouvel appareil) : directement sur l'onglet Foyer, où on le saisit
+if(!code&&cfg.SUPABASE_URL)setTimeout(()=>{tab=LS.tab="settings";stab="foyer";render()},300);
