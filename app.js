@@ -195,7 +195,7 @@ function resizeMeal(m,n){
   return{...m,servings:n,added:{...m.added,n}};
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v29";
+const BASE=4,VERSION="v30";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -225,6 +225,9 @@ function renderMenus(){
     return out.filter(x=>x.recipe||!out.some(y=>y!==x&&norm(y.t).length>norm(x.t).length&&norm(y.t).startsWith(norm(x.t))))};
   const commit=(el,t)=>{
     const key=el.dataset.m,o=S.meals[key]||{};
+    // plat remplacé ou effacé : on retire des listes ce que l'ancien plat y avait ajouté
+    const dropOld=()=>{if(o.added&&norm(o.text||"")!==norm(t))o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/BASE)))};
+    dropOld();
     if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});render();return}
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
     touch("meals",{key,text:known?known.name:t,servings:o.servings||(+LS.defN||BASE)});render();ingredientsDialog(known?known.name:t,key);
