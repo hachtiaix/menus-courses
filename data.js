@@ -112,7 +112,7 @@ const FOOD_CATS=["leg","fec","prot","pois"],CAT_ICON={leg:"🥦",fec:"🥔",prot
 // Image d'un ingrédient ajouté à la main, d'après son nom (sinon celle de sa famille).
 const EMOJI=[["tomate","🍅"],["carotte","🥕"],["courgette","🥒"],["concombre","🥒"],["cornichon","🥒"],["poivron","🫑"],["piment","🌶️"],["aubergine","🍆"],
  ["champignon","🍄"],["brocoli","🥦"],["chou","🥬"],["salade","🥬"],["laitue","🥬"],["epinard","🥬"],["poireau","🥬"],["blette","🥬"],["avocat","🥑"],["mais","🌽"],
- ["oignon","🧅"],["echalote","🧅"],["ail","🧄"],["patate douce","🍠"],["potiron","🎃"],["courge","🎃"],["butternut","🎃"],["citrouille","🎃"],
+ ["oignon","🧅"],["echalote","🧅"],["ail","🧄"],["navet","🫜"],["radis","🫜"],["betterave","🫜"],["panais","🫜"],["celeri","🫜"],["topinambour","🫜"],["patate douce","🍠"],["potiron","🎃"],["courge","🎃"],["butternut","🎃"],["citrouille","🎃"],
  ["haricot","🫛"],["petit pois","🫛"],["pois","🫛"],["feve","🫛"],["edamame","🫛"],["olive","🫒"],
  ["pomme de terre","🥔"],["patate","🥔"],["frite","🍟"],["pate","🍝"],["spaghetti","🍝"],["nouille","🍜"],["riz","🍚"],["pain","🥖"],["baguette","🥖"],["wrap","🌯"],["tortilla","🌮"],
  ["quinoa","🌾"],["boulgour","🌾"],["ble","🌾"],["semoule","🌾"],["lentille","🫘"],["pois chiche","🫘"],["haricot rouge","🫘"],["gnocchi","🥔"],["polenta","🌽"],

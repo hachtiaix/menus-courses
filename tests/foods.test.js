@@ -40,6 +40,6 @@ test("image d'un ingrédient ajouté : d'après son nom, sinon famille", () => {
   const S = { foods: { "c-1": { id: "c-1", label: "Huîtres", cat: "pois", kind: "n", q: 6 }, "c-2": { id: "c-2", label: "Navets", cat: "leg", kind: "g", q: 100 } } };
   Data.setCustom(S);
   assert.equal(Data.foodFor("huitres").icon, "🦪");
-  assert.equal(Data.foodFor("navets").icon, "🥦");
+  assert.equal(Data.foodFor("navets").icon, "🫜");
   Data.setCustom({ foods: {} });
 });
