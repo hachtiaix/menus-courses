@@ -31,11 +31,18 @@ test("apprentissage : pâtes le lundi soir, burger vendredi ou samedi soir, pas 
   const sig = add.map(a => `${a.type}:${a.days.join("+")}:${a.slot}`).sort();
   assert.deepEqual(sig, ["burger:5+6:s", "pates:1:s"]);
 });
-test("oubli : habitude jamais suivie alors que les créneaux ont des repas", () => {
-  const S = Data.cleanAll({ meals, habits: { h1: { type: "soupe", days: [1], slot: "s", ts: 1 }, h2: { type: "pates", days: [1], slot: "s", ts: 1 } } });
-  assert.deepEqual(Data.learnHabits(S, "2026-12-09").drop, ["h1"]);
+test("oubli : seulement après 12 mois sans être suivie", () => {
+  const S = Data.cleanAll({ habits: {
+    vieille: { type: "soupe", days: [7], slot: "s", last: "2025-11-01", ts: 1 },  // suivie il y a 13 mois
+    recente: { type: "pizza", days: [3], slot: "s", last: "2026-03-01", ts: 1 },  // il y a 9 mois
+    nouvelle: { type: "salade", days: [2], slot: "s", since: "2026-12-01", ts: 1 },
+    pates: { type: "pates", days: [1], slot: "s", ts: 1 },
+  }, meals });
+  const r = Data.learnHabits(S, "2026-12-09");
+  assert.deepEqual(r.drop, ["vieille"]);
+  assert.equal(r.seen.pates, "2026-11-30"); // dernier lundi soir de pâtes de l'historique
 });
-test("pas d'oubli sans historique (app récente)", () => {
+test("sans date connue, rien n'est oublié (l'app pose la date de création)", () => {
   const S = Data.cleanAll({ habits: { h1: { type: "soupe", days: [7], slot: "s", ts: 1 } } });
   assert.deepEqual(Data.learnHabits(S, "2026-12-09").drop, []);
 });

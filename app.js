@@ -355,15 +355,18 @@ function suggestDialog(){
     close();render();
   };
 }
-// Habitudes apprises : ajoutées ou oubliées en silence (une fois par jour) ; l'admin les voit dans Réglages → Habitudes.
+// Habitudes apprises : ajoutées en silence (une fois par jour), oubliées après 12 mois sans être suivies ; l'admin les voit dans Réglages → Habitudes.
 // Une habitude retirée à la main n'est pas réapprise avant 3 mois.
 function runLearning(){
   if(LS.learnDay===todayKey())return;LS.learnDay=todayKey();
-  const {add,drop}=Data.learnHabits(S,todayKey());
+  const {add,drop,seen}=Data.learnHabits(S,todayKey());
+  // dernière fois suivie (pour l'oubli à 12 mois) ; date de création si aucune
+  for(const [id,ymd] of Object.entries(seen))if(S.habits[id]&&(S.habits[id].last||"")<ymd)touch("habits",{...S.habits[id],last:ymd});
+  for(const h of live(S.habits))if(h.state==="on"&&!h.last&&!h.since)touch("habits",{...h,since:todayKey()});
   for(const c of add){
     const same=live(S.habits).find(h=>h.type===c.type&&h.slot===c.slot&&h.days.some(d=>c.days.includes(d)));
     if(same&&(same.state==="on"||Date.now()-same.ts<90*864e5))continue;
-    touch("habits",{id:same?same.id:"h-"+c.type+"-"+c.slot+"-"+c.days.join(""),days:c.days,slot:c.slot,type:c.type,auto:true,state:"on"});
+    touch("habits",{id:same?same.id:"h-"+c.type+"-"+c.slot+"-"+c.days.join(""),days:c.days,slot:c.slot,type:c.type,auto:true,state:"on",since:todayKey()});
   }
   for(const id of drop)touch("habits",{...S.habits[id],state:"off",auto:true});
 }
@@ -380,7 +383,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v76";
+const BASE=4,VERSION="v77";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -639,7 +642,7 @@ function habitEditor(){
     if(!days.length){alert("Cochez au moins un jour.");return}
     if(!sel){alert("Choisissez un plat dans la liste.");$("#hq").focus();return}
     const what=sel;
-    touch("habits",{id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,state:"on"});close();render();
+    touch("habits",{id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,state:"on",since:todayKey()});close();render();
   };
 }
 function recipeEditor(r){

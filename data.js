@@ -85,7 +85,7 @@ function habitTypesFor(S,key){
 // Apprentissage sur les 8 semaines complètes précédant celle de « today » :
 // un type présent au moins 3 semaines sur 8 sur un créneau, et au moins une fois sur deux quand ce créneau a un repas
 // → habitude ; même règle sur deux jours voisins (« vendredi ou samedi soir »).
-// Habitude active jamais suivie alors que ses créneaux ont eu des repas au moins 6 semaines sur 8 → à oublier.
+// Pour chaque habitude active : dernière date où elle a été suivie (seen) ; oubliée après 12 mois sans être suivie.
 function learnHabits(S,today){
   const mon=mondayOf(today),start=addDays(mon,-56),cells={},any={};
   const put=(o,k,w)=>(o[k]=o[k]||new Set()).add(w);
@@ -106,13 +106,20 @@ function learnHabits(S,today){
     }
     for(let wd=1;wd<=7;wd++)if(!used.has(wd)&&ok(W(wd),A(wd)))add.push({days:[wd],slot:s,type:t});
   }
-  const drop=[];
+  const drop=[],seen={};
   for(const h of Object.values(S.habits||{})){
     if(h.deleted||h.state!=="on")continue;
-    const W=union(...h.days.map(d=>get(cells,h.type+"|"+d+"|"+h.slot))),A=union(...h.days.map(d=>get(any,d+"|"+h.slot)));
-    if(W.size===0&&A.size>=6)drop.push(h.id);
+    let last=null;
+    for(const [k,m] of Object.entries(S.meals||{})){
+      if(m.deleted||!m.text)continue;const ymd=k.slice(0,10);
+      if(ymd>=today||k.slice(-1)!==h.slot||!h.days.includes(weekday(ymd)))continue;
+      if(habitMatches(S,h,m.text)&&(!last||ymd>last))last=ymd;
+    }
+    if(last)seen[h.id]=last;
+    const ref=[last,h.last,h.since].filter(Boolean).sort().pop();
+    if(ref&&Date.parse(today)-Date.parse(ref)>365*DAY)drop.push(h.id);
   }
-  return{add,drop};
+  return{add,drop,seen};
 }
 
 // Tirage pseudo-aléatoire reproductible (ordre propre à chaque créneau quand des plats sont à égalité).
@@ -180,7 +187,8 @@ function clean(k,id,r){
   if(k==="habits")return (TYPE_IDS.includes(r.type)||okId(r.recipe))&&(r.slot==="m"||r.slot==="s")?{id,
     type:TYPE_IDS.includes(r.type)?r.type:null,recipe:okId(r.recipe)?r.recipe:null,slot:r.slot,
     days:[...new Set((Array.isArray(r.days)?r.days:[]).map(x=>parseInt(x,10)).filter(x=>x>=1&&x<=7))].sort().slice(0,7),
-    state:r.state==="off"?"off":"on",auto:r.auto===true,ts,deleted}:null;
+    state:r.state==="off"?"off":"on",auto:r.auto===true,
+    last:/^\d{4}-\d{2}-\d{2}$/.test(r.last)?r.last:null,since:/^\d{4}-\d{2}-\d{2}$/.test(r.since)?r.since:null,ts,deleted}:null;
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
