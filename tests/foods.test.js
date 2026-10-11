@@ -31,3 +31,15 @@ test("salade : un quart par personne, arrondi au supérieur", () => {
 test("surgelés au féminin aussi (PDT surgelées)", () => {
   assert.equal(Qty.buy(Data.suite(S, "PDT surgelées").ingredients[0].t, 3, 1), "600 g de PDT surgelées");
 });
+
+test("image d'un ingrédient ajouté : d'après son nom, sinon famille", () => {
+  assert.equal(Data.emojiFor("Bulots"), "🐚");
+  assert.equal(Data.emojiFor("Pois chiches"), "🫘");
+  assert.equal(Data.emojiFor("Haricots beurre"), "🫛");
+  assert.equal(Data.emojiFor("Tartines"), null);
+  const S = { foods: { "c-1": { id: "c-1", label: "Huîtres", cat: "pois", kind: "n", q: 6 }, "c-2": { id: "c-2", label: "Navets", cat: "leg", kind: "g", q: 100 } } };
+  Data.setCustom(S);
+  assert.equal(Data.foodFor("huitres").icon, "🦪");
+  assert.equal(Data.foodFor("navets").icon, "🥦");
+  Data.setCustom({ foods: {} });
+});

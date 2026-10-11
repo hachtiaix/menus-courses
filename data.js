@@ -109,9 +109,23 @@ const FOODS=[
 // exact : le texte entier doit être l'aliment (« Soupe » oui, « Pommes de terre vache qui rit » non).
 // Ingrédients ajoutés dans les réglages (S.foods avec un nom) : mêmes règles que ceux de base.
 const FOOD_CATS=["leg","fec","prot","pois"],CAT_ICON={leg:"🥦",fec:"🥔",prot:"🥩",pois:"🐟"};
+// Image d'un ingrédient ajouté à la main, d'après son nom (sinon celle de sa famille).
+const EMOJI=[["tomate","🍅"],["carotte","🥕"],["courgette","🥒"],["concombre","🥒"],["cornichon","🥒"],["poivron","🫑"],["piment","🌶️"],["aubergine","🍆"],
+ ["champignon","🍄"],["brocoli","🥦"],["chou","🥬"],["salade","🥬"],["laitue","🥬"],["epinard","🥬"],["poireau","🥬"],["blette","🥬"],["avocat","🥑"],["mais","🌽"],
+ ["oignon","🧅"],["echalote","🧅"],["ail","🧄"],["patate douce","🍠"],["potiron","🎃"],["courge","🎃"],["butternut","🎃"],["citrouille","🎃"],
+ ["haricot","🫛"],["petit pois","🫛"],["pois","🫛"],["feve","🫛"],["edamame","🫛"],["olive","🫒"],
+ ["pomme de terre","🥔"],["patate","🥔"],["frite","🍟"],["pate","🍝"],["spaghetti","🍝"],["nouille","🍜"],["riz","🍚"],["pain","🥖"],["baguette","🥖"],["wrap","🌯"],["tortilla","🌮"],
+ ["quinoa","🌾"],["boulgour","🌾"],["ble","🌾"],["semoule","🌾"],["lentille","🫘"],["pois chiche","🫘"],["haricot rouge","🫘"],["gnocchi","🥔"],["polenta","🌽"],
+ ["poulet","🍗"],["dinde","🦃"],["canard","🦆"],["lapin","🐇"],["boeuf","🥩"],["steak","🥩"],["veau","🐄"],["agneau","🐑"],["mouton","🐑"],["porc","🐖"],
+ ["jambon","🍖"],["lardon","🥓"],["bacon","🥓"],["saucisse","🌭"],["chorizo","🌭"],["merguez","🌭"],["boudin","🌭"],["andouillette","🌭"],["oeuf","🥚"],["fromage","🧀"],["tofu","🧈"],
+ ["crevette","🦐"],["gambas","🦐"],["langoustine","🦐"],["homard","🦞"],["langouste","🦞"],["crabe","🦀"],["tourteau","🦀"],["calamar","🦑"],["encornet","🦑"],["seiche","🦑"],["poulpe","🐙"],
+ ["huitre","🦪"],["moule","🦪"],["coque","🦪"],["bulot","🐚"],["bigorneau","🐚"],["saint jacques","🐚"],["palourde","🐚"],["saumon","🍣"],["thon","🐟"],["sardine","🐟"],["maquereau","🐟"]];
+function emojiFor(label){const n=words(label);let best=null,len=0;
+  for(const [w,e] of EMOJI)if(w.length>len&&new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? ").test(n)){best=e;len=w.length}
+  return best}
 let CUSTOM=[];
 function setCustom(S){CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
-  .map(r=>({id:r.id,icon:CAT_ICON[r.cat],cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
+  .map(r=>({id:r.id,icon:emojiFor(r.label)||CAT_ICON[r.cat],cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
 const allFoods=()=>[...FOODS,...CUSTOM];
 function foodFor(name,exact){
   const n=words(name);let best=null,len=0;
@@ -331,5 +345,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,companionFor,FOODS,FOOD_CATS,CAT_ICON,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,companionFor,FOODS,FOOD_CATS,CAT_ICON,emojiFor,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
