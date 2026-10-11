@@ -166,8 +166,14 @@ function recordPurchase(text,store,bought){
   touch("stores",{id:k,last,def});
 }
 const defaultStore=(text,fallback)=>{const s=S.stores[Rayons.keyOf(Qty.parse(text).name||text)];return (s&&s.def&&S.lists[s.def]&&s.def)||fallback||"auchan"};
+// Articles cochés depuis plus de 2 h : les courses sont finies, on les retire de la liste.
+const DONE_TTL=2*3600*1000;
+function purgeDone(){
+  let n=0;live(S.items).forEach(i=>{if(i.done&&Date.now()-i.ts>DONE_TTL){touch("items",{...i,deleted:true});n++}});
+  if(n&&tab!=="menus"&&tab!=="settings")safeRender();
+}
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
-const BASE=4,VERSION="v26";
+const BASE=4,VERSION="v27";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -330,5 +336,6 @@ if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update());
   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had)location.reload()});
 }
-render();sync();
+purgeDone();render();sync();
+setInterval(purgeDone,5*60*1000);
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>$("#cfg").click(),300);
