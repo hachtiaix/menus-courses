@@ -356,7 +356,7 @@ function suggestDialog(){
     close();render();
   };
 }
-// Habitudes apprises : ajoutées en silence (une fois par jour), oubliées après 12 mois sans être suivies ; l'admin les voit dans Réglages → Habitudes.
+// Habitudes apprises : ajoutées en silence (une fois par jour), oubliées après 24 mois sans être suivies ; l'admin les voit dans Réglages → Habitudes.
 // Une habitude retirée à la main n'est pas réapprise avant 3 mois.
 function runLearning(){
   if(LS.learnDay===todayKey())return;LS.learnDay=todayKey();
@@ -384,7 +384,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v78";
+const BASE=4,VERSION="v79";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);

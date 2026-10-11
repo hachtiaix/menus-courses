@@ -8,6 +8,7 @@ const int=(v,min,max,def)=>Math.max(min,Math.min(max,parseInt(v,10)||def));
 const DAY=864e5;
 const TOMBSTONE_TTL=60*DAY;  // éléments supprimés : oubliés après 60 jours
 const MEAL_TTL=180*DAY;      // repas : gardés 6 mois
+const HABIT_TTL=730*DAY;     // habitude oubliée après 24 mois sans être suivie
 
 // Saison d'une recette : "all" (toute l'année), "ete" (pas de novembre à mars), "hiver" (pas de mai à septembre).
 const SEASONS=["all","ete","hiver"];
@@ -85,7 +86,7 @@ function habitTypesFor(S,key){
 // Apprentissage sur les 8 semaines complètes précédant celle de « today » :
 // un type présent au moins 3 semaines sur 8 sur un créneau, et au moins une fois sur deux quand ce créneau a un repas
 // → habitude ; même règle sur deux jours voisins (« vendredi ou samedi soir »).
-// Pour chaque habitude active : dernière date où elle a été suivie (seen) ; oubliée après 12 mois sans être suivie.
+// Pour chaque habitude active : dernière date où elle a été suivie (seen) ; oubliée après 24 mois sans être suivie.
 function learnHabits(S,today){
   const mon=mondayOf(today),start=addDays(mon,-56),cells={},any={};
   const put=(o,k,w)=>(o[k]=o[k]||new Set()).add(w);
@@ -117,7 +118,7 @@ function learnHabits(S,today){
     }
     if(last)seen[h.id]=last;
     const ref=[last,h.last,h.since].filter(Boolean).sort().pop();
-    if(ref&&Date.parse(today)-Date.parse(ref)>365*DAY)drop.push(h.id);
+    if(ref&&Date.parse(today)-Date.parse(ref)>HABIT_TTL)drop.push(h.id);
   }
   return{add,drop,seen};
 }

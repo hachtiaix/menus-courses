@@ -31,10 +31,10 @@ test("apprentissage : pâtes le lundi soir, burger vendredi ou samedi soir, pas 
   const sig = add.map(a => `${a.type}:${a.days.join("+")}:${a.slot}`).sort();
   assert.deepEqual(sig, ["burger:5+6:s", "pates:1:s"]);
 });
-test("oubli : seulement après 12 mois sans être suivie", () => {
+test("oubli : seulement après 24 mois sans être suivie", () => {
   const S = Data.cleanAll({ habits: {
-    vieille: { type: "soupe", days: [7], slot: "s", last: "2025-11-01", ts: 1 },  // suivie il y a 13 mois
-    recente: { type: "pizza", days: [3], slot: "s", last: "2026-03-01", ts: 1 },  // il y a 9 mois
+    vieille: { type: "soupe", days: [7], slot: "s", last: "2024-11-01", ts: 1 },  // suivie il y a 25 mois
+    recente: { type: "pizza", days: [3], slot: "s", last: "2025-03-01", ts: 1 },  // il y a 21 mois
     nouvelle: { type: "salade", days: [2], slot: "s", since: "2026-12-01", ts: 1 },
     pates: { type: "pates", days: [1], slot: "s", ts: 1 },
   }, meals });
