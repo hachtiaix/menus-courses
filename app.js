@@ -430,7 +430,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v113";
+const BASE=4,VERSION="v114";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -487,7 +487,7 @@ function renderMenus(){
     for(const [t,recipe] of [...live(S.recipes).map(r=>[r.name,true]),...live(S.meals).map(m=>[m.text,false]).filter(x=>x[0])]){const k=norm(t);if(!seen.has(k)){seen.add(k);out.push({t,recipe})}}
     // écarte les fragments saisis à moitié (ex. « Pom » quand « Pommes de terre… » existe)
     return out.filter(x=>x.recipe||!out.some(y=>y!==x&&norm(y.t).length>norm(x.t).length&&norm(y.t).startsWith(norm(x.t))))};
-  const commit=(el,t)=>{
+  const commit=(el,t,quiet)=>{ // quiet : enregistre le repas sans ouvrir la fenêtre des ingrédients
     const key=el.dataset.m,o=S.meals[key]||{};
     if(key.slice(0,10)<todayKey()){el.value=o.text||"";return}
     // plat remplacé ou effacé : on retire des listes ce que l'ancien plat y avait ajouté
@@ -502,7 +502,7 @@ function renderMenus(){
     t=t.replace(/[\s,+]+$/,"");
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
     touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.defN||BASE)});
-    applyCompanion(key);render();ingredientsDialog(known?known.name:t,key);
+    applyCompanion(key);render();if(!quiet)ingredientsDialog(known?known.name:t,key);
   };
   const clearSug=()=>document.querySelectorAll(".sug").forEach(x=>x.remove());
   document.querySelectorAll("[data-m]").forEach(el=>{
@@ -515,10 +515,8 @@ function renderMenus(){
       box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el._pick=Date.now();
         if(b.dataset.food){addChip(b.dataset.t.split(/[,+]/).pop().trim());clearSug();el.focus();return} // pastille, puis l'aliment suivant
         // plat déjà fait qui est une suite d'aliments (« Steak haché », « Poulet, riz ») : en pastilles, on continue la saisie
-        const t=b.dataset.t;if(el._items.length){addChip(t);clearSug();el.focus();return}
-        const tags=live(S.recipes).some(r=>norm(r.name)===norm(t))?null:Data.suiteTags(S,t);
-        if(tags){tags.forEach(x=>addChip(x.t));clearSug();el.focus();return}
-        el.value=t;clearSug();commit(el,t)};
+        const t=b.dataset.t,tags=live(S.recipes).some(r=>norm(r.name)===norm(t))?null:Data.suiteTags(S,t);
+        if(tags)tags.forEach(x=>addChip(x.t));else addChip(t);clearSug();el.focus()};
       el.closest(".slotw").appendChild(box);
     };
     // créneau vide touché sans rien taper : les meilleures suggestions (saison, pas faites depuis un mois)
@@ -539,10 +537,10 @@ function renderMenus(){
       if(tags&&!el.readOnly&&!el.disabled){el._items=tags.map(x=>x.t);el.value="";drawChips()}};
     el.onkeydown=e=>{
       if(e.key==="Backspace"&&!el.value&&el._items.length){el._items.pop();drawChips();e.preventDefault();return}
-      if(e.key!=="Enter")return;e.preventDefault();
-      const seg=el.value.trim(),recipe=live(S.recipes).some(r=>norm(r.name)===norm(seg));
-      if(seg&&(el._items.length||(!recipe&&Data.foodFor(seg)))){addChip(seg);clearSug();return}
-      el._pick=0;el.blur()};
+      if(e.key!=="Enter")return;e.preventDefault();el._enter=true; // Entrée déclenche aussi « change » : ignoré, traité ici
+      el._enter=false;const seg=el.value.trim();
+      if(seg){const r=live(S.recipes).find(x=>norm(x.name)===norm(seg));addChip(r?r.name:seg);clearSug();return}
+      el._pick=0;clearSug();el._finish=true;el.blur()};
     el.oninput=()=>{
       const v=el.value,q=norm(v.trim());if(!q){clearSug();return}
       // suite d'aliments en cours (après une virgule ou un +) : on propose seulement des aliments pour le dernier morceau
@@ -556,11 +554,13 @@ function renderMenus(){
     };
     // Fin de saisie en pastilles : seulement si le champ reste vraiment quitté (l'iPhone le quitte un instant quand on
     // touche une suggestion ou une pastille, puis on y revient : dans ce cas on ne valide rien).
-    el.onblur=()=>{setTimeout(clearSug,150);if(!el._items.length&&!el.parentElement.querySelector(".chips"))return;
+    el.onblur=()=>{setTimeout(clearSug,150);if(!el._items.length&&!el._finish&&!el.value.trim())return;
       clearTimeout(el._done);el._done=setTimeout(()=>{if(document.activeElement===el)return;
         const full=[...el._items,el.value.trim()].filter(Boolean).join(", ");el._items=[];el.value=full;
-        if(norm(full)!==norm(el._orig||""))commit(el,full);else render()},Date.now()-(el._pick||0)<800?900:400)};
-    el.onchange=()=>{if(Date.now()-(el._pick||0)<600)return;if(el.parentElement.querySelector(".chips"))return;if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
+        // Entrée dans la case vide : on ouvre les ingrédients ; sinon (case quittée) on enregistre sans rien ouvrir (🥕 pour les ingrédients)
+        const fin=el._finish;el._finish=false;
+        if(norm(full)!==norm(el._orig||""))commit(el,full,!fin);else render()},Date.now()-(el._pick||0)<800?900:400)};
+    el.onchange=null; // tout passe par Entrée et la sortie de la case (onblur)
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
   document.querySelectorAll("[data-bulb]").forEach(b=>b.onclick=()=>{
