@@ -153,3 +153,6 @@ nav i img.logo-auchan{height:16px;max-width:52px}
 nav i:has(.logo-auchan) b{right:-10px;top:-2px}
 nav i:has(.logo-lidl) b{right:-10px;top:-2px}
 nav i:has(.logo-auchan) b{right:-4px;top:-10px}
+#title .hlogo{display:block}
+#title .hlogo-lidl{height:38px;width:38px;border-radius:6px}
+#title .hlogo-auchan{height:26px;width:auto}
