@@ -431,7 +431,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v109";
+const BASE=4,VERSION="v110";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -842,6 +842,16 @@ async function autoUpdate(atStart){
 }
 setTimeout(()=>autoUpdate(true),1500);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(autoUpdate,500)});
+// iPhone : à l'ouverture du clavier, Safari fait glisser la page et le champ en cours sort de l'écran.
+// On recale la page pour garder le champ visible juste sous l'en-tête, tant que le clavier bouge.
+if(window.visualViewport){const vv=visualViewport;
+  const keep=()=>{const el=document.activeElement;if(!el||!el.matches("input[type=text],input[type=search],input:not([type]),textarea")||el.closest(".ov"))return;
+    const r=el.getBoundingClientRect(),hh=(document.querySelector("header")||{offsetHeight:60}).offsetHeight,top=vv.offsetTop+hh+8;
+    if(r.top<top||r.bottom>vv.offsetTop+vv.height-8)window.scrollBy(0,r.top-top)};
+  let t;const later=()=>{clearTimeout(t);t=setTimeout(keep,60)};
+  vv.addEventListener("resize",later);vv.addEventListener("scroll",later);
+  document.addEventListener("focusin",()=>{later();setTimeout(keep,350)});
+}
 addEventListener("online",sync);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});
 // Récupère les changements des autres appareils ; les siens partent tout de suite (touch).
