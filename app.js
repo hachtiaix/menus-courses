@@ -430,7 +430,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v112";
+const BASE=4,VERSION="v113";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -531,9 +531,11 @@ function renderMenus(){
       w.classList.toggle("editing",el._items.length>0);el.placeholder=el._items.length?"Ajouter…":el.dataset.ph;
       c.innerHTML=el._items.map((t,i)=>{const r=live(S.recipes).some(x=>norm(x.name)===norm(t)),f=Data.foodFor(t);return `<i class="tag ${r?"rcp":f?f.cat:"autre"}">${r?"📖 ":""}${esc(t.charAt(0).toUpperCase()+t.slice(1))}<b data-ci="${i}">×</b></i>`}).join("");
       c.onpointerdown=e=>{const x=e.target.closest("[data-ci]");e.preventDefault();if(x){el._items.splice(+x.dataset.ci,1);drawChips()}el.focus()}};
-    const addChip=t=>{t=t.trim();if(!t)return;el._items.push(t);el.value="";drawChips()};
+    const addChip=t=>{t=t.trim();if(!t)return;el._items.push(t);el.value="";drawChips();
+      setTimeout(()=>{if(document.activeElement!==el)el.focus()},60)}; // l'iPhone peut avoir quitté le champ : on y revient
     el.dataset.ph=el.placeholder;
-    el.onfocus=()=>{el._orig=el.value;const v=el.value.trim(),tags=live(S.recipes).some(r=>norm(r.name)===norm(v))?[{t:v}]:Data.suiteTags(S,el.value);
+    el.onfocus=()=>{clearTimeout(el._done);if(el._items.length){drawChips();return} // retour dans le champ : on continue la saisie
+      el._orig=el.value;const v=el.value.trim(),tags=live(S.recipes).some(r=>norm(r.name)===norm(v))?[{t:v}]:Data.suiteTags(S,el.value);
       if(tags&&!el.readOnly&&!el.disabled){el._items=tags.map(x=>x.t);el.value="";drawChips()}};
     el.onkeydown=e=>{
       if(e.key==="Backspace"&&!el.value&&el._items.length){el._items.pop();drawChips();e.preventDefault();return}
@@ -552,9 +554,12 @@ function renderMenus(){
       showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,5)
         .filter(x=>!foods.some(f=>norm(f.t)===norm(x.t))).map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"}))]);
     };
-    el.onblur=()=>{if(Date.now()-(el._pick||0)<600)return;setTimeout(clearSug,150);if(!el._items.length&&!el.parentElement.querySelector(".chips"))return;
-      const full=[...el._items,el.value.trim()].filter(Boolean).join(", ");el._items=[];el.value=full;
-      if(norm(full)!==norm(el._orig||""))commit(el,full);else render()};
+    // Fin de saisie en pastilles : seulement si le champ reste vraiment quitté (l'iPhone le quitte un instant quand on
+    // touche une suggestion ou une pastille, puis on y revient : dans ce cas on ne valide rien).
+    el.onblur=()=>{setTimeout(clearSug,150);if(!el._items.length&&!el.parentElement.querySelector(".chips"))return;
+      clearTimeout(el._done);el._done=setTimeout(()=>{if(document.activeElement===el)return;
+        const full=[...el._items,el.value.trim()].filter(Boolean).join(", ");el._items=[];el.value=full;
+        if(norm(full)!==norm(el._orig||""))commit(el,full);else render()},Date.now()-(el._pick||0)<800?900:400)};
     el.onchange=()=>{if(Date.now()-(el._pick||0)<600)return;if(el.parentElement.querySelector(".chips"))return;if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
