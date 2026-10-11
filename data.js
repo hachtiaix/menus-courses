@@ -77,10 +77,15 @@ const FOODS=[
   {id:"porc",icon:"🐖",cat:"prot",label:"Porc",words:["porc","cote de porc","filet mignon"],kind:"g",q:150,store:"boucherie"},
   {id:"saucisse",icon:"🌭",cat:"prot",label:"Saucisses",words:["saucisse","chipolata","merguez"],kind:"n",q:2,store:"boucherie"},
   {id:"poisson",icon:"🐟",cat:"prot",label:"Poisson",words:["poisson","saumon","cabillaud","colin","lieu","merlu"],kind:"g",q:150,store:"auchan"},
+  {id:"crevettes",icon:"🦐",cat:"prot",label:"Crevettes",words:["crevette","gambas"],kind:"g",q:150,store:"auchan"},
+  {id:"st-jacques",icon:"🐚",cat:"prot",label:"Noix de Saint-Jacques",words:["saint jacques","st jacques","noix de saint jacques","noix de st jacques"],kind:"g",q:120,store:"auchan"},
+  {id:"moules",icon:"🦪",cat:"prot",label:"Moules",words:["moule"],kind:"g",q:500,store:"auchan"},
   {id:"pdt-surg",icon:"🍟",cat:"fec",label:"Pommes de terre surgelées",words:["pdt surgele","pdt surgelee","pomme de terre surgele","pomme de terre surgelee","pommes de terre surgelee","frite","potatoes"],kind:"g",q:200,store:"auchan"},
   {id:"pdt",icon:"🥔",cat:"fec",label:"Pommes de terre",words:["pdt","pomme de terre","patate"],kind:"g",q:250,store:"auchan"},
   {id:"pates",icon:"🍝",cat:"fec",label:"Pâtes",words:["pate","spaghetti","tagliatelle","penne","coquillette"],kind:"g",q:100,store:"auchan"},
   {id:"riz",icon:"🍚",cat:"fec",label:"Riz",words:["riz"],kind:"g",q:80,store:"auchan"},
+  {id:"beans",icon:"🥫",cat:"fec",label:"Beans",words:["beans","baked beans","haricots a la tomate"],kind:"n",q:1,as:"boîte de beans (400 g)",store:"auchan"},
+  {id:"raviolis",icon:"🥫",cat:"fec",label:"Raviolis",words:["ravioli","raviolis"],kind:"n",q:1,as:"boîte de raviolis (400 g)",store:"auchan"},
   {id:"semoule",icon:"🌾",cat:"fec",label:"Semoule",words:["semoule"],kind:"g",q:80,store:"auchan"},
   {id:"lentilles",icon:"🫘",cat:"fec",label:"Lentilles",words:["lentille"],kind:"g",q:70,store:"auchan"},
   {id:"legboite",icon:"🥫",cat:"leg",label:"Haricots verts, petits pois, flageolets (boîte)",words:["haricot vert","petit pois","flageolet"],kind:"box",store:"auchan"},
@@ -111,6 +116,7 @@ function foodLine(S,f,name){
   const q=(S.foods&&S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
   const nm=name.trim().replace(/^(\p{Lu})(?=\p{Ll})/u,c=>c.toLowerCase()); // « Poulet » → « poulet », « PDT » inchangé
   if(f.kind==="g")return q+" g de "+nm;
+  if(f.kind==="n"&&f.as)return String(q).replace(".",",")+" "+f.as; // ex. « 1 boîte de beans (400 g) »
   if(f.kind==="n")return String(q).replace(".",",")+" "+nm;
   if(f.kind==="text")return f.line;
   return nm; // boîte : comptée par personne par Qty.buy
