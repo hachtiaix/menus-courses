@@ -55,15 +55,22 @@ const fr=x=>String(Math.round(x*100)/100).replace(".",",");
 // « d' » devant une voyelle ou un h muet ; h aspiré (haricot, hachis, homard…) → « de »
 const ASPIRE=/^h(aricot|achis|amburger|omard|ibou|arengs?|ors|aut)/i;
 const de=name=>!name?"":(/^[aeiouyâàéèêëîïôûù]/i.test(name)||(/^h/i.test(name)&&!ASPIRE.test(name)))?" d'"+name:" de "+name;
-const plural=(w,n)=>n>1&&!/[sxz]$/i.test(w)?w+"s":w;
+// pluriel : -eau/-au/-eu → x (poireaux, gâteaux ; sauf bleus, pneus), chou → choux, chou-fleur → choux-fleurs
+const plural=(w,n)=>{if(n<=1||/[sxz]$/i.test(w))return w;
+  if(/^chou-/i.test(w))return w.split("-").map(x=>plural(x,n)).join("-");
+  if(/^chou$/i.test(w)||(/(eau|au|eu)$/i.test(w)&&!/^(bleu|pneu)$/i.test(w)))return w+"x";
+  return w+"s"};
 // « 1 gousses » → « 1 gousse » (sans toucher ananas, radis, jus…)
-const single=w=>w.length>4&&/[^saiu]s$/i.test(w)?w.slice(0,-1):w;
+const single=w=>/^choux-/i.test(w)?w.split("-").map(single).join("-"):/^choux$/i.test(w)||/(eau|au|eu)x$/i.test(w)?w.slice(0,-1)
+  :w.length>4&&/[^saiu]s$/i.test(w)?w.slice(0,-1):w;
 // accorde le premier mot, et le suivant si le premier est un adjectif (« 1 grosse pomme de terre »)
 const ADJ=/^(grosses?|petites?|moyennes?|grandes?|belles?|beaux?|bel|jeunes?|vieilles?|vieux|gros|petits?|grands?)$/i;
 // adjectif après le nom, accordé aussi (« 3 boudins blancs », « 4 steaks hachés », « 2 cordons bleus »)
-const POST=/^(hach[ée]e?s?|blancs?|noirs?|rouges?|verts?|bleus?|fum[ée]e?s?|frais|panée?s?|entiers?|entières?)$/i;
+const POST=/^(blancs?|blanches?|noirs?|noires?|rouges?|verts?|vertes?|bleus?|jaunes?|frais|fraîches?|entiers?|entières?|mûrs?|mûres?|cuits?|cuites?|crus?|crues?|secs?|sèches?|cerises?|[^\s]{2,}ée?s?)$/i; // …ée?s? : haché, râpée, pané, fumé, émincé…
 const pluralFirst=(name,n)=>{const w=name.split(" "),f=x=>n>1?plural(x,n):single(x);
-  w[0]=f(w[0]);if(w.length>1&&(ADJ.test(w[0])||POST.test(w[1])))w[1]=f(w[1]);return w.join(" ")};
+  w[0]=f(w[0]);if(w.length>1&&ADJ.test(w[0]))w[1]=f(w[1]);
+  else if(w.length>1&&POST.test(w[1]))w[1]=n>1?plural(w[1],n):/^(frais|gros)$/i.test(w[1])?w[1]:w[1].replace(/s$/i,""); // adjectif : « 1 avocat mûr », « 1 cordon bleu »
+  return w.join(" ")};
 
 function format(p){
   if(p.n==null)return p.name;

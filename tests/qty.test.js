@@ -55,3 +55,17 @@ test("ancienne ligne combinée relue", () => {
   const p = Qty.parse("1 grosse boîte + 1 petite boîte de tomates");
   assert.equal(p.kind, "box"); assert.equal(p.n, 5);
 });
+
+test("pluriels : -eau/-au → x, chou(x), chou-fleur, adjectifs après le nom", () => {
+  const up = (t) => Qty.step(t, 1), down = (t) => Qty.step(Qty.step(t, 1), -1);
+  assert.equal(up("1 poireau"), "2 poireaux");
+  assert.equal(up("1 gâteau"), "2 gâteaux");
+  assert.equal(up("1 chou-fleur"), "2 choux-fleurs");
+  assert.equal(up("1 chou rouge"), "2 choux rouges");
+  assert.equal(up("1 carotte râpée"), "2 carottes râpées");
+  assert.equal(up("1 avocat mûr"), "2 avocats mûrs");
+  assert.equal(down("1 cordon bleu"), "1 cordon bleu");
+  assert.equal(down("1 poireau"), "1 poireau");
+  assert.equal(up("1 poisson frais"), "2 poissons frais");
+  assert.equal(up("1 noix de saint-jacques"), "2 noix de saint-jacques");
+});

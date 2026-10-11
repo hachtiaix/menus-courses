@@ -52,8 +52,8 @@ test("recette + aliments dans le même repas (« Carbonade flamande, Frites »)"
   assert.deepEqual(Data.suiteTags(S, "Carbonade flamande, Frites").map((x) => x.cat), ["rcp", "fec"]);
 });
 
-test("aliments inconnus d'une suite : à classer (ni recettes ni déjà connus)", () => {
-  const S = Data.cleanAll({ recipes: { c: { id: "c", name: "Carbonade", serves: 4, ingredients: [] } }, foods: { x: { id: "c-x", label: "Navets", cat: "wait" } } });
+test("aliments inconnus d'une suite (ni recettes ni déjà connus)", () => {
+  const S = Data.cleanAll({ recipes: { c: { id: "c", name: "Carbonade", serves: 4, ingredients: [] } }, foods: { x: { id: "c-x", label: "Navets", cat: "autre", kind: "g", q: 100 } } });
   assert.deepEqual(Data.unknownFoods(S, "Saucisses, Asperges, Carbonade, Navets"), ["Asperges"]);
   assert.deepEqual(Data.unknownFoods(S, "Restes"), ["Restes"]);
 });

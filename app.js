@@ -452,7 +452,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v123";
+const BASE=4,VERSION="v124";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -615,10 +615,10 @@ function renderMenus(){
   $("#sugg").onclick=suggestDialog;
   $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
 }
-function ingredientsDialog(name,mealKey,startN,asRecipe){
+function ingredientsDialog(name,mealKey,startN){
   // Plat ou aliment inconnu tapé seul : une ligne sans quantité, comme dans une suite ; il attend dans
   // Réglages → Ingrédients → ⏳ À classer. Les recettes se créent dans Réglages → Recettes.
-  const r=recipeOf(name)||(asRecipe?null:{name,serves:1,virtual:true,ingredients:[{t:name,store:"auchan"}]});
+  const r=recipeOf(name)||{name,serves:1,virtual:true,ingredients:[{t:name,store:"auchan"}]};
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   const B=(r&&r.serves)||BASE; // la recette est écrite pour B personnes
@@ -702,8 +702,6 @@ function renderSettings(){
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`,
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
    <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
-   ${(()=>{const w=live(S.foods).filter(r=>r.cat==="wait"&&!Data.foodFor(r.label,true)&&!live(S.recipes).some(x=>x.name.toLowerCase()===r.label.toLowerCase())) // devenu recette ou ingrédient : plus à classer.sort((a,b)=>a.label.localeCompare(b.label));
-     return w.length?`<h3 class="fam wait">⏳ À classer</h3><div class="card fam wait">${w.map(r=>`<div class="row"><span class="t">${esc(r.label)}<br><small class="mut">tapé dans un repas</small></span><button class="btn sec" data-fwait="${r.id}">Classer</button><button class="x" data-fdel="${r.id}" aria-label="Écarter">×</button></div>`).join("")}</div>`:""})()}
    ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"],["autre","🍽️ Autres"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
      const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
      return `<div class="row"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}${f.custom?`<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button>`:""}</div>`}).join("")}<button class="row add-food" data-fadd="${c}">+ Ajouter un ingrédient</button></div>`).join("")}`,
@@ -730,7 +728,6 @@ function renderSettings(){
       c.querySelectorAll(".row:not(.add-food)").forEach(r=>{const ok=!q||norm(r.querySelector(".t").textContent).includes(q);r.style.display=ok?"":"none";any=any||ok});
       c.querySelector(".add-food").style.display=q?"none":"";c.style.display=any||!q?"":"none";c.previousElementSibling.style.display=c.style.display})});
   document.querySelectorAll("[data-fadd]").forEach(el=>el.onclick=()=>foodEditor(el.dataset.fadd));
-  document.querySelectorAll("[data-fwait]").forEach(el=>el.onclick=()=>foodEditor(null,S.foods[el.dataset.fwait]));
   document.querySelectorAll("[data-fdel]").forEach(el=>el.onclick=()=>{const r=S.foods[el.dataset.fdel];if(r&&confirm(`Retirer « ${r.label} » ?`)){touch("foods",{...r,deleted:true});render()}});
   document.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.allFoods().find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
     const st=f.kind==="g"?10:cur<1||(cur===1&&+el.dataset.d<0)?0.25:1,q=Math.max(f.kind==="g"?10:0.25,Math.round((cur+st*el.dataset.d)*100)/100);
@@ -807,10 +804,10 @@ function habitEditor(h){
   };
 }
 // Nouvel ingrédient dans une famille (réglages) : nom, quantité par personne en grammes ou en pièces, magasin.
-function foodEditor(cat,rec,done,step){ // rec : un aliment « à classer » dont on choisit la famille ; done : appelé ensuite (même « Plus tard »)
+function foodEditor(cat,rec,done,step){ // rec : aliment inconnu d'un repas, dont on choisit la famille ; done : appelé ensuite (même « Plus tard »)
   const lists=live(S.lists).sort(listSort),FAM={leg:"Légumes",fec:"Féculents",prot:"Viandes, œufs",pois:"Poissons, crustacés",autre:"Autres"},fam=FAM[cat];
   const ov=document.createElement("div");ov.className="ov";
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${rec?"Nouvel ingrédient"+(step&&!step.endsWith("/1")?" "+step:""):"Nouvel ingrédient · "+fam}</h2>
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Nouvel ingrédient${rec?(step&&!step.endsWith("/1")?" "+step:""):" · "+fam}</h2>
    <input type="text" id="fn" placeholder="Nom (ex. Haricots beurre)" autocapitalize="sentences" value="${rec?esc(rec.label):""}" style="width:100%;margin-bottom:10px">
    ${rec?`<div class="serv"><span>Famille</span><select id="fc">${Object.entries(FAM).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>`:""}
    <div class="serv"><span>Par personne</span><input type="text" id="fqv" value="150" inputmode="decimal" style="width:80px">
