@@ -160,7 +160,12 @@ function itemEditor(i){
   $("#ok").onclick=()=>{
     const t=$("#it").value.trim().slice(0,200)||i.text,r=$("#ir").value;
     const l=$("#il").value;
-    if(l!==i.list&&S.lists[l]){touch("items",{...i,deleted:true});addToList(l,t)} // changement de liste : cumulé avec l'article s'il y est déjà
+    if(l!==i.list&&S.lists[l]){touch("items",{...i,deleted:true});const nids=addToList(l,t); // changement de liste : cumulé avec l'article s'il y est déjà
+      // les repas qui l'avaient ajouté le suivent dans sa nouvelle liste (supprimer le repas le retirera bien de là)
+      const k=Qty.key(Qty.parse(i.text));
+      for(const m of live(S.meals))if(m.added&&m.added.ids.includes(i.id))touch("meals",{...m,added:{...m.added,
+        ids:[...new Set(m.added.ids.map(x=>x===i.id?nids[0]:x))],
+        items:m.added.items.map(g=>g.store===i.list&&Qty.key(Qty.parse(g.t))===k?{...g,store:l}:g)}})}
     else if(t!==i.text)touch("items",{...i,text:t});
     if(r!==rayonOf(t)){const k=Rayons.keyOf(Qty.parse(t).name||t);touch("aisles",{id:k,rayon:r})}
     close();render();
@@ -434,7 +439,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v115";
+const BASE=4,VERSION="v116";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -535,7 +540,7 @@ function renderMenus(){
       c.innerHTML=el._items.map((t,i)=>{const r=live(S.recipes).some(x=>norm(x.name)===norm(t)),f=Data.foodFor(t);return `<i class="tag ${r?"rcp":f?f.cat:"autre"}">${r?"📖 ":""}${esc(t.charAt(0).toUpperCase()+t.slice(1))}<b data-ci="${i}">×</b></i>`}).join("");
       c.onpointerdown=e=>{const x=e.target.closest("[data-ci]");e.preventDefault();if(x){el._items.splice(+x.dataset.ci,1);drawChips()}el.focus()}};
     const addChip=t=>{t=t.trim();if(!t)return;el._items.push(t);el.value="";drawChips();
-      setTimeout(()=>{if(document.activeElement!==el)el.focus()},60)}; // l'iPhone peut avoir quitté le champ : on y revient
+      setTimeout(()=>{if(!el._finish&&document.activeElement!==el)el.focus()},60)}; // l'iPhone peut avoir quitté le champ : on y revient
     el.dataset.ph=el.placeholder;
     el.onfocus=()=>{clearTimeout(el._done);if(el._items.length){drawChips();return} // retour dans le champ : on continue la saisie
       el._orig=el.value;const v=el.value.trim(),tags=live(S.recipes).some(r=>norm(r.name)===norm(v))?[{t:v}]:Data.suiteTags(S,el.value);
@@ -593,8 +598,17 @@ function renderMenus(){
   $("#sugg").onclick=suggestDialog;
   $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
 }
-function ingredientsDialog(name,mealKey,startN){
+function ingredientsDialog(name,mealKey,startN,asRecipe){
   const r=recipeOf(name);
+  // Plat inconnu tapé seul : ingrédient (quantité au poids ou à la pièce) ou nouvelle recette ?
+  if(!r&&!asRecipe){const ov=document.createElement("div");ov.className="ov";
+    ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>« ${esc(name)} »</h2><p class="mut">C'est :</p>
+     <div class="acts" style="flex-direction:column;gap:10px"><button class="btn" id="asf">🥕 Un ingrédient (quantité par personne)</button>
+     <button class="btn sec" id="asr">📖 Une recette (plusieurs ingrédients)</button><button class="btn sec" id="no">Ignorer</button></div></div>`;
+    document.body.appendChild(ov);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+    $("#asr").onclick=()=>{close();ingredientsDialog(name,mealKey,startN,true)};
+    $("#asf").onclick=()=>{close();foodEditor(null,{id:"c-"+uid(),label:name},()=>ingredientsDialog(name,mealKey,startN))};
+    return}
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   const B=(r&&r.serves)||BASE; // la recette est écrite pour B personnes
@@ -783,10 +797,10 @@ function habitEditor(h){
   };
 }
 // Nouvel ingrédient dans une famille (réglages) : nom, quantité par personne en grammes ou en pièces, magasin.
-function foodEditor(cat,rec){ // rec : un aliment « à classer » dont on choisit la famille
+function foodEditor(cat,rec,done){ // rec : un aliment « à classer » dont on choisit la famille
   const lists=live(S.lists).sort(listSort),FAM={leg:"Légumes",fec:"Féculents",prot:"Viandes, œufs",pois:"Poissons, crustacés"},fam=FAM[cat];
   const ov=document.createElement("div");ov.className="ov";
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${rec?"Classer l'ingrédient":"Nouvel ingrédient · "+fam}</h2>
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${rec?(S.foods[rec.id]?"Classer l'ingrédient":"Nouvel ingrédient"):"Nouvel ingrédient · "+fam}</h2>
    <input type="text" id="fn" placeholder="Nom (ex. Haricots beurre)" autocapitalize="sentences" value="${rec?esc(rec.label):""}" style="width:100%;margin-bottom:10px">
    ${rec?`<div class="serv"><span>Famille</span><select id="fc">${Object.entries(FAM).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>`:""}
    <div class="serv"><span>Par personne</span><input type="number" id="fqv" value="150" min="0.25" step="any" inputmode="decimal" style="width:80px">
@@ -799,7 +813,7 @@ function foodEditor(cat,rec){ // rec : un aliment « à classer » dont on chois
   $("#ok").onclick=()=>{const label=$("#fn").value.trim(),q=parseFloat(String($("#fqv").value).replace(",","."));
     if(!label){$("#fn").focus();return}if(!(q>0)){$("#fqv").focus();return}
     if(Data.foodFor(label,true)&&!confirm(`« ${label} » ressemble à un ingrédient existant. L'ajouter quand même ?`))return;
-    touch("foods",{id:rec?rec.id:"c-"+uid(),label:label.charAt(0).toUpperCase()+label.slice(1),cat:rec?$("#fc").value:cat,kind:$("#fk").value,q,store:$("#fs").value,deleted:false});close();render()};
+    touch("foods",{id:rec?rec.id:"c-"+uid(),label:label.charAt(0).toUpperCase()+label.slice(1),cat:rec?$("#fc").value:cat,kind:$("#fk").value,q,store:$("#fs").value,deleted:false});close();render();if(done)done()};
   if(!rec)setTimeout(()=>$("#fn").focus(),50);
 }
 function recipeEditor(r){
