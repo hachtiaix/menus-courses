@@ -45,3 +45,38 @@ test("saison forcée dans la recette prioritaire sur la devinette", () => {
   const S = S0(); S.recipes.r1.season = "all"; // salade servie toute l'année
   assert.ok(Data.suggest(S, "2026-12-30", 10, [], noRandom).some(x => x.name === "Salade niçoise"));
 });
+
+// Situation réelle du 11/10/2026 : 7 recettes, 5 déjà prévues dans la semaine du 12 au 16, 2 plats sans recette.
+const real = () => Data.cleanAll({
+  recipes: rec(["Chili con Carne", "Purée de patate douce", "Rougaï de saucisses", "Pommes de terres vache qui rit",
+    "Saucisses Lentilles", "Risotto Champignons Chorizo", "Pain de hachis"]),
+  meals: {
+    "2026-10-12-s": { text: "Pates", ts: 1 }, "2026-10-13-s": { text: "Saucisses Lentilles", ts: 1 },
+    "2026-10-14-s": { text: "Pommes de terres vache qui rit", ts: 1 }, "2026-10-15-m": { text: "Lasagnes", ts: 1 },
+    "2026-10-15-s": { text: "Purée de patate douce", ts: 1 }, "2026-10-16-s": { text: "Risotto Champignons Chorizo", ts: 1 },
+    "2026-10-05-s": { text: "Pates", ts: 1 }, // plat sans recette déjà mangé
+  },
+});
+test("semaine prochaine : les plats prévus cette semaine redeviennent possibles", () => {
+  const got = Data.suggest(real(), "2026-10-11", 20, [], noRandom, "2026-10-21-s").map(x => x.name);
+  assert.ok(got.length >= 8, `seulement ${got.length} : ${got}`);
+  assert.ok(got.includes("Saucisses Lentilles"));
+  // les plats jamais prévus passent avant ceux de la semaine précédente
+  assert.ok(got.indexOf("Chili con Carne") < got.indexOf("Saucisses Lentilles"));
+});
+test("même semaine : un plat déjà prévu n'est pas reproposé", () => {
+  const got = Data.suggest(real(), "2026-10-11", 20, [], noRandom, "2026-10-17-s").map(x => x.name);
+  assert.ok(!got.includes("Saucisses Lentilles") && !got.includes("Risotto Champignons Chorizo"));
+  assert.ok(got.includes("Chili con Carne"));
+});
+test("les plats saisis sans recette sont aussi suggérés", () => {
+  const got = Data.suggest(real(), "2026-10-11", 20, [], noRandom, "2026-10-27-s").map(x => x.name);
+  assert.ok(got.includes("Pates"));
+});
+test("deux créneaux n'ont pas forcément le même ordre de suggestions", () => {
+  const S = real(), a = Data.suggest(S, "2026-10-11", 5, [], undefined, "2026-10-17-s").map(x => x.name).join(),
+    b = Data.suggest(S, "2026-10-11", 5, [], undefined, "2026-10-18-s").map(x => x.name).join(),
+    a2 = Data.suggest(S, "2026-10-11", 5, [], undefined, "2026-10-17-s").map(x => x.name).join();
+  assert.equal(a, a2);   // stable pour un même créneau
+  assert.notEqual(a, b); // différent d'un créneau à l'autre
+});

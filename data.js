@@ -100,26 +100,42 @@ function learnHabits(S,today){
   return{add,drop};
 }
 
-// Suggestions de plats : de saison, pas déjà prévus, pas cuisinés depuis plus de 30 jours
-// (complété par les plus anciens s'il en manque). today = "AAAA-MM-JJ".
+// Tirage pseudo-aléatoire reproductible (ordre propre à chaque créneau quand des plats sont à égalité).
+function seeded(str){let h=2166136261;for(const c of String(str))h=Math.imul(h^c.charCodeAt(0),16777619);
+  return()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return((h>>>0)%10000)/10000}}
+
+// Suggestions pour un créneau (slotKey « AAAA-MM-JJ-s ») ou, à défaut, pour aujourd'hui :
+// - candidats : les recettes, plus les plats déjà mangés saisis sans recette ;
+// - exclus : les plats déjà prévus la même semaine, hors saison ;
+// - l'écart en jours avec le repas le plus proche (passé ou prévu) du même plat décide :
+//   d'abord le type d'habitude du créneau, puis les plats pas mangés à moins d'un mois, puis les plus anciens.
 function suggest(S,today,n,exclude,rnd,slotKey){
-  rnd=rnd||Math.random;
-  const key=s=>plain(s).trim(),t0=Date.parse(today),month=+today.slice(5,7),last={},planned=new Set();
+  const ref=slotKey?slotKey.slice(0,10):today,mon=mondayOf(ref),sun=addDays(mon,6),month=+ref.slice(5,7);
+  rnd=rnd||(slotKey?seeded(slotKey):Math.random);
+  const key=s=>plain(s).trim(),dates={};
   for(const [k,m] of Object.entries(S.meals||{})){
-    if(m.deleted||!m.text)continue;
-    const d=k.slice(0,10);
-    if(d>=today){planned.add(key(m.text));continue}
-    const t=Date.parse(d);if(!last[key(m.text)]||t>last[key(m.text)])last[key(m.text)]=t;
+    if(m.deleted||!m.text||k===slotKey)continue;
+    (dates[key(m.text)]=dates[key(m.text)]||[]).push(k.slice(0,10));
   }
-  const ex=new Set((exclude||[]).map(key));
-  const rows=Object.values(S.recipes||{})
-    .filter(r=>!r.deleted&&r.name&&!ex.has(key(r.name))&&!planned.has(key(r.name))&&inSeason(recipeSeason(r),month))
-    .map(r=>{const l=last[key(r.name)],days=l?Math.round((t0-l)/DAY):null;return{name:r.name,days,score:Math.min(days==null?400:days,400)+rnd()*20}});
+  const names=new Map();
+  for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name)names.set(key(r.name),{name:r.name,season:recipeSeason(r)});
+  for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&k.slice(0,10)<today&&!names.has(key(m.text)))
+    names.set(key(m.text),{name:m.text,season:guessSeason(m.text)});
+  const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
+  const rows=[];
+  for(const [k,x] of names){
+    if(ex.has(k)||!inSeason(x.season,month))continue;
+    const ds=dates[k]||[];
+    if(ds.some(d=>d>=mon&&d<=sun))continue; // déjà prévu (ou mangé) cette semaine-là
+    const gap=ds.length?Math.min(...ds.map(d=>Math.abs(Date.parse(d)-t0)/DAY)):null;
+    const past=ds.filter(d=>d<today).sort().pop();
+    rows.push({name:x.name,gap,days:past?Math.round((todayT-Date.parse(past))/DAY):null,score:Math.min(gap==null?400:gap,400)+rnd()*20});
+  }
   const types=slotKey?habitTypesFor(S,slotKey):[];
   const habit=rows.filter(x=>types.includes(typeOf(x.name))).sort((a,b)=>b.score-a.score).map(x=>({...x,habit:typeOf(x.name)}));
   const rest=rows.filter(x=>!types.includes(typeOf(x.name)));
-  const fresh=rest.filter(x=>x.days==null||x.days>30).sort((a,b)=>b.score-a.score);
-  const recent=rest.filter(x=>x.days!=null&&x.days<=30).sort((a,b)=>b.days-a.days);
+  const fresh=rest.filter(x=>x.gap==null||x.gap>30).sort((a,b)=>b.score-a.score);
+  const recent=rest.filter(x=>x.gap!=null&&x.gap<=30).sort((a,b)=>b.score-a.score);
   return [...habit,...fresh,...recent].slice(0,n).map(({name,days,habit})=>({name,days,habit:habit||null}));
 }
 
