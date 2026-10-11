@@ -425,7 +425,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v89";
+const BASE=4,VERSION="v90";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -505,9 +505,14 @@ function renderMenus(){
       clearSug();if(!hits.length)return;
       const box=document.createElement("div");box.className="sug";
       box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}" ${x.food?'data-food="1"':""}>${x.icon} ${esc(x.food?x.t.split(/[,+]/).pop().trim():x.t)}${x.note?` <small class="mut">${esc(x.note)}</small>`:""}</button>`).join("");
-      box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();
+      // iPhone : sans ça, toucher une suggestion ferme d'abord le champ (et validait le texte à moitié tapé)
+      box.addEventListener("touchstart",e=>{el._pick=Date.now();e.preventDefault()},{passive:false});box.onmousedown=e=>e.preventDefault();
+      box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el._pick=Date.now();
         if(b.dataset.food){addChip(b.dataset.t.split(/[,+]/).pop().trim());clearSug();el.focus();return} // pastille, puis l'aliment suivant
-        el.value=b.dataset.t;clearSug();commit(el,b.dataset.t)};
+        // plat déjà fait qui est une suite d'aliments (« Steak haché », « Poulet, riz ») : en pastilles, on continue la saisie
+        const t=b.dataset.t,tags=live(S.recipes).some(r=>norm(r.name)===norm(t))?null:Data.suiteTags(S,t);
+        if(tags){tags.forEach(x=>addChip(x.t));clearSug();el.focus();return}
+        el.value=t;clearSug();commit(el,t)};
       el.closest(".slotw").appendChild(box);
     };
     // créneau vide touché sans rien taper : les meilleures suggestions (saison, pas faites depuis un mois)
@@ -538,12 +543,12 @@ function renderMenus(){
         .map(({f})=>({t:head+(f.id==="legboite"?"Haricots verts":f.label),icon:f.icon,food:true})):[];
       if(cut>=0||el._items.length){showBox(foods);return}
       showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,5)
-        .map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"}))]);
+        .filter(x=>!foods.some(f=>norm(f.t)===norm(x.t))).map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"}))]);
     };
-    el.onblur=()=>{setTimeout(clearSug,150);if(!el._items.length&&!el.parentElement.querySelector(".chips"))return;
+    el.onblur=()=>{if(Date.now()-(el._pick||0)<600)return;setTimeout(clearSug,150);if(!el._items.length&&!el.parentElement.querySelector(".chips"))return;
       const full=[...el._items,el.value.trim()].filter(Boolean).join(", ");el._items=[];el.value=full;
       if(norm(full)!==norm(el._orig||""))commit(el,full);else render()};
-    el.onchange=()=>{if(el.parentElement.querySelector(".chips"))return;if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
+    el.onchange=()=>{if(Date.now()-(el._pick||0)<600)return;if(el.parentElement.querySelector(".chips"))return;if(document.querySelector(".sug:hover"))return;clearSug();commit(el,el.value.trim())};
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
   document.querySelectorAll("[data-bulb]").forEach(b=>b.onclick=()=>{
