@@ -73,6 +73,7 @@ const live=o=>Object.values(o).filter(x=>!x.deleted);
 const ico=i=>/^svg:[a-z-]+$/.test(i||"")?`<img class="ico" src="icons/${i.slice(4)}.svg" alt="">`:(i||"");
 function render(){
   Data.setCustom(S);
+  const hd=document.querySelector("header");if(hd)document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");
   $("#cfg").style.display=tab==="settings"?"none":""; // inutile dans les réglages : le point de synchro prend sa place
   const lists=live(S.lists).sort(listSort);
   $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}" aria-label="${esc(l.name)}"><i>${LOGO[l.id]?`<img src="${LOGO[l.id]}" alt="" class="logo-${l.id}">`:PICTO[l.id]?`<img src="${PICTO[l.id]}" alt="" class="picto">`:ICON[l.id]||"🛒"}${c?`<b>${c}</b>`:""}</i></button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}" aria-label="Menus"><i>${MENU_ICON}</i></button>`;
@@ -430,7 +431,7 @@ function resizeMeal(m,n){
 }
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v108";
+const BASE=4,VERSION="v109";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -829,17 +830,17 @@ function recipeEditor(r){
 }
 // Mise à jour automatique : à l'ouverture et au retour dans l'app, si une nouvelle version est en ligne, on recharge
 // (jamais pendant une saisie ; une seule tentative par version, au cas où le serveur tarde à servir les nouveaux fichiers).
-async function autoUpdate(){
+async function autoUpdate(atStart){
   try{const a=document.activeElement;if(document.hidden||(a&&a.matches("input,textarea,select"))||document.querySelector(".ov"))return;
     const t=await (await fetch("sw.js?v="+Date.now(),{cache:"no-store"})).text(),v=(t.match(/V="([^"]+)"/)||[])[1];
     if(!v||v===VERSION||LS.autoTried===v)return;
-    if(tab!=="menus"&&tab!=="settings")return; // en magasin, sur une liste : pas de rechargement, ça attendra
+    if(!atStart&&tab!=="menus"&&tab!=="settings")return; // au retour dans l'app sur une liste (en magasin) : pas de rechargement
     LS.autoTried=v;LS.autoFrom=VERSION;
     const r=await navigator.serviceWorker?.getRegistration();if(r)await r.update();
     location.replace(location.pathname+"?maj="+Date.now());
   }catch(e){}
 }
-setTimeout(autoUpdate,1500);
+setTimeout(()=>autoUpdate(true),1500);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(autoUpdate,500)});
 addEventListener("online",sync);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});

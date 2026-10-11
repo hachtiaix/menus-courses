@@ -283,3 +283,5 @@ h3.fam{font-size:14px;margin:14px 4px 6px}
 #fsearch{box-sizing:border-box;height:42px;padding:0 12px;font-size:16px;border:1px solid #d5d9df;border-radius:10px;background:var(--card,#fff);color:inherit;margin:4px 0 8px}
 .tag.rcp{background:#fff;border-color:#c9ced6;color:#1f2329;border-radius:5px;font-weight:600}
 @media(prefers-color-scheme:dark){.tag.rcp{background:#2c3038;color:#eef0f3}}
+/* champ « Ajouter un article » toujours visible sous l'en-tête, même en bas d'une longue liste */
+#add{position:sticky;top:var(--hh,64px);z-index:3;background:var(--bg);padding:6px 0;margin-top:-6px}
