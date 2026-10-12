@@ -103,3 +103,18 @@ test("plats faits uniquement d'ingrédients « Autres » (gâteaux) : jamais sug
   assert.ok(names.includes("Poulet, riz"));
   Data.setCustom({ foods: {} });
 });
+
+test("desserts (recette de type Dessert, gâteau…) : jamais suggérés, sauf si la recette est marquée Plat", () => {
+  const S = Data.cleanAll({
+    recipes: {
+      a: { id: "a", name: "Gâteau au yaourt", serves: 6, ingredients: [] },
+      b: { id: "b", name: "Tarte maison", serves: 6, ingredients: [], dessert: true },
+      c: { id: "c", name: "Crêpes", serves: 4, ingredients: [] },
+      d: { id: "d", name: "Cake salé", serves: 4, ingredients: [], dessert: false },
+    },
+    meals: { "2026-09-01-s": { key: "2026-09-01-s", text: "Brownies", servings: 4 } },
+  });
+  const names = Data.suggest(S, "2026-10-12", 20, [], () => 0.5).map((x) => x.name);
+  for (const n of ["Gâteau au yaourt", "Tarte maison", "Brownies"]) assert.ok(!names.includes(n), n);
+  for (const n of ["Crêpes", "Cake salé"]) assert.ok(names.includes(n), n);
+});

@@ -21,6 +21,14 @@ const SEASON_WORDS={
 };
 const plain=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const words=s=>" "+plain(s).replace(/[^a-z0-9]+/g," ").trim()+" ";
+// Desserts (gâteaux, tartes sucrées…) : ce ne sont pas des repas, jamais proposés par 💡.
+// Deviné d'après le nom, modifiable dans la fiche de la recette (Type : Plat / Dessert).
+const DESSERT_WORDS=["gateau","cake","crumble","brownie","cookie","muffin","cupcake","clafoutis","fondant","moelleux","mousse au chocolat",
+  "tiramisu","cheesecake","flan","madeleine","financier","charlotte","quatre quart","biscuit","gaufre","panna cotta","creme brulee","creme dessert",
+  "riz au lait","compote","tarte aux pomme","tarte au citron","tarte tatin","tarte aux fraise","tarte au chocolat","far breton","kouign amann",
+  "eclair","chou a la creme","profiterole","meringue","macaron","glace","sorbet","dessert","entremet","buche","galette des rois","beignet","banana bread"];
+const guessDessert=name=>{const n=words(name);return DESSERT_WORDS.some(p=>new RegExp(" "+p.replace(/ /g,"[sx]? ")+"[sx]? ").test(n))};
+const recipeDessert=r=>!!r&&(r.dessert===true||(r.dessert!==false&&guessDessert(r.name||"")));
 function guessSeason(name){
   const n=words(name);
   for(const [s,list] of Object.entries(SEASON_WORDS))
@@ -294,9 +302,10 @@ function suggest(S,today,n,exclude,rnd,slotKey){
     (dates[key(m.text)]=dates[key(m.text)]||[]).push(k.slice(0,10));
   }
   const names=new Map();
-  for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name)names.set(key(r.name),{name:r.name,season:recipeSeason(r)});
-  // plats déjà faits, sauf ceux faits uniquement d'ingrédients « Autres » (gâteaux, desserts…) : jamais proposés
-  const onlyOther=t=>{const p=String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);return p.length&&p.every(x=>{const f=foodFor(x);return f&&f.cat==="autre"})};
+  for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name&&!recipeDessert(r))names.set(key(r.name),{name:r.name,season:recipeSeason(r)});
+  // plats déjà faits, sauf les desserts (recette « Dessert », gâteau…) et ce qui n'est fait que d'ingrédients « Autres »
+  const dessert=x=>{const r=Object.values(S.recipes||{}).find(r=>r&&!r.deleted&&r.name&&key(r.name)===key(x));return r?recipeDessert(r):guessDessert(x)};
+  const onlyOther=t=>{const p=String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);return p.length&&p.every(x=>{const f=foodFor(x);return dessert(x)||(f&&f.cat==="autre")})};
   for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text))&&!onlyOther(m.text))
     names.set(key(m.text),{name:m.text,season:guessSeason(m.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
@@ -353,6 +362,7 @@ function clean(k,id,r){
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,ts,deleted}}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
+    dessert:r.dessert===true?true:r.dessert===false?false:null,
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
   return null;
 }
@@ -383,5 +393,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,companionFor,plain,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,companionFor,plain,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
