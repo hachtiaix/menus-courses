@@ -35,7 +35,7 @@ const PANTRY_WORDS=[
   // graines et entiers
   "clou de girofle","girofle","anis etoile","badiane","cardamome","graine de sesame","sesame","graine de fenouil","fenouil moulu","fenouil en poudre","baie de genievre","genievre",
   // mélanges et aides
-  "bouillon cube","cube de bouillon","bouillon","fond de veau","sauce soja","moutarde","vinaigre","huile","farine","sucre","levure","maizena","bicarbonate"];
+  "bouillon cube","cube de bouillon","bouillon","fond de veau","sauce soja","moutarde","vinaigre","huile","farine","sucre","levure","maizena","bicarbonate","chapelure"];
 const pantryKey=name=>root.Rayons?root.Rayons.keyOf(name):plain(name);
 function isPantry(S,name){
   const r=(S.stores||{})[pantryKey(name)];
