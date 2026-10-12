@@ -19,7 +19,7 @@ const SEASON_WORDS={
   ete:["salade","gaspacho","gazpacho","taboule","barbecue","bbq","brochette","melon","carpaccio","ceviche","poke","pan bagnat",
        "tomate mozzarella","sorbet"],
 };
-const plain=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const plain=s=>String(s||"").toLowerCase().replace(/œ/g,"oe").replace(/æ/g,"ae").normalize("NFD").replace(/[\u0300-\u036f]/g,""); // « bœuf » = « boeuf »
 const words=s=>" "+plain(s).replace(/[^a-z0-9]+/g," ").trim()+" ";
 // Ingrédients « placard » (toujours à la maison) : pas achetés d'office, mis « à vérifier » dans la liste.
 // Les classiques par défaut ; chaque ingrédient se marque ou se démarque (🏠) dans la fiche recette, pour toutes les recettes.
@@ -99,7 +99,7 @@ function companionFor(S,name,today){
 // Aliments de base : portion par personne (q, en g ou en unités), rayon/magasin par défaut.
 // kind "g" : grammes ; "n" : à l'unité ; "box" : légumes en boîte (petite 1 pers., moyenne 2, grande 4) ; "text" : ligne fixe.
 const FOODS=[
-  {id:"viande",icon:"🥩",cat:"prot",label:"Viande rouge",words:["viande rouge","viande","steak","boeuf","bavette","entrecote","roti de boeuf"],kind:"g",q:150,store:"boucherie"},
+  {id:"viande",icon:"🥩",cat:"prot",label:"Pièce de bœuf",words:["piece de boeuf","viande rouge","viande","steak","boeuf","bavette","entrecote","roti de boeuf"],kind:"g",q:150,store:"boucherie"},
   {id:"hache",icon:"🥩",cat:"prot",label:"Steak haché",words:["steak hache","viande hachee","hache"],kind:"n",q:1,store:"boucherie"},
   {id:"poulet",icon:"🍗",cat:"prot",label:"Poulet",words:["poulet","blanc de poulet"],kind:"g",q:150,store:"boucherie"},
   {id:"esc-poulet",icon:"🍗",cat:"prot",label:"Escalopes de poulet",words:["escalope de poulet","escalopes de poulet"],kind:"n",q:1,store:"boucherie"},
