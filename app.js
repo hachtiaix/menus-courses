@@ -460,12 +460,16 @@ function suggestDialog(){
 // dans un repas (« Courgettes farcies, Orzo ») ou dans une association ajoutée à la main (« Pâtes, Œufs », supprimable)
 function sidesLearned(){
   const rec=live(S.recipes).filter(r=>!Data.recipeDessert(r)),key=s=>Data.plain(s).trim(),out=new Map();
-  const baseOf=x=>{const r=rec.find(r=>key(r.name)===key(x));if(r)return r.name;const f=Data.foodFor(x,true);return f&&f.cat==="fec"?f.label:null};
+  const isRec=x=>rec.find(r=>key(r.name)===key(x)),starch=x=>{const f=Data.foodFor(x,true);return!!(f&&f.cat==="fec")};
   const texts=[...live(S.meals).map(m=>({t:m.text})),...live(S.combos||{}).map(c=>({t:c.text,id:c.id}))].filter(x=>x.t);
   for(const {t,id} of texts){const p=t.split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);if(p.length<2)continue;
-    const hasRec=p.some(x=>rec.some(r=>key(r.name)===key(x))); // avec une recette : rangé sous la recette seulement
-    for(const x of p){const b=baseOf(x);if(!b||(hasRec&&!rec.some(r=>key(r.name)===key(x))))continue;const o=out.get(b)||new Map();
-      const side=p.filter(y=>y!==x).join(", "),k=key(side);o.set(k,{side,id:id||(o.get(k)||{}).id});out.set(b,o)}}
+    // le plat principal : la recette ; sinon un type de plat (« Pâtes » avec œufs…) ; sinon ce qui n'est pas un féculent
+    // (« Poulet rôti » avec pommes de terre : les pommes de terre sont l'accompagnement)
+    let bases=p.filter(isRec);
+    if(!bases.length)bases=[...p.filter(x=>Data.typeOf(x)&&!starch(x)),...p.filter(x=>Data.typeOf(x))].slice(0,1); // « Poulet curry » avant « Riz »
+    if(!bases.length)bases=p.filter(x=>!starch(x));
+    for(const x of bases){const r=isRec(x),b=r?r.name:(Data.foodFor(x,true)||{}).label||x.charAt(0).toUpperCase()+x.slice(1);
+      const o=out.get(b)||new Map(),side=p.filter(y=>y!==x).join(", "),k=key(side);o.set(k,{side,id:id||(o.get(k)||{}).id});out.set(b,o)}}
   return [...out].map(([recipe,s])=>({recipe,sides:[...s.values()]})).sort((a,b)=>a.recipe.localeCompare(b.recipe,"fr"));
 }
 // Habitudes apprises : ajoutées en silence (une fois par jour), oubliées après 24 mois sans être suivies ; l'admin les voit dans Réglages → Habitudes.
@@ -517,7 +521,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v164";
+const BASE=4,VERSION="v165";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
