@@ -21,6 +21,27 @@ const SEASON_WORDS={
 };
 const plain=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const words=s=>" "+plain(s).replace(/[^a-z0-9]+/g," ").trim()+" ";
+// Ingrédients « placard » (toujours à la maison) : pas achetés d'office, mis « à vérifier » dans la liste.
+// Les classiques par défaut ; chaque ingrédient se marque ou se démarque (🏠) dans la fiche recette, pour toutes les recettes.
+const PANTRY_WORDS=[
+  // poivres et sel
+  "sel","fleur de sel","gros sel","poivre","poivre noir","poivre blanc","poivre 5 baie",
+  // épices en poudre
+  "paprika","paprika fume","cumin","curry","curcuma","gingembre en poudre","cannelle","muscade","noix de muscade","piment d espelette",
+  "piment de cayenne","cayenne","ras el hanout","colombo","quatre epice","coriandre en poudre","safran","ail en poudre","oignon en poudre","epice",
+  // herbes séchées (basilic, persil, ciboulette, menthe : seulement séchés, les bouquets frais s'achètent)
+  "herbes de provence","thym","laurier","origan","romarin","estragon","aneth seche","sauge",
+  "basilic seche","persil seche","ciboulette sechee","menthe sechee",
+  // graines et entiers
+  "clou de girofle","girofle","anis etoile","badiane","cardamome","graine de sesame","sesame","graine de fenouil","baie de genievre","genievre",
+  // mélanges et aides
+  "bouillon cube","cube de bouillon","bouillon","fond de veau","sauce soja","moutarde","vinaigre","huile","farine","sucre","levure","maizena","bicarbonate"];
+const pantryKey=name=>root.Rayons?root.Rayons.keyOf(name):plain(name);
+function isPantry(S,name){
+  const r=(S.stores||{})[pantryKey(name)];
+  if(r&&!r.deleted&&r.pantry!=null)return r.pantry;
+  const n=words(name);return PANTRY_WORDS.some(p=>new RegExp(" "+p.replace(/ /g,"[sx]? ")+"[sx]? ").test(n));
+}
 // Desserts (gâteaux, tartes sucrées…) : ce ne sont pas des repas, jamais proposés par 💡.
 // Deviné d'après le nom, modifiable dans la fiche de la recette (Type : Plat / Dessert).
 const DESSERT_WORDS=["gateau","cake","crumble","brownie","cookie","muffin","cupcake","clafoutis","fondant","moelleux","mousse au chocolat",
@@ -344,6 +365,8 @@ function clean(k,id,r){
   if(k==="lists")return{id,name:str(r.name,60)||id,
     order:(Array.isArray(r.order)?r.order:[]).filter(x=>R&&R.byId[x]).slice(0,30),ts,deleted};
   if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,archived:r.archived===true,
+    check:r.check===true,until:/^\d{4}-\d{2}-\d{2}$/.test(r.until)?r.until:null, // check : 🏠 à vérifier au placard, jusqu'au repas « until »
+    meals:Array.isArray(r.meals)?r.meals.filter(okId).slice(0,20):[], // repas qui en ont besoin (affichés en petit)
     c:Number.isFinite(r.c)?r.c:ts,ts,deleted}:null;
   if(k==="meals"){
     const ad=r.added&&typeof r.added==="object"&&Array.isArray(r.added.items)?{n:int(r.added.n,1,30,4),
@@ -352,7 +375,7 @@ function clean(k,id,r){
     return{key:id,text:str(r.text,120),servings:int(r.servings,1,30,4),added:ad,for:str(r.for,30)||null,ts,deleted};
   }
   if(k==="stores")return{id,last:(Array.isArray(r.last)?r.last:[]).filter(okId).slice(-3),def:okId(r.def)?r.def:null,
-    name:str(r.name,80)||null,n:int(r.n,0,9999,0),ts,deleted}; // name, n : article déjà acheté (mémoire de la saisie), et combien de fois
+    name:str(r.name,80)||null,n:int(r.n,0,9999,0),pantry:r.pantry===true?true:r.pantry===false?false:null,ts,deleted}; // name, n : article déjà acheté (mémoire de la saisie), et combien de fois
   if(k==="habits")return (TYPE_IDS.includes(r.type)||okId(r.recipe))&&(r.slot==="m"||r.slot==="s")?{id,
     type:TYPE_IDS.includes(r.type)?r.type:null,recipe:okId(r.recipe)?r.recipe:null,slot:r.slot,
     days:[...new Set((Array.isArray(r.days)?r.days:[]).map(x=>parseInt(x,10)).filter(x=>x>=1&&x<=7))].sort().slice(0,7),
@@ -396,5 +419,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,companionFor,plain,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,companionFor,plain,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

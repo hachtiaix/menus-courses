@@ -21,12 +21,12 @@ const RAYONS=[
 // Mots-clés (sans accents, au singulier). Les expressions de plusieurs mots passent avant les mots seuls.
 // Mots seuls, sans accents, au singulier ; un mot n'apparaît que dans un rayon.
 const K={
-  fruits:"pomme poire banane orange citron clementine mandarine pamplemousse kiwi fraise framboise myrtille cerise abricot peche nectarine prune raisin melon pasteque ananas mangue avocat figue grenade fruit legume salade laitue mache roquette epinard tomate concombre courgette aubergine poivron carotte navet radis betterave poireau oignon echalote ail celeri fenouil chou brocoli artichaut asperge champignon potiron citrouille courge butternut endive persil ciboulette basilic coriandre menthe thym romarin aneth gingembre patate",
+  fruits:"pomme poire banane orange citron clementine mandarine pamplemousse kiwi fraise framboise myrtille cerise abricot peche nectarine prune raisin melon pasteque ananas mangue avocat figue grenade fruit legume salade laitue mache roquette epinard tomate concombre courgette aubergine poivron carotte navet radis betterave poireau oignon echalote ail celeri fenouil chou brocoli artichaut asperge champignon potiron citrouille courge butternut endive persil ciboulette basilic coriandre menthe thym romarin aneth gingembre patate basilic persil ciboulette menthe coriandre aneth",
   pain:"pain baguette brioche croissant viennoiserie gateau biscotte bun wrap tortilla",
   boucherie:"boeuf veau porc agneau poulet dinde canard lapin steak hache viande escalope roti cote filet bavette entrecote saucisse merguez chipolata poisson saumon cabillaud colin thon crevette moule huitre crabe dorade bar truite maquereau gambas",
   charcuterie:"jambon lardon bacon saucisson chorizo rillette terrine salami coppa knacki quiche pizza traiteur taboule surimi",
   cremerie:"lait beurre creme yaourt yogourt fromage emmental gruyere comte mozzarella parmesan feta chevre camembert brie raclette reblochon roquefort mascarpone ricotta oeuf skyr faisselle",
-  sale:"pate spaghetti tagliatelle penne coquillette riz semoule quinoa lentille farine huile vinaigre sel poivre epice moutarde mayonnaise ketchup sauce bouillon conserve olive cornichon chip cracker soupe puree concentre coulis",
+  sale:"pate spaghetti tagliatelle penne coquillette riz semoule quinoa lentille farine huile vinaigre sel poivre epice paprika cumin curry curcuma cannelle muscade cayenne colombo safran thym laurier origan romarin estragon sauge girofle badiane cardamome sesame genievre maizena bicarbonate soja moutarde mayonnaise ketchup sauce bouillon conserve olive cornichon chip cracker soupe puree concentre coulis",
   sucre:"sucre chocolat cafe the infusion cereale muesli confiture miel nutella madeleine compote levure vanille cacao bonbon biscuit",
   boissons:"eau jus soda coca limonade sirop boisson",
   alcools:"vin biere cidre champagne rhum whisky vodka pastis aperitif",
@@ -56,7 +56,10 @@ const PHRASES=[
   ["gel douche","hygiene"],["pastille lave vaisselle","entretien"],["essuie tout","entretien"],["pate brisee","charcuterie"],
   ["pate feuilletee","charcuterie"],["pate a pizza","charcuterie"],["pate de campagne","charcuterie"],["pois chiche","sale"],["haricot rouge","sale"],
   ["petit suisse","cremerie"],["dessert lacte","cremerie"],["biscuit aperitif","sale"],["pain d epice","sucre"],
-  ["lardon fume","charcuterie"],["tomate pelee","sale"],["boite de tomate","sale"],["coeur de palmier","sale"],
+  ["lardon fume","charcuterie"],["ras el hanout","sale"],["herbe de provence","sale"],["piment d espelette","sale"],["quatre epice","sale"],
+  ["fond de veau","sale"],["fleur de sel","sale"],["gros sel","sale"],["anis etoile","sale"],["baie de genievre","sale"],["graine de fenouil","sale"],
+  ["basilic seche","sale"],["persil seche","sale"],["ciboulette sechee","sale"],["menthe sechee","sale"],["coriandre en poudre","sale"],["gingembre en poudre","sale"],
+  ["ail en poudre","sale"],["oignon en poudre","sale"],["poivre 5 baie","sale"],["tomate pelee","sale"],["boite de tomate","sale"],["coeur de palmier","sale"],
 ].map(([p,r])=>[norm(p),r]);
 const map=new Map();for(const [w,r] of RULES)if(w&&!w.includes(" ")&&!map.has(w))map.set(w,r);
 

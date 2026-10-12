@@ -80,7 +80,7 @@ section.day{display:grid;grid-template-columns:42px 1fr;gap:6px;padding:10px 12p
 h2.sec{font-size:15px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin:20px 4px 6px;font-weight:600}
 h2.sec small{text-transform:none;letter-spacing:0;font-weight:400}
 .row.link{cursor:pointer}
-.ed-row{display:grid;grid-template-columns:1fr auto auto;gap:6px;margin:6px 0}
+.ed-row{display:grid;grid-template-columns:1fr 92px 34px 24px;gap:6px;margin:6px 0;align-items:center}
 .ed-row input{height:42px;min-width:0;font-size:16px}.ed-row select{height:42px}
 .danger{color:#d9534f}
 .acts .btn.sec{margin:0}
@@ -112,7 +112,7 @@ h3.ray{font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--m
 .okmsg{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);border-radius:10px;padding:8px 10px;font-size:14px;margin:6px 0}
 .sub .x{margin-left:auto}
 /* fenêtre ingrédients : quantité sur toute la largeur, puis − / + et magasin */
-.ing-row{grid-template-columns:26px 1fr auto;grid-template-areas:"cb q q" ". st sel" ". w w";row-gap:6px}
+.ing-row{grid-template-columns:26px 1fr auto;grid-template-areas:"cb q q" ". st sel" ". pn pn" ". w w";row-gap:6px}
 .ing-row>[type=checkbox]{grid-area:cb}.ing-row>.ing{grid-area:q}.ing-row>.stp{grid-area:st;justify-self:start}.ing-row>select{grid-area:sel}
 .homewarn{grid-area:w;margin:0;font-size:13px;color:#b07800}.homewarn:empty{display:none}
 .ing-row.warn{background:color-mix(in srgb,#e0a800 12%,transparent);border-radius:10px;padding-left:6px;padding-right:6px}
@@ -280,3 +280,12 @@ section.day{grid-template-columns:1fr;gap:0;padding:8px 12px 10px}
 .sheet .step{margin:0 0 2px;font-size:13px;font-weight:600;color:var(--accent)}
 /* boutons d'une fenêtre côte à côte : même largeur, quel que soit le texte (« Ne pas ajouter aux listes ») */
 .acts:not([style*="column"]) .btn{flex:1 1 0;min-width:0;white-space:normal;line-height:1.2;height:auto;min-height:48px;padding:8px 10px}
+/* 🏠 placard */
+.row.verif .t{color:var(--mut);font-style:italic}.row.verif .t small{display:block;font-size:12px;font-style:normal;opacity:.8}
+.row.verif .pill{flex:none;height:32px;padding:0 10px;border-radius:16px;font-size:13px;font-weight:600;white-space:nowrap}
+.row.verif .vok{background:var(--accent);color:#fff;border:0}.row.verif .vno{background:none;border:1px solid var(--line);color:var(--fg)}
+.ed-row .pan{flex:none;width:34px;height:34px;padding:0;border-radius:50%;font-size:16px;opacity:.35;filter:grayscale(1);background:none;border:1px dashed var(--line)}
+.ed-row .pan.on{opacity:1;filter:none;border:1px solid var(--accent);background:var(--card)}
+.pan-note{grid-area:pn;margin:0;font-size:13px;color:var(--accent)}
+.ed-row select{width:100%}.ed-row .x{width:24px}
+.row.verif{flex-wrap:wrap;row-gap:2px}.row.verif .for{flex-basis:100%;font-size:12px;color:var(--mut);padding-left:2px}

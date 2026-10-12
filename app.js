@@ -76,7 +76,7 @@ function render(){
   const hd=document.querySelector("header");if(hd)document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");
   $("#cfg").style.display=tab==="settings"?"none":""; // inutile dans les réglages : le point de synchro prend sa place
   const lists=live(S.lists).sort(listSort);
-  $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}" aria-label="${esc(l.name)}"><i>${LOGO[l.id]?`<img src="${LOGO[l.id]}" alt="" class="logo-${l.id}">`:PICTO[l.id]?`<img src="${PICTO[l.id]}" alt="" class="picto">`:ICON[l.id]||"🛒"}${c?`<b>${c}</b>`:""}</i></button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}" aria-label="Menus"><i>${MENU_ICON}</i></button>`;
+  $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done&&!i.check).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}" aria-label="${esc(l.name)}"><i>${LOGO[l.id]?`<img src="${LOGO[l.id]}" alt="" class="logo-${l.id}">`:PICTO[l.id]?`<img src="${PICTO[l.id]}" alt="" class="picto">`:ICON[l.id]||"🛒"}${c?`<b>${c}</b>`:""}</i></button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}" aria-label="Menus"><i>${MENU_ICON}</i></button>`;
   if(tab==="settings")renderSettings();else if(tab==="menus")renderMenus();else renderList(S.lists[tab]?tab:"auchan");
 }
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -87,9 +87,13 @@ function renderList(id){
   else $("#title").textContent=S.lists[id].name;
   live(S.items).filter(i=>i.list===id&&!i.done&&/\s\+\s/.test(i.text)&&Qty.parse(i.text).kind==="box").forEach(i=>{touch("items",{...i,deleted:true});addBoxes(id,Qty.parse(i.text),i.id)});
   const items=live(S.items).filter(i=>i.list===id&&!i.archived).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
-  const row=i=>`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span><button class="pill imv" data-imv="${i.id}" aria-label="Changer de liste">⇄</button>`:""}<button class="x" data-d="${i.id}">×</button></div>`;
+  // 🏠 à vérifier au placard : en gris, « Il en manque » (devient un article à acheter) ou « J'en ai » (retiré)
+  const row=i=>i.check?`<div class="row verif"><span class="t" data-e="${i.id}">🏠 ${esc(i.text)}</span><button class="pill vok" data-vok="${i.id}">Il en manque</button><button class="pill vno" data-d="${i.id}">J'en ai</button><small class="for">pour ${esc((i.meals||[]).map(k=>S.meals[k]&&!S.meals[k].deleted&&S.meals[k].text).filter(Boolean).join(", ")||"un repas")}</small></div>`
+    :`<div class="row ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-e="${i.id}">${esc(i.text)}</span>${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span><button class="pill imv" data-imv="${i.id}" aria-label="Changer de liste">⇄</button>`:""}<button class="x" data-d="${i.id}">×</button></div>`;
   $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off"><button class="btn">+</button></form>`+
-   (items.length?rayonOrder(id).map(r=>{const g=items.filter(i=>!i.done&&rayonOf(i.text)===r.id);
+   // 🏠 à vérifier au placard : tous ensemble en haut de la liste
+   (items.some(i=>i.check)?`<h3 class="ray">🏠 À vérifier au placard</h3><div class="card">${items.filter(i=>i.check).map(row).join("")}</div>`:"")+
+   (items.length?rayonOrder(id).map(r=>{const g=items.filter(i=>!i.done&&!i.check&&rayonOf(i.text)===r.id);
       return g.length?`<h3 class="ray">${r.icon} ${esc(r.label)}</h3><div class="card">${g.map(row).join("")}</div>`:""}).join("")+
     (items.some(i=>i.done)?`<h3 class="ray">✅ Dans le caddie</h3><div class="card">${items.filter(i=>i.done).map(row).join("")}</div>`:"")+`
    ${items.some(i=>i.done)?`<button class="btn sec" id="clr">Retirer les articles cochés</button>`:""}`:`<div class="empty">Liste vide</div>`);
@@ -121,15 +125,37 @@ function renderList(id){
   document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.q],t=Qty.step(i.text,+el.dataset.dir);if(t){touch("items",{...i,text:t});render()}});
   document.querySelectorAll("[data-imv]").forEach(el=>el.onclick=()=>moveItemDialog(S.items[el.dataset.imv]));
   document.querySelectorAll("[data-e]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.e];if(!i.done)itemEditor(i)});
+  document.querySelectorAll("[data-vok]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.vok];touch("items",{...i,check:false,until:null,c:Date.now()});render()});
   document.querySelectorAll("[data-c]").forEach(el=>el.onchange=()=>{const i=S.items[el.dataset.c];touch("items",{...i,done:el.checked});recordPurchase(i.text,i.list,el.checked);render()});
   document.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.d];touch("items",i.done?{...i,archived:true}:{...i,deleted:true});render()});
   const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,archived:true}));render()};
 }
 // Ajoute un article à une liste en cumulant avec un article identique non coché (« 1 oignon » + « 3 oignons » = « 4 oignons »).
+// Ingrédient « placard » d'un repas : une seule ligne 🏠 « à vérifier » (sans quantité), gardée jusqu'au dernier repas qui en a besoin.
+// Rien si on l'achète déjà (article normal) ; pas de doublon si deux repas en ont besoin.
+const pantryOf=t=>Data.isPantry(S,pantryName(t));
+// nom seul, sans la mesure : « 2 c. à soupe de moutarde » → « moutarde »
+const MEASURE=/^(?:c\.?\s*[àa]\s*(?:s|c)\.?|c\.?\s*s\.?|c\.?\s*c\.?|cs|cc|càs|càc|cuil(?:l[eè]re)?s?\.?(?:\s*[àa]\s*(?:soupe|café|cafe))?|c\.?(?:\s*[àa]\s*(?:soupe|café|cafe))|pinc[ée]es?|sachets?|pots?|bocal|bocaux|tubes?|brins?|feuilles?|traits?|filets?|noisettes?|morceaux?|bâtons?|branches?|cubes?|tablettes?)\s+(?:de\s+|d['’]\s*)/i;
+const pantryName=t=>{let nm=(Qty.parse(t).name||t).trim();for(let i=0;i<2;i++)nm=nm.replace(MEASURE,"");return nm};
+function addCheck(list,text,until,mealKey){
+  const nm=pantryName(text),k=Data.pantryKey(nm),kOf=i=>Data.pantryKey(pantryName(i.text));
+  if(live(S.items).some(i=>!i.done&&!i.check&&kOf(i)===k))return[];
+  const ex=live(S.items).find(i=>i.check&&!i.done&&kOf(i)===k);
+  if(ex){const meals=mealKey&&!(ex.meals||[]).includes(mealKey)?[...(ex.meals||[]),mealKey]:ex.meals||[];
+    if((until&&(!ex.until||until>ex.until))||meals!==ex.meals)touch("items",{...ex,until:until&&(!ex.until||until>ex.until)?until:ex.until,meals});return[ex.id]}
+  const nid=uid();touch("items",{id:nid,list,text:nm.charAt(0).toUpperCase()+nm.slice(1),check:true,until:until||null,meals:mealKey?[mealKey]:[],done:false,c:Date.now()});return[nid];
+}
+// Ingrédients placard d'un repas → 🏠 « à vérifier » (aussi quand on n'ajoute pas les autres ingrédients aux listes)
+function addPantry(r,mealKey){for(const g of r.ingredients||[])if(pantryOf(g.t))addCheck(defaultStore(g.t,g.store),g.t,mealKey&&mealKey.slice(0,10),mealKey)}
+// Repas retiré ou changé : il ne demande plus ses « à vérifier » (la ligne disparaît si plus aucun repas n'en a besoin)
+function dropChecks(mealKey){
+  for(const i of live(S.items))if(i.check&&(i.meals||[]).includes(mealKey)){const meals=i.meals.filter(k=>k!==mealKey);
+    touch("items",meals.length?{...i,meals}:{...i,deleted:true})}
+}
 function addToList(list,text){
   const p=Qty.parse(text);
   if(p.kind==="box")return addBoxes(list,p);
-  const same=live(S.items).find(i=>i.list===list&&!i.done&&Qty.key(Qty.parse(i.text))===Qty.key(Qty.parse(text)));
+  const same=live(S.items).find(i=>i.list===list&&!i.done&&!i.check&&Qty.key(Qty.parse(i.text))===Qty.key(Qty.parse(text)));
   if(same){const t=Qty.add(same.text,text);if(t&&t!==same.text)touch("items",{...same,text:t});return[same.id]}
   const nid=uid();touch("items",{id:nid,list,text,done:false,c:Date.now()});return[nid];
 }
@@ -205,13 +231,16 @@ function purgeDone(){
   let n=0;live(S.items).forEach(i=>{
     if(i.done&&!i.archived&&Date.now()-i.ts>DONE_TTL){touch("items",{...i,archived:true});n++}       // masqué après 2 h
     else if(i.archived&&Date.now()-i.ts>HISTORY_TTL)touch("items",{...i,deleted:true});              // oublié après 30 j
+    else if(i.check&&i.until&&i.until<todayKey()){touch("items",{...i,deleted:true});n++}            // 🏠 à vérifier : repas passés
   });
   if(n&&tab!=="menus"&&tab!=="settings")safeRender();
 }
 // Retire une quantité d'un article non coché (supprimé s'il tombe à zéro).
 function removeFromList(list,text){
-  const p=Qty.parse(text),k=Qty.key(p);
-  const same=live(S.items).filter(i=>i.list===list&&!i.done&&Qty.key(Qty.parse(i.text))===k).sort((a,b)=>Qty.parse(a.text).n-Qty.parse(b.text).n);
+  const p=Qty.parse(text),k=Qty.key(p),pk=Data.pantryKey(pantryName(text));
+  const ck=live(S.items).find(i=>i.list===list&&i.check&&Data.pantryKey(pantryName(i.text))===pk);
+  if(ck)return; // 🏠 à vérifier : retiré avec son repas (dropChecks)
+  const same=live(S.items).filter(i=>i.list===list&&!i.done&&!i.check&&Qty.key(Qty.parse(i.text))===k).sort((a,b)=>Qty.parse(a.text).n-Qty.parse(b.text).n);
   let need=Math.ceil(p.n==null?1:p.n);
   for(const i of same){
     if(need<=0)break;
@@ -243,6 +272,9 @@ function moveMeal(from){
     const to=$("#mvto").value,o=S.meals[to];
     touch("meals",{...m,key:to});
     touch("meals",o&&o.text?{...o,key:from}:{key:from,text:"",servings:m.servings||BASE});
+    // les « à vérifier » suivent aussi leurs repas
+    const sw=k=>k===from?to:k===to?from:k.startsWith(from)&&Data.isSecond(k)?to+k.slice(from.length):k.startsWith(to)&&Data.isSecond(k)?from+k.slice(to.length):k;
+    for(const i of live(S.items))if(i.check&&(i.meals||[]).some(k=>sw(k)!==k))touch("items",{...i,meals:i.meals.map(sw)});
     for(let i=2;i<=MAX_DISHES;i++){ // les plats en plus suivent leur repas
       const s2=S.meals[from+i],t2=S.meals[to+i],on=x=>x&&!x.deleted;
       if(!on(s2)&&!on(t2))continue;
@@ -307,7 +339,7 @@ function extraDialog(key,n){
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(m.text)}</h2>
    <p class="okmsg">✓ Déjà acheté pour ${prev.n} personne${prev.n>1?"s":""}. Seule la différence sera ajoutée aux listes.</p>
    <div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
-   <div id="ings" class="card">${r.ingredients.map(rowH).join("")}</div>
+   <div id="ings" class="card">${r.ingredients.filter(i=>!pantryOf(i.t)).map(rowH).join("")}</div>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter la différence</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
@@ -334,7 +366,7 @@ function extraDialog(key,n){
 function addMealIngredients(key){
   const m=S.meals[key],r=m&&recipeOf(m.text);if(!r)return;
   const B=r.serves||BASE,n=m.servings||BASE,ids=new Set(),items=[];
-  for(const g of r.ingredients){const store=defaultStore(g.t,g.store);addToList(store,Qty.buy(g.t,n/B,B)).forEach(x=>ids.add(x));items.push({t:g.t,store})}
+  for(const g of r.ingredients){const store=defaultStore(g.t,g.store),t=Qty.buy(g.t,n/B,B);(pantryOf(g.t)?addCheck(store,t,key.slice(0,10),key):addToList(store,t)).forEach(x=>ids.add(x));items.push({t:g.t,store})}
   touch("meals",{...S.meals[key],added:{n,items,ids:[...ids],b:B}});
 }
 const slotName=k=>new Date(k.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"long"})+(/-m\d*$/.test(k)?" midi":" soir")+(Data.isSecond(k)?" (2ᵉ plat)":"");
@@ -446,7 +478,7 @@ function addSecond(key,n,name,noIng){ // noIng : ne pas ajouter ses ingrédients
 }
 // Retire les plats en plus d'un repas (et leurs ingrédients), sauf ceux déjà achetés.
 function removeSecond(key){
-  for(const k2 of extrasOf(key)){const s=S.meals[k2];if(bought(s))continue;
+  for(const k2 of extrasOf(key)){const s=S.meals[k2];if(bought(s))continue;dropChecks(k2);
     if(s.added)s.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,s.added.n/(s.added.b||BASE),s.added.b||BASE)));
     touch("meals",{key:k2,text:"",deleted:true})}
 }
@@ -460,7 +492,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v134";
+const BASE=4,VERSION="v135";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -529,7 +561,8 @@ function renderMenus(){
       alert(`Les ingrédients de « ${o.text} » ont déjà été achetés : ce repas ne peut pas être supprimé ni remplacé. Utilisez ⇄ pour le déplacer.`);
       return;
     }
-    const dropOld=()=>{if(o.added&&norm(o.text||"")!==norm(t))o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)))};
+    const dropOld=()=>{if(norm(o.text||"")===norm(t))return;dropChecks(key);
+      if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)))};
     dropOld();
     if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});if(!Data.isSecond(key))removeSecond(key);render();return}
     t=t.replace(/[\s,+]+$/,"");
@@ -612,7 +645,7 @@ function renderMenus(){
     const key=el.dataset.del,m=S.meals[key];
     if(bought(m)){alert(`Les ingrédients de « ${m.text} » ont déjà été achetés : ce repas ne peut pas être supprimé. Utilisez ⇄ pour le déplacer.`);return}
     if(m.text&&!confirm(`Supprimer « ${m.text} »${m.added?" et retirer ses ingrédients des listes":""} ?`))return;
-    if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/(m.added.b||BASE),m.added.b||BASE)));
+    dropChecks(key);if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/(m.added.b||BASE),m.added.b||BASE)));
     if(Data.isSecond(key))touch("meals",{key,text:"",deleted:true});
     else{touch("meals",{key,text:"",servings:m.servings||BASE});removeSecond(key)}
     render();
@@ -646,13 +679,15 @@ function ingredientsDialog(name,mealKey,startN,after,step){
    ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
    <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans ⚙︎ → Ingrédients.":`Recette pour ${B} personne${B>1?"s":""}.`}</p>
-   <div id="ings" class="card">${r.ingredients.map(rowH).join("")}</div><button class="btn sec" id="more">+ Ingrédient</button>`
+   <div id="ings" class="card">${r.ingredients.filter(i=>!pantryOf(i.t)).map(rowH).join("")}</div><button class="btn sec" id="more">+ Ingrédient</button>`
    :`<p class="mut">Nouvelle recette : un ingrédient par ligne, quantité en premier (ex. « 400 g de pâtes »).</p><div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${n}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div><textarea id="ta" rows="7" placeholder="400 g de pâtes&#10;200 g de lardons&#10;2 oeufs&#10;crème fraîche"></textarea>`}
    <div class="acts"><button class="btn sec" id="no">Ne pas ajouter<br>aux listes</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour<br>les listes":"Ajouter<br>aux listes"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();
   // « Ne pas ajouter aux listes » : rien n'est ajouté aux listes, mais le nombre de personnes choisi est gardé pour le repas
-  const skip=()=>{close();const m=mealKey&&S.meals[mealKey];if(r&&m&&m.text&&n!==(m.servings||BASE)){touch("meals",{...m,servings:n});render()}if(after)after()};
+  const skip=()=>{close();const m=mealKey&&S.meals[mealKey];
+    if(r&&m&&m.text){addPantry(r,mealKey);if(n!==(m.servings||BASE))touch("meals",{...m,servings:n});render()} // les « à vérifier » sont ajoutés quand même
+    if(after)after()};
   ov.onclick=e=>{if(e.target===ov)skip()};
   $("#no").onclick=skip;
   if(r){
@@ -689,12 +724,15 @@ function ingredientsDialog(name,mealKey,startN,after,step){
     }
     const rows=[...ov.querySelectorAll(".ing-row")].map(el=>{const i=el.querySelector(".ing"),edited=i.value!==i.dataset.shown;
       return{orig:el.dataset.base,on:el.querySelector("[type=checkbox]").checked,shown:i.value.trim(),base:edited||el.dataset.diff?scaleText(i.value.trim(),B/n):el.dataset.base,store:el.querySelector("select").value}}).filter(x=>x.shown);
-    const now=rows.filter(x=>x.on).map(x=>({t:x.base,store:x.store}));
+    // ingrédients placard (non affichés) : toujours ajoutés en 🏠 « à vérifier »
+    const pan=r.ingredients.filter(g=>pantryOf(g.t)).map(g=>({t:g.t,store:defaultStore(g.t,g.store)}));
+    const now=[...rows.filter(x=>x.on).map(x=>({t:x.base,store:x.store})),...pan];
     const sig=(items,k)=>items.map(g=>g.t+"@"+g.store).sort().join("|")+"#"+k;
     const ids=new Set(prev?prev.ids||[]:[]);
     if(!prev||sig(prev.items,prev.n)!==sig(now,n)){
       if(prev)prev.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,prev.n/(prev.b||BASE),prev.b||BASE)));
-      rows.filter(x=>x.on).forEach(x=>addToList(x.store,x.shown).forEach(i=>ids.add(i)));
+      rows.filter(x=>x.on).forEach(x=>(pantryOf(x.orig||x.shown)?addCheck(x.store,x.shown,mealKey&&mealKey.slice(0,10),mealKey):addToList(x.store,x.shown)).forEach(i=>ids.add(i)));
+      pan.forEach(g=>addCheck(g.store,g.t,mealKey&&mealKey.slice(0,10),mealKey).forEach(i=>ids.add(i)));
     }
     // la recette ne change pas avec les quantités achetées ; seuls les ingrédients ajoutés (+ Ingrédient) s'y ajoutent
     const extra=rows.filter(x=>!x.orig).map(x=>({t:x.base,store:x.store}));
@@ -842,7 +880,7 @@ function foodEditor(cat,rec,done,step){ // rec : aliment inconnu d'un repas, don
 function recipeEditor(r){
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(SHORT[l.id]||l.name)}</option>`).join("");
-  const rowH=i=>`<div class="ed-row"><input type="text" class="ing" value="${esc(i.t)}" placeholder="400 g de pâtes"><select>${opts(i.store||"auchan")}</select><button class="x">×</button></div>`;
+  const rowH=i=>`<div class="ed-row"><input type="text" class="ing" value="${esc(i.t)}" placeholder="400 g de pâtes"><select>${opts(i.store||"auchan")}</select><button type="button" class="pill pan ${i.t&&pantryOf(i.t)?"on":""}" aria-label="Toujours à la maison (placard)" title="Placard : toujours à la maison">🏠</button><button class="x">×</button></div>`;
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${r?"Modifier la recette":"Nouvelle recette"}</h2>
    <input type="text" id="rn" placeholder="Nom du plat" value="${esc(r?r.name:"")}" style="width:100%;margin-bottom:10px">
@@ -857,7 +895,8 @@ function recipeEditor(r){
    <div class="acts">${r?`<button class="btn sec danger" id="del">Supprimer</button>`:""}<button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();
-  ov.onclick=e=>{if(e.target===ov)close();const x=e.target.closest(".x");if(x)x.parentNode.remove()};
+  ov.onclick=e=>{if(e.target===ov)close();const x=e.target.closest(".x");if(x)x.parentNode.remove();
+    const p=e.target.closest(".pan");if(p)p.classList.toggle("on")}; // 🏠 placard : vaut pour toutes les recettes
   $("#no").onclick=close;
   // Texte collé : une ligne d'ingrédient par ligne (puces, titres et étapes ignorés), « pour 6 personnes » règle le nombre.
   $("#paste").oninput=()=>{const v=$("#paste").value;if(!/\n/.test(v.trim()))return;
@@ -874,7 +913,10 @@ function recipeEditor(r){
   if(r)$("#del").onclick=()=>{if(confirm("Supprimer cette recette ?")){touch("recipes",{...r,deleted:true});close();render()}};
   $("#ok").onclick=()=>{
     const name=$("#rn").value.trim();
-    const ings=[...ov.querySelectorAll(".ed-row")].map(el=>({t:el.querySelector(".ing").value.trim(),store:el.querySelector("select").value})).filter(x=>x.t);
+    const ings=[...ov.querySelectorAll(".ed-row")].map(el=>({t:el.querySelector(".ing").value.trim(),store:el.querySelector("select").value,pan:el.querySelector(".pan").classList.contains("on")})).filter(x=>x.t);
+    for(const g of ings)if(g.pan!==pantryOf(g.t)){const nm=pantryName(g.t),k=Data.pantryKey(nm);
+      touch("stores",{...(S.stores[k]||{id:k,last:[],def:null,n:0}),id:k,name:(S.stores[k]&&S.stores[k].name)||nm,pantry:g.pan})}
+    ings.forEach(g=>delete g.pan);
     if(!name){$("#rn").focus();return}
     touch("recipes",{id:r?r.id:uid(),name,season:$("#ssn").value,dessert:$("#sdes").value==="d",serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings});close();render();
   };

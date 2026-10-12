@@ -56,7 +56,7 @@ const fr=x=>String(Math.round(x*100)/100).replace(".",",");
 const ASPIRE=/^h(aricot|achis|amburger|omard|ibou|arengs?|ors|aut)/i;
 const de=name=>!name?"":(/^[aeiouyâàéèêëîïôûù]/i.test(name)||(/^h/i.test(name)&&!ASPIRE.test(name)))?" d'"+name:" de "+name;
 // pluriel : -eau/-au/-eu → x (poireaux, gâteaux ; sauf bleus, pneus), chou → choux, chou-fleur → choux-fleurs
-const plural=(w,n)=>{if(n<=1||/[sxz]$/i.test(w))return w;
+const plural=(w,n)=>{if(n<=1||/[sxz.]$/i.test(w))return w; // « c. à soupe » : abréviation inchangée
   if(/^chou-/i.test(w))return w.split("-").map(x=>plural(x,n)).join("-");
   if(/^chou$/i.test(w)||(/(eau|au|eu)$/i.test(w)&&!/^(bleu|pneu)$/i.test(w)))return w+"x";
   return w+"s"};

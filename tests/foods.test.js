@@ -57,3 +57,13 @@ test("aliments inconnus d'une suite (ni recettes ni déjà connus)", () => {
   assert.deepEqual(Data.unknownFoods(S, "Saucisses, Asperges, Carbonade, Navets"), ["Asperges"]);
   assert.deepEqual(Data.unknownFoods(S, "Restes"), ["Restes"]);
 });
+
+test("ingrédients placard : épices, sel, huile… ; herbes fraîches seulement si séchées ; réglable par ingrédient", () => {
+  const S = Data.cleanAll({});
+  for (const t of ["moutarde", "paprika", "cumin", "sel", "huile d'olive", "basilic séché", "ras el hanout", "clou de girofle"]) assert.ok(Data.isPantry(S, t), t);
+  for (const t of ["basilic", "persil", "poivrons", "salade", "poulet", "crème fraîche"]) assert.ok(!Data.isPantry(S, t), t);
+  const k = Data.pantryKey("moutarde"), k2 = Data.pantryKey("crème fraîche");
+  const S2 = Data.cleanAll({ stores: { [k]: { id: k, last: [], pantry: false }, [k2]: { id: k2, last: [], pantry: true } } });
+  assert.ok(!Data.isPantry(S2, "moutarde"));
+  assert.ok(Data.isPantry(S2, "crème fraîche"));
+});
