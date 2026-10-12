@@ -35,7 +35,7 @@ const PANTRY_WORDS=[
   // graines et entiers
   "clou de girofle","girofle","anis etoile","badiane","cardamome","graine de sesame","sesame","graine de fenouil","fenouil moulu","fenouil en poudre","baie de genievre","genievre",
   // mélanges et aides
-  "bouillon cube","cube de bouillon","bouillon","fond de veau","sauce soja","moutarde","vinaigre","huile","farine","sucre","levure","maizena","bicarbonate","chapelure"];
+  "bouillon cube","cube de bouillon","bouillon","fond de veau","sauce soja","moutarde","vinaigre","huile","farine","sucre","levure","maizena","bicarbonate","chapelure","beurre"];
 const pantryKey=name=>root.Rayons?root.Rayons.keyOf(name):plain(name);
 function isPantry(S,name){
   const r=(S.stores||{})[pantryKey(name)];
@@ -48,7 +48,11 @@ const DESSERT_WORDS=["gateau","cake","crumble","brownie","cookie","muffin","cupc
   "tiramisu","cheesecake","flan","madeleine","financier","charlotte","quatre quart","biscuit","gaufre","panna cotta","creme brulee","creme dessert",
   "riz au lait","compote","tarte aux pomme","tarte au citron","tarte tatin","tarte aux fraise","tarte au chocolat","far breton","kouign amann",
   "eclair","chou a la creme","profiterole","meringue","macaron","glace","sorbet","dessert","entremet","buche","galette des rois","beignet","banana bread"];
-const guessDessert=name=>{const n=words(name);return DESSERT_WORDS.some(p=>new RegExp(" "+p.replace(/ /g,"[sx]? ")+"[sx]? ").test(n))};
+// … sauf si le nom dit que c'est salé (« crumble de légumes », « cake au chèvre », « tarte au thon »)
+const SAVORY_WORDS=["legume","chevre","fromage","sale","tomate","courgette","aubergine","poivron","poireau","epinard","champignon","oignon",
+  "poulet","jambon","lardon","saumon","thon","poisson","viande","boeuf","porc","chorizo","feta","mozzarella","parmesan","reblochon","olive"];
+const hasWord=(n,list)=>list.some(p=>new RegExp(" "+p.replace(/ /g,"[sx]? ")+"[sx]? ").test(n));
+const guessDessert=name=>{const n=words(name);return hasWord(n,DESSERT_WORDS)&&!hasWord(n,SAVORY_WORDS)};
 const recipeDessert=r=>!!r&&(r.dessert===true||(r.dessert!==false&&guessDessert(r.name||"")));
 function guessSeason(name){
   const n=words(name);

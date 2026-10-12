@@ -59,7 +59,7 @@ const PHRASES=[
   ["lardon fume","charcuterie"],["ras el hanout","sale"],["herbe de provence","sale"],["piment d espelette","sale"],["quatre epice","sale"],
   ["fond de veau","sale"],["fleur de sel","sale"],["gros sel","sale"],["anis etoile","sale"],["baie de genievre","sale"],["graine de fenouil","sale"],
   ["basilic seche","sale"],["persil seche","sale"],["ciboulette sechee","sale"],["menthe sechee","sale"],["coriandre en poudre","sale"],["gingembre en poudre","sale"],
-  ["ail en poudre","sale"],["oignon en poudre","sale"],["poivre 5 baie","sale"],["fenouil moulu","sale"],["fenouil en poudre","sale"],["tomate pelee","sale"],["boite de tomate","sale"],["coeur de palmier","sale"],
+  ["ail en poudre","sale"],["oignon en poudre","sale"],["poivre 5 baie","sale"],["fenouil moulu","sale"],["chair de tomate","sale"],["coulis de tomate","sale"],["tomate concassee","sale"],["fenouil en poudre","sale"],["tomate pelee","sale"],["boite de tomate","sale"],["coeur de palmier","sale"],
 ].map(([p,r])=>[norm(p),r]);
 const map=new Map();for(const [w,r] of RULES)if(w&&!w.includes(" ")&&!map.has(w))map.set(w,r);
 

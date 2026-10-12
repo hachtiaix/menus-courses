@@ -129,3 +129,8 @@ test("une recette mangée dans un repas composé (« Courgettes farcies, Orzo »
   assert.equal(r.days, 7);
   assert.ok(s.some((x) => x.name === "Courgettes farcies, Orzo"));
 });
+
+test("dessert deviné, sauf nom salé (crumble de légumes, cake au chèvre)", () => {
+  for (const n of ["Crumble aux pommes", "Gâteau au yaourt", "Tarte tatin"]) assert.ok(Data.guessDessert(n), n);
+  for (const n of ["Crumble aux légumes d'été & chèvre frais", "Cake au jambon et olives", "Crumble de courgettes"]) assert.ok(!Data.guessDessert(n), n);
+});
