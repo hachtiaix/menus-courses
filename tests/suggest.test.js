@@ -185,3 +185,15 @@ test("associations ajoutées à la main (« Pâtes, Œufs ») : proposées, et r
   assert.ok(got.includes("Boulettes de porc, Riz"));
   assert.ok(!got.includes("Boulettes de porc"));
 });
+
+test("junk food (burgers, pizza, croques…) : une fois par semaine au plus", () => {
+  const S = Data.cleanAll({
+    recipes: { p: { id: "p", name: "Pizza maison", serves: 4, ingredients: [] }, c: { id: "c", name: "Croques monsieur", serves: 4, ingredients: [] }, q: { id: "q", name: "Poulet basquaise", serves: 4, ingredients: [] } },
+    meals: { "2026-12-15-s": { key: "2026-12-15-s", text: "Burgers", servings: 4 } },
+  });
+  const sameWeek = Data.suggest(S, "2026-12-10", 10, [], () => 0.5, "2026-12-17-s").map((x) => x.name);
+  assert.ok(!sameWeek.includes("Pizza maison") && !sameWeek.includes("Croques monsieur"));
+  assert.ok(sameWeek.includes("Poulet basquaise"));
+  const nextWeek = Data.suggest(S, "2026-12-10", 10, [], () => 0.5, "2026-12-24-s").map((x) => x.name);
+  assert.ok(nextWeek.includes("Pizza maison"));
+});

@@ -22,10 +22,10 @@ const put = (mon, wd, slot, text) => { meals[Data.addDays(mon, wd - 1) + "-" + s
 weeks.forEach((mon, i) => {
   put(mon, 1, "s", i % 3 === 2 ? "Quiche" : ["Carbonara", "Lasagnes", "Penne pesto"][i % 3]); // pâtes 6/8 le lundi
   put(mon, i % 2 ? 6 : 5, "s", "Burgers maison");                                                // burger vendredi OU samedi
-  if (i < 2) put(mon, 3, "s", "Pizza");                                                            // pizza 2/8 : pas assez
+  if (i < 2) put(mon, 3, "s", "Quiche lorraine");                                                   // quiche 2/8 : pas assez
 });
 
-test("apprentissage : pâtes le lundi soir, burger vendredi ou samedi soir, pas la pizza", () => {
+test("apprentissage : pâtes le lundi soir, burger vendredi ou samedi soir, pas la quiche", () => {
   const S = Data.cleanAll({ meals });
   const { add } = Data.learnHabits(S, "2026-12-09");
   const sig = add.map(a => `${a.type}:${a.days.join("+")}:${a.slot}`).sort();
@@ -34,7 +34,7 @@ test("apprentissage : pâtes le lundi soir, burger vendredi ou samedi soir, pas 
 test("oubli : seulement après 24 mois sans être suivie", () => {
   const S = Data.cleanAll({ habits: {
     vieille: { type: "soupe", days: [7], slot: "s", last: "2024-11-01", ts: 1 },  // suivie il y a 25 mois
-    recente: { type: "pizza", days: [3], slot: "s", last: "2025-03-01", ts: 1 },  // il y a 21 mois
+    recente: { type: "quiche", days: [3], slot: "s", last: "2025-03-01", ts: 1 },  // il y a 21 mois
     nouvelle: { type: "salade", days: [2], slot: "s", since: "2026-12-01", ts: 1 },
     pates: { type: "pates", days: [1], slot: "s", ts: 1 },
   }, meals });
@@ -83,17 +83,17 @@ test("habitude sur une recette : nettoyée et gardée", () => {
   assert.deepEqual(Object.keys(S.habits), ["h"]); assert.equal(S.habits.h.recipe, "r1"); assert.equal(S.habits.h.type, null);
 });
 
-// 8 semaines avant le 07/12/2026 : pizza le lundi soir, burgers le jeudi soir, plus de pâtes ni de burgers vendredi/samedi
+// 8 semaines avant le 07/12/2026 : quiche le lundi soir, burgers le jeudi soir, plus de pâtes ni de burgers vendredi/samedi
 const changed = {};
 weeks.forEach((mon, i) => {
-  if (i % 4 !== 3) changed[Data.addDays(mon, 0) + "-s"] = { text: "Pizza", ts: 1 };
+  if (i % 4 !== 3) changed[Data.addDays(mon, 0) + "-s"] = { text: "Quiche lorraine", ts: 1 };
   if (i % 3 !== 2) changed[Data.addDays(mon, 3) + "-s"] = { text: "Burgers maison", ts: 1 };
 });
-test("habitude manuelle plus suivie : le plat change (pâtes → pizza le lundi)", () => {
+test("habitude manuelle plus suivie : le plat change (pâtes → quiche le lundi)", () => {
   const S = Data.cleanAll({ meals: changed, habits: { p: { type: "pates", days: [1], slot: "s", since: "2026-01-01", ts: 1 } } });
   const r = Data.learnHabits(S, "2026-12-09");
-  assert.deepEqual(r.change.find(c => c.id === "p"), { id: "p", type: "pizza", recipe: null, days: [1] });
-  assert.ok(!r.add.some(a => a.type === "pizza"));
+  assert.deepEqual(r.change.find(c => c.id === "p"), { id: "p", type: "quiche", recipe: null, days: [1] });
+  assert.ok(!r.add.some(a => a.type === "quiche"));
 });
 test("habitude manuelle plus suivie : les jours changent (burger vendredi/samedi → jeudi)", () => {
   const S = Data.cleanAll({ meals: changed, habits: { b: { type: "burger", days: [5, 6], slot: "s", since: "2026-01-01", ts: 1 } } });
@@ -104,6 +104,6 @@ test("habitude encore suivie : jamais modifiée, la nouvelle s'ajoute à côté"
   const S = Data.cleanAll({ meals: m, habits: { p: { type: "pates", days: [1], slot: "s", ts: 1 } } });
   const r = Data.learnHabits(S, "2026-12-09");
   assert.ok(!r.change.some(c => c.id === "p"));
-  assert.ok(r.add.some(a => a.type === "pizza" && a.days.join() === "1"));
+  assert.ok(r.add.some(a => a.type === "quiche" && a.days.join() === "1"));
 });
 

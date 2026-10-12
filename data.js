@@ -65,12 +65,14 @@ const inSeason=(season,month)=>season==="ete"?!(month>=11||month<=3):season==="h
 
 // Types de plats (pour les habitudes), reconnus dans le nom : l'expression la plus à gauche l'emporte
 // (« Salade de pâtes » → salade, « Gratin de pâtes » → gratin).
+const ONCE_A_WEEK=["burger"]; // types limités à une fois par semaine (junk food)
 const TYPES=[
   {id:"pates",dish:"Pâtes",label:"Pâtes",icon:"🍝",words:["pate","spaghetti","tagliatelle","penne","fusilli","macaroni","coquillette","carbonara","bolognaise",
     "lasagne","ravioli","gnocchi","linguine","farfalle","tortellini","cannelloni","pesto"]},
   {id:"soupe",dish:"Soupe",label:"Soupe",icon:"🍲",words:["soupe","veloute","potage","minestrone","gaspacho","gazpacho","bouillon","garbure"]},
-  {id:"burger",dish:"Burgers",label:"Burger / hot-dog",icon:"🍔",words:["burger","hamburger","cheeseburger","hot dog","hotdog"]},
-  {id:"pizza",dish:"Pizza",label:"Pizza",icon:"🍕",words:["pizza","calzone"]},
+  // « Junk food » regroupe burgers, hot-dogs, pizzas, croques, fajitas, friterie… (id gardé « burger » pour les habitudes existantes)
+  {id:"burger",dish:"Junk food",label:"Junk food",icon:"🍔",words:["burger","hamburger","cheeseburger","hot dog","hotdog","pizza","calzone",
+    "croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food"]},
   {id:"salade",dish:"Salade",label:"Salade",icon:"🥗",words:["salade","taboule","poke"]},
   {id:"poisson",dish:"Poisson",label:"Poisson",icon:"🐟",words:["poisson","saumon","cabillaud","colin","truite","dorade","merlu","lieu","sole","crevette","moule","fruits de mer"]},
   {id:"gratin",dish:"Gratin",label:"Gratin",icon:"🧀",words:["gratin","parmentier","moussaka"]},
@@ -354,9 +356,12 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // associations ajoutées à la main sans recette (« Pâtes, Œufs ») : candidates comme un plat déjà fait
   for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.text&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
+  // junk food : une fois par semaine au plus (déjà prévue ou mangée cette semaine-là → plus proposée)
+  const weekTypes=new Set(Object.entries(S.meals||{}).filter(([k,m])=>!m.deleted&&m.text&&k!==slotKey&&k.slice(0,10)>=mon&&k.slice(0,10)<=sun).map(([k,m])=>typeOf(m.text)).filter(Boolean));
+  const capped=x=>ONCE_A_WEEK.includes(typeOf(x))&&weekTypes.has(typeOf(x));
   const rows=[];
   for(const [k,x] of names){
-    if(ex.has(k)||!inSeason(x.season,month))continue;
+    if(ex.has(k)||!inSeason(x.season,month)||capped(x.name))continue;
     const ds=[...new Set([...(dates[k]||[]),...(x.dk?dates[x.dk]||[]:[])])];
     if(ds.some(d=>d>=mon&&d<=sun))continue; // déjà prévu (ou mangé) cette semaine-là
     const gap=ds.length?Math.min(...ds.map(d=>Math.abs(Date.parse(d)-t0)/DAY)):null;
@@ -370,7 +375,7 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // aucun plat connu pour une habitude de type : on propose le type lui-même (« Pâtes », « Soupe »…)
   for(const t of types)if(!habit.some(x=>x.habit===t)){
     const dish=(TYPES.find(y=>y.id===t)||{}).dish,dk=key(dish||"");
-    if(dish&&!ex.has(dk)&&!(dates[dk]||[]).some(d=>d>=mon&&d<=sun))habit.push({name:dish,days:null,habit:t});
+    if(dish&&!ex.has(dk)&&!capped(dish)&&!(dates[dk]||[]).some(d=>d>=mon&&d<=sun))habit.push({name:dish,days:null,habit:t});
   }
   const rest=rows.filter(x=>!tag(x));
   const fresh=rest.filter(x=>x.gap==null||x.gap>30).sort((a,b)=>b.score-a.score);
