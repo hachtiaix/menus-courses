@@ -50,7 +50,7 @@ const PHRASES=[
   ["thon en boite","sale"],["sardine en boite","sale"],["sauce tomate","sale"],["pate a tartiner","sucre"],
   ["lait concentre","sucre"],["fromage blanc","cremerie"],
   ["creme fraiche","cremerie"],["creme hydratante","hygiene"],["the glace","boissons"],["jus de","boissons"],
-  ["noix de saint jacque","boucherie"],["blanc de poulet","charcuterie"],["jambon cru","charcuterie"],
+  ["noix de saint jacque","boucherie"],["osso buco","boucherie"],["osso bucco","boucherie"],["jarret","boucherie"],["blanc de poulet","charcuterie"],["jambon cru","charcuterie"],
   ["legume surgele","surgeles"],["poisson pane","surgeles"],["papier toilette","hygiene"],["brosse a dent","hygiene"],
   ["liquide vaisselle","entretien"],["sac poubelle","entretien"],["papier alu","entretien"],["film alimentaire","entretien"],
   ["gel douche","hygiene"],["pastille lave vaisselle","entretien"],["essuie tout","entretien"],["pate brisee","charcuterie"],
