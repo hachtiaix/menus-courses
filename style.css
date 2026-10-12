@@ -277,3 +277,4 @@ section.day{grid-template-columns:1fr;gap:0;padding:8px 12px 10px}
 .slotw.second .slot{gap:6px}.slotw.second .sub .x{width:auto}
 .slotw.second .slot>span.lbl{color:var(--accent);font-weight:700;text-transform:none;letter-spacing:0}
 .sub .x,.slotw.second .sub .x{width:32px;text-align:center;margin-left:auto}
+.sheet .step{margin:0 0 2px;font-size:13px;font-weight:600;color:var(--accent)}

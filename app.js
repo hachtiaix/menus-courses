@@ -337,6 +337,7 @@ function addMealIngredients(key){
   for(const g of r.ingredients){const store=defaultStore(g.t,g.store);addToList(store,Qty.buy(g.t,n/B,B)).forEach(x=>ids.add(x));items.push({t:g.t,store})}
   touch("meals",{...S.meals[key],added:{n,items,ids:[...ids],b:B}});
 }
+const slotName=k=>new Date(k.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"long"})+(/-m\d*$/.test(k)?" midi":" soir")+(Data.isSecond(k)?" (2ᵉ plat)":"");
 // 💡 : un plat pour chaque soir libre et pour les midis du week-end de la semaine affichée.
 // Chaque ligne a son nombre de personnes ; × retire une suggestion ; ↻ en tire une autre.
 function suggestDialog(){
@@ -381,7 +382,7 @@ function suggestDialog(){
   const paint=()=>{ov.querySelector("#sugs").innerHTML=rows.map(rowH).join("")||`<div class="empty">Plus aucune suggestion</div>`;
     ov.querySelector("#ok").textContent=`Placer ${live_().length} plat${live_().length>1?"s":""}`};
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>💡 Suggestions</h2>
-   <p class="mut">De saison, pas cuisinés depuis plus d'un mois. Les ingrédients seront ajoutés aux listes.</p>
+   <p class="mut">De saison, pas cuisinés depuis plus d'un mois. Ensuite, les ingrédients s'affichent repas par repas : vous cochez ce qu'il faut acheter.</p>
    <div class="card" id="sugs"></div>
    ${rows.some(r=>!r.sug)?`<p class="mut">${rows.filter(r=>!r.sug).length} créneau${rows.filter(r=>!r.sug).length>1?"x":""} sans suggestion : plus de recettes donneront plus de choix.</p>`:""}
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok"></button></div></div>`;
@@ -401,9 +402,13 @@ function suggestDialog(){
   });
   $("#ok").onclick=()=>{
     const keep=live_();if(!keep.length){close();return}
-    for(const r of keep){touch("meals",{key:r.key,text:r.sug.name,servings:r.n});addMealIngredients(r.key);
-      if(r.comp)addSecond(r.key,r.comp.n,r.side?r.side.name:"")}
+    const queue=[];
+    for(const r of keep){touch("meals",{key:r.key,text:r.sug.name,servings:r.n});queue.push(r.key);
+      if(r.comp){const k2=addSecond(r.key,r.comp.n,r.side?r.side.name:"",true);if(k2&&r.side)queue.push(k2)}}
     close();render();
+    // puis la fenêtre des ingrédients, repas par repas (« Ajouter aux listes » ou « Ne pas ajouter aux listes » passe au suivant)
+    const next=i=>{if(i<queue.length)ingredientsDialog(S.meals[queue[i]].text,queue[i],null,()=>next(i+1),`Repas ${i+1}/${queue.length} · ${slotName(queue[i])}`)};
+    next(0);
   };
 }
 // Habitudes apprises : ajoutées en silence (une fois par jour), oubliées après 24 mois sans être suivies ; l'admin les voit dans Réglages → Habitudes.
@@ -431,12 +436,12 @@ const habitWhat=h=>h.recipe?{icon:"📖",label:(S.recipes[h.recipe]&&!S.recipes[
 // Le plat principal garde son nombre de personnes.
 const MAX_DISHES=10;
 const extrasOf=key=>{const out=[];for(let i=2;i<=MAX_DISHES;i++){const m=S.meals[key+i];if(m&&!m.deleted)out.push(key+i)}return out};
-function addSecond(key,n,name){
+function addSecond(key,n,name,noIng){ // noIng : ne pas ajouter ses ingrédients tout de suite
   let i=2;while(i<=MAX_DISHES&&S.meals[key+i]&&!S.meals[key+i].deleted)i++;
   if(i>MAX_DISHES)return null;
   const k2=key+i;name=name||"";
   touch("meals",{key:k2,text:name,servings:n||1});
-  if(name)addMealIngredients(k2);
+  if(name&&!noIng)addMealIngredients(k2);
   return k2;
 }
 // Retire les plats en plus d'un repas (et leurs ingrédients), sauf ceux déjà achetés.
@@ -455,7 +460,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v132";
+const BASE=4,VERSION="v133";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -622,7 +627,8 @@ function renderMenus(){
   $("#sugg").onclick=suggestDialog;
   $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
 }
-function ingredientsDialog(name,mealKey,startN){
+// after : appelé une fois la fenêtre fermée (validée ou ignorée) ; step : « Repas 2/5 · mardi soir »
+function ingredientsDialog(name,mealKey,startN,after,step){
   // Plat ou aliment inconnu tapé seul : une ligne sans quantité, comme dans une suite ; il attend dans
   // Réglages → Ingrédients → ⏳ À classer. Les recettes se créent dans Réglages → Recettes.
   const r=recipeOf(name)||{name,serves:1,virtual:true,ingredients:[{t:name,store:"auchan"}]};
@@ -635,18 +641,18 @@ function ingredientsDialog(name,mealKey,startN){
   const ov=document.createElement("div");ov.className="ov";
   const home=t=>prev&&t&&!was(t); // décoché lors de l'ajout : on l'avait à la maison
   const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}" ${home(i.t)?'data-home="1"':""}><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/B,B))}" data-shown="${esc(Qty.buy(i.t,n/B,B))}"><span class="stp sm"><button type="button" data-st="-1" aria-label="Moins">−</button><button type="button" data-st="1" aria-label="Plus">+</button></span><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select><p class="homewarn"></p></div>`;
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(name)}</h2>
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div>${step?`<p class="mut step">${esc(step)}</p>`:""}<h2>${esc(name)}</h2>
    ${r&&meal&&meal.text&&!prev&&meal.ts<LEGACY_TS?`<p class="homewarn" style="margin:6px 0">⚠ Ce repas date d'avant le suivi des ajouts : vérifiez qu'il n'est pas déjà dans vos listes avant d'ajouter.</p>`:""}
    ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
    <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans ⚙︎ → Ingrédients.":`Recette pour ${B} personne${B>1?"s":""}.`}</p>
    <div id="ings" class="card">${r.ingredients.map(rowH).join("")}</div><button class="btn sec" id="more">+ Ingrédient</button>`
    :`<p class="mut">Nouvelle recette : un ingrédient par ligne, quantité en premier (ex. « 400 g de pâtes »).</p><div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${n}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div><textarea id="ta" rows="7" placeholder="400 g de pâtes&#10;200 g de lardons&#10;2 oeufs&#10;crème fraîche"></textarea>`}
-   <div class="acts"><button class="btn sec" id="no">Ignorer</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour les listes":"Ajouter aux listes"}</button></div></div>`;
+   <div class="acts"><button class="btn sec" id="no">Ne pas ajouter aux listes</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour les listes":"Ajouter aux listes"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();
-  // « Ignorer » : rien n'est ajouté aux listes, mais le nombre de personnes choisi est gardé pour le repas
-  const skip=()=>{close();const m=mealKey&&S.meals[mealKey];if(r&&m&&m.text&&n!==(m.servings||BASE)){touch("meals",{...m,servings:n});render()}};
+  // « Ne pas ajouter aux listes » : rien n'est ajouté aux listes, mais le nombre de personnes choisi est gardé pour le repas
+  const skip=()=>{close();const m=mealKey&&S.meals[mealKey];if(r&&m&&m.text&&n!==(m.servings||BASE)){touch("meals",{...m,servings:n});render()}if(after)after()};
   ov.onclick=e=>{if(e.target===ov)skip()};
   $("#no").onclick=skip;
   if(r){
@@ -694,7 +700,7 @@ function ingredientsDialog(name,mealKey,startN){
     const extra=rows.filter(x=>!x.orig).map(x=>({t:x.base,store:x.store}));
     if(extra.length&&!r.virtual)touch("recipes",{...r,ingredients:[...r.ingredients,...extra]});
     if(meal)touch("meals",{...S.meals[mealKey],servings:n,added:{n,items:now,ids:[...ids],b:B}});
-    close();render();
+    close();render();if(after)after();
   };
 }
 $("#tabs").onclick=e=>{const t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t){tab=LS.tab=t;render();scrollTo(0,0)}};
