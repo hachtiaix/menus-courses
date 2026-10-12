@@ -91,3 +91,15 @@ test("habitude sans recette correspondante : plat déjà saisi de ce type, sinon
   const memeSemaine = Data.suggest(S, "2026-10-11", 3, [], noRandom, "2026-10-17-s");
   assert.ok(!memeSemaine.some(x => x.habit)); // samedi : pas d'habitude ce jour-là
 });
+
+test("plats faits uniquement d'ingrédients « Autres » (gâteaux) : jamais suggérés", () => {
+  const S = Data.cleanAll({
+    foods: { g: { id: "c-g", label: "Gâteaux", cat: "autre", kind: "n", q: 1 } },
+    meals: { "2026-09-01-s": { key: "2026-09-01-s", text: "Gâteaux", servings: 4 }, "2026-09-02-s": { key: "2026-09-02-s", text: "Poulet, riz", servings: 4 } },
+  });
+  Data.setCustom(S);
+  const names = Data.suggest(S, "2026-10-12", 10, [], () => 0.5).map((x) => x.name);
+  assert.ok(!names.includes("Gâteaux"));
+  assert.ok(names.includes("Poulet, riz"));
+  Data.setCustom({ foods: {} });
+});

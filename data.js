@@ -295,7 +295,9 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   }
   const names=new Map();
   for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name)names.set(key(r.name),{name:r.name,season:recipeSeason(r)});
-  for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text)))
+  // plats déjà faits, sauf ceux faits uniquement d'ingrédients « Autres » (gâteaux, desserts…) : jamais proposés
+  const onlyOther=t=>{const p=String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);return p.length&&p.every(x=>{const f=foodFor(x);return f&&f.cat==="autre"})};
+  for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text))&&!onlyOther(m.text))
     names.set(key(m.text),{name:m.text,season:guessSeason(m.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
   const rows=[];
@@ -337,7 +339,8 @@ function clean(k,id,r){
       ids:(Array.isArray(r.added.ids)?r.added.ids:[]).filter(okId).slice(0,120),b:int(r.added.b,1,30,4)}:null;
     return{key:id,text:str(r.text,120),servings:int(r.servings,1,30,4),added:ad,for:str(r.for,30)||null,ts,deleted};
   }
-  if(k==="stores")return{id,last:(Array.isArray(r.last)?r.last:[]).filter(okId).slice(-3),def:okId(r.def)?r.def:null,ts,deleted};
+  if(k==="stores")return{id,last:(Array.isArray(r.last)?r.last:[]).filter(okId).slice(-3),def:okId(r.def)?r.def:null,
+    name:str(r.name,80)||null,n:int(r.n,0,9999,0),ts,deleted}; // name, n : article déjà acheté (mémoire de la saisie), et combien de fois
   if(k==="habits")return (TYPE_IDS.includes(r.type)||okId(r.recipe))&&(r.slot==="m"||r.slot==="s")?{id,
     type:TYPE_IDS.includes(r.type)?r.type:null,recipe:okId(r.recipe)?r.recipe:null,slot:r.slot,
     days:[...new Set((Array.isArray(r.days)?r.days:[]).map(x=>parseInt(x,10)).filter(x=>x>=1&&x<=7))].sort().slice(0,7),

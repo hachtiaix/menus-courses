@@ -96,16 +96,19 @@ function renderList(id){
   // Suggestions : articles déjà saisis (toutes listes, même retirés) et ingrédients des recettes,
   // dont le nom commence par ce qui est tapé ; les plus fréquents d'abord.
   const nm=Data.plain;
+  // Suggestions de la liste : le nom seul, sans quantité (« Saucisses de Francfort », pas « 4 saucisses de Francfort »).
+  // Sources : articles récents, ingrédients des recettes, et tous les articles déjà achetés (gardés sans limite de temps).
   const known=()=>{const m=new Map();
-    const put=(t,ts)=>{const p=Qty.parse(t),k=Qty.key(p);if(!p.name)return;const e=m.get(k)||{n:0,ts:0};e.n++;if(ts>=e.ts){e.ts=ts;e.text=t;e.name=p.name}m.set(k,e)};
+    const put=(t,ts,w=1)=>{const p=Qty.parse(t);if(!p.name)return;const k=Rayons.keyOf(p.name),e=m.get(k)||{n:0,ts:0};e.n+=w;if(ts>=e.ts){e.ts=ts;e.name=p.name}m.set(k,e)};
     Object.values(S.items).forEach(i=>put(i.text,i.ts||0));
     live(S.recipes).forEach(r=>r.ingredients.forEach(g=>put(g.t,0)));
-    return [...m.values()]};
+    live(S.stores).forEach(s=>s.name&&put(s.name,s.ts||0,s.n||1));
+    return [...m.values()].map(e=>({...e,text:e.name.charAt(0).toUpperCase()+e.name.slice(1)}))};
   const inp=$("#new"),form=$("#add");
   const closeSug=()=>form.querySelectorAll(".sug").forEach(x=>x.remove());
   inp.oninput=()=>{
     closeSug();const q=nm(inp.value.trim());if(!q)return;
-    const hits=known().filter(e=>nm(e.name).startsWith(q)||nm(e.text).startsWith(q)).sort((a,b)=>b.n-a.n||b.ts-a.ts).slice(0,8);
+    const hits=known().filter(e=>nm(e.name).startsWith(q)||nm(e.name).includes(" "+q)) // début du nom ou d'un mot (« fraîche » → Crème fraîche).sort((a,b)=>b.n-a.n||b.ts-a.ts).slice(0,8);
     if(!hits.length)return;
     const box=document.createElement("div");box.className="sug";
     box.innerHTML=hits.map(e=>`<button type="button" data-t="${esc(e.text)}">${esc(e.text)}</button>`).join("");
@@ -187,12 +190,12 @@ function moveItemDialog(i){
 // Magasin par défaut d'un article : fixé seulement après 3 achats consécutifs au même endroit,
 // et il change si les 3 derniers achats se font ailleurs.
 function recordPurchase(text,store,bought){
-  const k=Rayons.keyOf(Qty.parse(text).name||text),o=S.stores[k]||{id:k,last:[],def:null};
+  const nm=Qty.parse(text).name||text,k=Rayons.keyOf(nm),o=S.stores[k]||{id:k,last:[],def:null,n:0};
   let last=[...o.last];
   if(bought)last=[...last,store].slice(-3);
   else{const j=last.lastIndexOf(store);if(j>=0)last.splice(j,1)} // case décochée : on annule cet achat
   const def=last.length===3&&last.every(s=>s===last[0])?last[0]:o.def;
-  touch("stores",{id:k,last,def});
+  touch("stores",{...o,id:k,last,def,name:nm,n:Math.max(0,(o.n||0)+(bought?1:-1))}); // garde le nom : proposé à la saisie, même des mois après
 }
 const defaultStore=(text,fallback)=>{const s=S.stores[Rayons.keyOf(Qty.parse(text).name||text)];return (s&&s.def&&S.lists[s.def]&&s.def)||fallback||"auchan"};
 // Articles cochés depuis plus de 2 h : les courses sont finies, on les masque (gardés en historique).
@@ -446,7 +449,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v127";
+const BASE=4,VERSION="v128";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -549,6 +552,7 @@ function renderMenus(){
     // Suite d'aliments en cours de saisie : pastilles devant le champ, Entrée valide l'aliment et passe au suivant.
     el._items=[];
     const drawChips=()=>{const w=el.parentElement;let c=w.querySelector(".chips");
+      w.classList.remove("has");w.querySelector(".tags")?.remove(); // en saisie : plus d'ancien affichage par-dessus (il doublait les pastilles)
       if(!c){c=document.createElement("span");c.className="chips";w.insertBefore(c,el)}
       w.classList.toggle("editing",el._items.length>0);el.placeholder=el._items.length?"Ajouter…":el.dataset.ph;
       c.innerHTML=el._items.map((t,i)=>{const r=live(S.recipes).some(x=>norm(x.name)===norm(t)),f=Data.foodFor(t);return `<i class="tag ${r?"rcp":f?f.cat:"autre"}">${r?"📖 ":""}${esc(t.charAt(0).toUpperCase()+t.slice(1))}<b data-ci="${i}">×</b></i>`}).join("");
