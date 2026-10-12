@@ -449,7 +449,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v128";
+const BASE=4,VERSION="v129";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -639,8 +639,10 @@ function ingredientsDialog(name,mealKey,startN){
    <div class="acts"><button class="btn sec" id="no">Ignorer</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour les listes":"Ajouter aux listes"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();
-  ov.onclick=e=>{if(e.target===ov)close()};
-  $("#no").onclick=close;
+  // « Ignorer » : rien n'est ajouté aux listes, mais le nombre de personnes choisi est gardé pour le repas
+  const skip=()=>{close();const m=mealKey&&S.meals[mealKey];if(r&&m&&m.text&&n!==(m.servings||BASE)){touch("meals",{...m,servings:n});render()}};
+  ov.onclick=e=>{if(e.target===ov)skip()};
+  $("#no").onclick=skip;
   if(r){
     const missing=t=>{const a=Qty.parse(Qty.buy(t,prev.n/B,B)),b=Qty.parse(Qty.buy(t,n/B,B));
       if(a.n==null||b.n==null||Qty.key(a)!==Qty.key(b))return Qty.buy(t,n/B,B);
