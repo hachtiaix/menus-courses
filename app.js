@@ -490,7 +490,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v141";
+const BASE=4,VERSION="v142";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -753,7 +753,7 @@ function renderSettings(){
   const hs=live(S.habits).filter(h=>h.state==="on").sort((a,b)=>a.days[0]-b.days[0]||b.slot.localeCompare(a.slot));
   const tabs=`<div class="seg">${STABS.map(([id,l])=>`<button data-stab="${id}" class="${stab===id?"on":""}">${l}</button>`).join("")}</div>`;
   const body={
-   recettes:`<div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
+   recettes:`<div class="card">${rs.length?rs.map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${r.side?" · avec "+esc(r.side):""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join(""):`<div class="empty">Aucune recette pour l'instant</div>`}</div>
    <button class="btn" id="newr" style="width:100%">+ Nouvelle recette</button>`,
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
    <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
@@ -888,6 +888,7 @@ function recipeEditor(r){
    <input type="text" id="rn" placeholder="Nom du plat" value="${esc(r?r.name:"")}" style="width:100%;margin-bottom:10px">
    <div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${r?r.serves||BASE:BASE}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div>
    <div class="serv"><span>Type</span><select id="sdes"><option value="p">Plat</option><option value="d" ${Data.recipeDessert(r||{name:""})?"selected":""}>Dessert (jamais proposé dans les menus)</option></select></div>
+   <div class="serv"><span>Servi avec</span><input type="text" id="sside" placeholder="Pâtes, riz… (facultatif)" value="${esc(r&&r.side||"")}" autocapitalize="sentences" style="flex:1;min-width:0"></div>
    <div class="serv"><span>Saison</span><select id="ssn">${[["all","Toute l'année"],["ete","Été (pas de novembre à mars)"],["hiver","Hiver (pas de mai à septembre)"]]
      .map(([v,l])=>`<option value="${v}" ${v===Data.recipeSeason(r||{name:""})?"selected":""}>${l}</option>`).join("")}</select></div>
    <p class="mut">Ingrédients pour ce nombre de personnes, avec la quantité en premier. Le magasin est celui proposé par défaut.</p>
@@ -920,7 +921,7 @@ function recipeEditor(r){
       touch("stores",{...(S.stores[k]||{id:k,last:[],def:null,n:0}),id:k,name:(S.stores[k]&&S.stores[k].name)||nm,pantry:g.pan})}
     ings.forEach(g=>delete g.pan);
     if(!name){$("#rn").focus();return}
-    touch("recipes",{id:r?r.id:uid(),name,season:$("#ssn").value,dessert:$("#sdes").value==="d",serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings});close();render();
+    touch("recipes",{id:r?r.id:uid(),name,season:$("#ssn").value,dessert:$("#sdes").value==="d",side:$("#sside").value.trim()||null,serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings});close();render();
   };
 }
 // Mise à jour automatique : à l'ouverture et au retour dans l'app, si une nouvelle version est en ligne, on recharge

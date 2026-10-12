@@ -231,7 +231,8 @@ const mondayOf=ymd=>addDays(ymd,1-weekday(ymd));
 
 // Une habitude vise un type de plat (h.type) ou une recette précise (h.recipe).
 const habitMatches=(S,h,name)=>{
-  if(h.recipe){const r=(S.recipes||{})[h.recipe];return!!(r&&!r.deleted&&plain(r.name).trim()===plain(name).trim())}
+  if(h.recipe){const r=(S.recipes||{})[h.recipe],first=String(name).split(/\s*(?:,|\+)\s*/)[0]; // « Recette, accompagnement »
+    return!!(r&&!r.deleted&&[name,first].some(x=>plain(r.name).trim()===plain(x).trim()))}
   return typeOf(name)===h.type;
 };
 // Habitudes attendues pour un créneau (objets habitude).
@@ -330,17 +331,30 @@ function suggest(S,today,n,exclude,rnd,slotKey){
     if(parts.length>1)for(const p of parts)(dates[key(p)]=dates[key(p)]||[]).push(k.slice(0,10));
   }
   const names=new Map();
-  for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name&&!recipeDessert(r))names.set(key(r.name),{name:r.name,season:recipeSeason(r)});
+  // une recette est proposée avec un accompagnement : celui de la fiche (« Servi avec ») et ceux déjà faits avec elle,
+  // tiré au hasard s'il y en a plusieurs ; seule si elle n'en a jamais eu
+  const split=t=>String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);
+  const withs={};
+  for(const m of Object.values(S.meals||{})){if(m.deleted||!m.text)continue;const p=split(m.text);if(p.length<2)continue;
+    for(const x of p){const s=withs[key(x)]=withs[key(x)]||new Map();s.set(key(m.text),m.text)}}
+  for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name&&!recipeDessert(r)){
+    const opts=new Map(withs[key(r.name)]||[]);if(r.side)opts.set(key(r.name+", "+r.side),r.name+", "+r.side);
+    const list=[...opts.values()].sort(),full=list.length?list[Math.floor(rnd()*list.length)%list.length]:r.name;
+    names.set(key(full),{name:full,season:recipeSeason(r),dk:key(r.name)}); // dk : dates de la recette elle-même
+  }
   // plats déjà faits, sauf les desserts (recette « Dessert », gâteau…) et ce qui n'est fait que d'ingrédients « Autres »
   const dessert=x=>{const r=Object.values(S.recipes||{}).find(r=>r&&!r.deleted&&r.name&&key(r.name)===key(x));return r?recipeDessert(r):guessDessert(x)};
   const onlyOther=t=>{const p=String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);return p.length&&p.every(x=>{const f=foodFor(x);return dessert(x)||(f&&f.cat==="autre")})};
-  for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text))&&!onlyOther(m.text))
+  // un plat composé avec une recette (« Courgettes farcies, Orzo ») est déjà proposé par la recette (avec un de ses accompagnements)
+  const recKeys=new Set(Object.values(S.recipes||{}).filter(r=>r&&!r.deleted&&r.name).map(r=>key(r.name)));
+  const withRecipe=t=>{const p=split(t);return p.length>1&&p.some(x=>recKeys.has(key(x)))};
+  for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text))&&!onlyOther(m.text)&&!withRecipe(m.text))
     names.set(key(m.text),{name:m.text,season:guessSeason(m.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
   const rows=[];
   for(const [k,x] of names){
     if(ex.has(k)||!inSeason(x.season,month))continue;
-    const ds=dates[k]||[];
+    const ds=[...new Set([...(dates[k]||[]),...(x.dk?dates[x.dk]||[]:[])])];
     if(ds.some(d=>d>=mon&&d<=sun))continue; // déjà prévu (ou mangé) cette semaine-là
     const gap=ds.length?Math.min(...ds.map(d=>Math.abs(Date.parse(d)-t0)/DAY)):null;
     const past=ds.filter(d=>d<today).sort().pop();
@@ -392,7 +406,7 @@ function clean(k,id,r){
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,ts,deleted}}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
-    dessert:r.dessert===true?true:r.dessert===false?false:null,
+    dessert:r.dessert===true?true:r.dessert===false?false:null,side:str(r.side,80)||null, // side : servi avec (« Pâtes »)
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
   return null;
 }
