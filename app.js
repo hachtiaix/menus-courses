@@ -502,7 +502,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v154";
+const BASE=4,VERSION="v155";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -783,7 +783,8 @@ function renderSettings(){
    ${status==="unk"?`<p class="warn">Ce code ne correspond à aucun foyer. Vérifiez-le (majuscules, espaces) ou demandez-le à un autre membre du foyer.</p>`:""}
    <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`,
   }[stab];
-  $("#view").innerHTML=tabs+body;
+  // ➕ flottant : nouvelle recette sans descendre en bas de la liste
+  $("#view").innerHTML=tabs+body+(stab==="recettes"?`<button class="fab" id="fabr" aria-label="Nouvelle recette" title="Nouvelle recette">+</button>`:"");
   document.querySelectorAll("[data-stab]").forEach(b=>b.onclick=()=>{stab=b.dataset.stab;render();scrollTo(0,0)});
   const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
   document.querySelectorAll("[data-hdel]").forEach(el=>el.onclick=e=>{e.stopPropagation();touch("habits",{...S.habits[el.dataset.hdel],state:"off"});render()});
@@ -825,7 +826,7 @@ function renderSettings(){
     const e=r?await r.json().catch(()=>({})):{};
     alert(e.message==="code deja utilise"?"Ce code est déjà pris, choisissez-en un autre.":"Impossible de changer le code pour l'instant (hors ligne ?).");
   };
-  on("#newr","onclick",()=>recipeEditor(null));
+  on("#newr","onclick",()=>recipeEditor(null));on("#fabr","onclick",()=>recipeEditor(null));
   const ol=()=>LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan";
   on("#ordl","onchange",e=>{LS.ordl=e.target.value;render()});
   const moveR=(i,d)=>{const ids=rayonOrder(ol()).map(r=>r.id);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];touch("lists",{...S.lists[ol()],order:ids});render()};
