@@ -25,7 +25,7 @@ const K={
   pain:"pain baguette brioche croissant viennoiserie gateau biscotte bun wrap tortilla",
   boucherie:"boeuf veau porc agneau poulet dinde canard lapin steak hache viande escalope roti cote filet bavette entrecote saucisse merguez chipolata poisson saumon cabillaud colin thon crevette moule huitre crabe dorade bar truite maquereau gambas",
   charcuterie:"jambon lardon bacon saucisson chorizo rillette terrine salami coppa knacki quiche pizza traiteur taboule surimi",
-  cremerie:"lait beurre creme yaourt yogourt fromage emmental gruyere comte mozzarella parmesan feta chevre camembert brie raclette reblochon roquefort mascarpone ricotta oeuf skyr faisselle",
+  cremerie:"lait beurre creme yaourt yogourt fromage emmental gruyere comte mozzarella parmesan feta chevre camembert brie raclette reblochon roquefort mascarpone ricotta cheddar gouda edam maroille munster cantal tomme morbier mimolette oeuf skyr faisselle",
   sale:"chapelure pate spaghetti tagliatelle penne coquillette riz semoule quinoa lentille farine huile vinaigre sel poivre epice paprika cumin curry curcuma cannelle muscade cayenne colombo safran thym laurier origan romarin estragon sauge girofle badiane cardamome sesame genievre maizena bicarbonate soja moutarde mayonnaise ketchup sauce bouillon conserve olive cornichon chip cracker soupe puree concentre coulis",
   sucre:"sucre chocolat cafe the infusion cereale muesli confiture miel nutella madeleine compote levure vanille cacao bonbon biscuit",
   boissons:"eau jus soda coca limonade sirop boisson",
