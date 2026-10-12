@@ -460,7 +460,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v133";
+const BASE=4,VERSION="v134";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -648,7 +648,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
    <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans ⚙︎ → Ingrédients.":`Recette pour ${B} personne${B>1?"s":""}.`}</p>
    <div id="ings" class="card">${r.ingredients.map(rowH).join("")}</div><button class="btn sec" id="more">+ Ingrédient</button>`
    :`<p class="mut">Nouvelle recette : un ingrédient par ligne, quantité en premier (ex. « 400 g de pâtes »).</p><div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${n}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div><textarea id="ta" rows="7" placeholder="400 g de pâtes&#10;200 g de lardons&#10;2 oeufs&#10;crème fraîche"></textarea>`}
-   <div class="acts"><button class="btn sec" id="no">Ne pas ajouter aux listes</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour les listes":"Ajouter aux listes"}</button></div></div>`;
+   <div class="acts"><button class="btn sec" id="no">Ne pas ajouter<br>aux listes</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour<br>les listes":"Ajouter<br>aux listes"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();
   // « Ne pas ajouter aux listes » : rien n'est ajouté aux listes, mais le nombre de personnes choisi est gardé pour le repas

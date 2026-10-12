@@ -278,3 +278,5 @@ section.day{grid-template-columns:1fr;gap:0;padding:8px 12px 10px}
 .slotw.second .slot>span.lbl{color:var(--accent);font-weight:700;text-transform:none;letter-spacing:0}
 .sub .x,.slotw.second .sub .x{width:32px;text-align:center;margin-left:auto}
 .sheet .step{margin:0 0 2px;font-size:13px;font-weight:600;color:var(--accent)}
+/* boutons d'une fenêtre côte à côte : même largeur, quel que soit le texte (« Ne pas ajouter aux listes ») */
+.acts:not([style*="column"]) .btn{flex:1 1 0;min-width:0;white-space:normal;line-height:1.2;height:auto;min-height:48px;padding:8px 10px}
