@@ -11,7 +11,7 @@ const MEAL_TTL=180*DAY;      // repas : gardés 6 mois
 const HABIT_TTL=730*DAY;     // habitude oubliée après 24 mois sans être suivie
 
 // Saison d'une recette : "all" (toute l'année), "ete" (pas de novembre à mars), "hiver" (pas de mai à septembre).
-const SEASONS=["all","ete","hiver"];
+const SEASONS=["all","ete","hiver","dec"]; // dec : en décembre seulement (Noël)
 // Expressions entières (sans accents), au singulier ; le pluriel en s/x est accepté.
 const SEASON_WORDS={
   hiver:["tartiflette","croziflette","raclette","fondue","pierrade","pot au feu","choucroute","potee","soupe","veloute","potage",
@@ -61,7 +61,7 @@ function guessSeason(name){
   return "all";
 }
 const recipeSeason=r=>(r&&r.season)||guessSeason(r&&r.name);
-const inSeason=(season,month)=>season==="ete"?!(month>=11||month<=3):season==="hiver"?!(month>=5&&month<=9):true;
+const inSeason=(season,month)=>season==="ete"?!(month>=11||month<=3):season==="hiver"?!(month>=5&&month<=9):season==="dec"?month===12:true;
 
 // Types de plats (pour les habitudes), reconnus dans le nom : l'expression la plus à gauche l'emporte
 // (« Salade de pâtes » → salade, « Gratin de pâtes » → gratin).
