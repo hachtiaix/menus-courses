@@ -243,10 +243,11 @@ function moveMeal(from){
     const to=$("#mvto").value,o=S.meals[to];
     touch("meals",{...m,key:to});
     touch("meals",o&&o.text?{...o,key:from}:{key:from,text:"",servings:m.servings||BASE});
-    const s2=S.meals[from+"2"],t2=S.meals[to+"2"],on=x=>x&&!x.deleted; // les 2e plats suivent leur repas
-    if(on(s2)||on(t2)){
-      touch("meals",on(s2)?{...s2,key:to+"2"}:{key:to+"2",text:"",deleted:true});
-      touch("meals",on(t2)?{...t2,key:from+"2"}:{key:from+"2",text:"",deleted:true});
+    for(let i=2;i<=MAX_DISHES;i++){ // les plats en plus suivent leur repas
+      const s2=S.meals[from+i],t2=S.meals[to+i],on=x=>x&&!x.deleted;
+      if(!on(s2)&&!on(t2))continue;
+      touch("meals",on(s2)?{...s2,key:to+i}:{key:to+i,text:"",deleted:true});
+      touch("meals",on(t2)?{...t2,key:from+i}:{key:from+i,text:"",deleted:true});
     }
     close();render();
     if(n===was)return;
@@ -426,30 +427,35 @@ const habitWhen=h=>"le "+h.days.map(d=>DAYS[d-1]).join(" ou ")+(h.slot==="m"?" m
 const typeById=id=>id==="recette"?{icon:"📖",label:"Recette"}:Data.TYPES.find(t=>t.id===id)||{icon:"🍽️",label:id};
 // libellé d'une habitude : la recette visée, sinon le type de plat
 const habitWhat=h=>h.recipe?{icon:"📖",label:(S.recipes[h.recipe]&&!S.recipes[h.recipe].deleted)?S.recipes[h.recipe].name:"Recette supprimée"}:typeById(h.type);
-// 2e plat d'un repas (clé du repas + « 2 »), ajouté vide : c'est l'utilisateur qui choisit (saisie ou 💡).
+// Plats en plus d'un repas (clé du repas + 2, 3… jusqu'à MAX_DISHES), ajoutés vides : l'utilisateur choisit (saisie ou 💡).
 // Le plat principal garde son nombre de personnes.
+const MAX_DISHES=10;
+const extrasOf=key=>{const out=[];for(let i=2;i<=MAX_DISHES;i++){const m=S.meals[key+i];if(m&&!m.deleted)out.push(key+i)}return out};
 function addSecond(key,n,name){
-  const k2=key+"2";name=name||"";
+  let i=2;while(i<=MAX_DISHES&&S.meals[key+i]&&!S.meals[key+i].deleted)i++;
+  if(i>MAX_DISHES)return null;
+  const k2=key+i;name=name||"";
   touch("meals",{key:k2,text:name,servings:n||1});
   if(name)addMealIngredients(k2);
+  return k2;
 }
-// Retire le 2e plat d'un repas (et ses ingrédients), sauf s'il a déjà été acheté.
+// Retire les plats en plus d'un repas (et leurs ingrédients), sauf ceux déjà achetés.
 function removeSecond(key){
-  const s=S.meals[key+"2"];if(!s||s.deleted||bought(s))return;
-  if(s.added)s.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,s.added.n/(s.added.b||BASE),s.added.b||BASE)));
-  touch("meals",{key:key+"2",text:"",deleted:true});
+  for(const k2 of extrasOf(key)){const s=S.meals[k2];if(bought(s))continue;
+    if(s.added)s.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,s.added.n/(s.added.b||BASE),s.added.b||BASE)));
+    touch("meals",{key:k2,text:"",deleted:true})}
 }
 // Plat qui s'accompagne d'habitude d'un 2e plat (appris dans l'historique) : on l'ajoute tout seul.
 function applyCompanion(key){
   const m=S.meals[key];if(!m||!m.text||Data.isSecond(key))return;
-  const s=S.meals[key+"2"];if(s&&!s.deleted)return;
+  if(extrasOf(key).length)return;
   const c=Data.companionFor(S,m.text,todayKey());if(c)addSecond(key,c.n);
 }
 // Recette d'un plat : une recette enregistrée, sinon une suite d'aliments (« viande rouge, haricots verts »).
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v130";
+const BASE=4,VERSION="v131";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -463,7 +469,7 @@ function scaleText(t,f){
 const todayKey=()=>{const x=new Date();x.setHours(12,0,0,0);return x.toISOString().slice(0,10)};
 // Un créneau du planning. Jour passé : plus rien à compléter, le repas reste visible et déplaçable.
 function slotHtml(key,label,past){
-  const e=S.meals[key]||{},n=e.servings||BASE,b=bought(e),s2=S.meals[key+"2"],has2=!!(s2&&!s2.deleted);
+  const e=S.meals[key]||{},n=e.servings||BASE,b=bought(e),extras=extrasOf(key),has2=extras.length>=MAX_DISHES-1; // has2 : plus de place pour un plat de plus
   const lock=past?(e.text?'readonly title="Jour passé"':"disabled"):b?'readonly title="Ingrédients déjà achetés : déplacez le repas avec ⇄"':"";
   // la case prend toute la largeur : × (ou 🔒) passe dans la rangée de boutons du dessous ; seul 💡 reste à droite d'une case vide
   const right=!past&&!e.text?`<button class="pill bulb" data-bulb="${key}" aria-label="Suggestions">💡</button>`:"";
@@ -471,8 +477,8 @@ function slotHtml(key,label,past){
     past?`<span class="mut sm">${n} pers.${b?" · acheté":""}</span>`
     :b?`<div class="stp"><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers. · acheté</em></div>`
     :`<div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`
-  }${!past&&!has2?`<button class="pill add2" data-add2="${key}" aria-label="Ajouter un 2e plat" title="Ajouter un 2e plat">🍽️</button>`:""}<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button>${past?"":b?`<span class="lock" title="Ingrédients déjà achetés">🔒</span>`:`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`}</div>`;
-  return `<div class="slotw ${past?"past":""}"><div class="slot"><span class="lbl">${label}</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text)}</span>${right}</div>${sub}</div>${has2?secondHtml(key+"2",s2,past):""}`;
+  }${!past&&!has2?`<button class="pill add2" data-add2="${key}" aria-label="Ajouter un plat" title="Ajouter un plat">🍽️</button>`:""}<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button>${past?"":b?`<span class="lock" title="Ingrédients déjà achetés">🔒</span>`:`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`}</div>`;
+  return `<div class="slotw ${past?"past":""}"><div class="slot"><span class="lbl">${label}</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text)}</span>${right}</div>${sub}</div>${extras.map((k2,i)=>secondHtml(k2,S.meals[k2],past,i+2)).join("")}`;
 }
 // 2e plat d'un repas (pour qui, plat, personnes, ingrédients) ; il se déplace avec le repas principal.
 // Suite d'aliments : étiquettes colorées par-dessus le champ (le texte réapparaît quand on le touche).
@@ -480,7 +486,7 @@ const tagsHtml=text=>{const real=live(S.recipes).some(r=>r.name.toLowerCase()===
   if(real)return `<span class="tags" aria-hidden="true"><i class="rcp">📖 <b>${esc(text)}</b></i></span>`; // recette : livre + nom en gras
   const tags=text?Data.suiteTags(S,text):null;
   return tags?`<span class="tags" aria-hidden="true">${tags.map(x=>`<i class="tag ${x.cat}">${x.cat==="rcp"?"📖 ":""}${esc(x.t.charAt(0).toUpperCase()+x.t.slice(1))}</i>`).join("")}</span>`:""};
-function secondHtml(k2,e,past){
+function secondHtml(k2,e,past,pos){ // pos : rang affiché (2ᵉ, 3ᵉ…), sans trou si un plat a été retiré
   // comme un repas : case pleine largeur, puis personnes, 🥕 et × sur la rangée du dessous
   const n=e.servings||1,b=bought(e);
   const lock=past||b?"readonly":"";
@@ -489,7 +495,7 @@ function secondHtml(k2,e,past){
   const sub=!e.text?"":past?`<div class="sub"><span class="mut sm">${n} pers.</span></div>`
     :`<div class="sub">${b?`<div class="stp"><b>${n}</b><em>pers. · acheté</em></div><span class="lock" title="Ingrédients déjà achetés">🔒</span>`
     :`<div class="stp"><button data-sm="${k2}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${k2}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${k2}" aria-label="Ingrédients" title="Ingrédients">🥕</button><button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`}</div>`;
-  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span class="lbl">+ 2ᵉ plat</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text)}</span>${right}</div>${sub}</div>`;
+  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span class="lbl">+ ${pos||2}ᵉ plat</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text)}</span>${right}</div>${sub}</div>`;
 }
 function renderMenus(){
   $("#title").innerHTML=`Menus <span class="hicon">${MENU_ICON}</span>`;
@@ -596,7 +602,7 @@ function renderMenus(){
     $(`[data-m="${b.dataset.bulb}"]`).tips();
   });
   document.querySelectorAll("[data-mv]").forEach(el=>el.onclick=()=>moveMeal(el.dataset.mv));
-  document.querySelectorAll("[data-add2]").forEach(el=>el.onclick=()=>{addSecond(el.dataset.add2,1);render();const i=$(`[data-m="${el.dataset.add2}2"]`);if(i)i.focus()});
+  document.querySelectorAll("[data-add2]").forEach(el=>el.onclick=()=>{const k2=addSecond(el.dataset.add2,1);render();const i=k2&&$(`[data-m="${k2}"]`);if(i)i.focus()});
   document.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{
     const key=el.dataset.del,m=S.meals[key];
     if(bought(m)){alert(`Les ingrédients de « ${m.text} » ont déjà été achetés : ce repas ne peut pas être supprimé. Utilisez ⇄ pour le déplacer.`);return}
