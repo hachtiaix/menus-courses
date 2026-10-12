@@ -88,7 +88,7 @@ function renderList(id){
   // 🏠 à vérifier au placard : en gris, « Il en manque » (devient un article à acheter) ou « J'en ai » (retiré)
   // 🏠 avec les quantités demandées par chaque repas (pour voir s'il en reste assez), et le total quand il s'additionne ;
   // seulement pour ce qui se mesure vraiment (beurre, farine, sucre…), pas pour les épices, l'huile ou le vinaigre
-  const QTY_PANTRY=/^(beurre|farine|sucre|chapelure|maizena|levure)/;
+  const QTY_PANTRY=/^(beurre|farine|sucre|maizena|levure)/;
   const need=i=>{const k=Data.pantryKey(pantryName(i.text)),out=[],withQty=QTY_PANTRY.test(Data.plain(pantryName(i.text)).trim());
     for(const mk of i.meals||[]){const m=S.meals[mk];if(!m||m.deleted||!m.text)continue;const r=recipeOf(m.text);
       const B=(r&&r.serves)||BASE,n=m.servings||BASE,lines=r&&withQty?r.ingredients.filter(g=>Data.pantryKey(pantryName(g.t))===k).map(g=>Qty.buy(g.t,n/B,B)):[];
@@ -502,7 +502,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v146";
+const BASE=4,VERSION="v147";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
