@@ -502,7 +502,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v152";
+const BASE=4,VERSION="v153";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -857,6 +857,8 @@ function habitEditor(h){
    <div class="days">${DAYS.map((d,i)=>`<label><input type="checkbox" value="${i+1}" ${h&&h.days.includes(i+1)?"checked":""}><span>${d.slice(0,3)}</span></label>`).join("")}</div>
    <div class="serv"><span>Moment</span><select id="hslot"><option value="s">Soir</option><option value="m" ${h&&h.slot==="m"?"selected":""}>Midi</option></select></div>
    <div class="serv"><span>Plat</span><div class="pick"><input type="text" id="hq" placeholder="Tapez : pâtes, soupe, une recette…" autocomplete="off"><div class="plist"></div></div></div>
+   <p class="mut" style="margin:10px 0 4px">Idées de plats à proposer (une par ligne, facultatif)</p>
+   <textarea id="hideas" rows="3" placeholder="Pâtes, Saucisses de Francfort&#10;Pâtes, Œufs&#10;Pâtes carbonara">${esc((h&&h.ideas||[]).join("\n"))}</textarea>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">${h?"Enregistrer":"Ajouter"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
@@ -867,7 +869,8 @@ function habitEditor(h){
     const what=pick();
     if(!what){alert("Choisissez un plat dans la liste.");$("#hq").focus();return}
     // modifiée à la main : elle redevient une habitude « à vous », et l'année se recompte
-    touch("habits",{...(h||{}),id:h?h.id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,adj:null,state:"on",since:todayKey()});close();render();
+    const ideas=$("#hideas").value.split("\n").map(x=>x.trim()).filter(Boolean).slice(0,12);
+    touch("habits",{...(h||{}),id:h?h.id:"h-"+uid(),days,slot:$("#hslot").value,...what,ideas,auto:false,adj:null,state:"on",since:todayKey()});close();render();
   };
 }
 // Nouvel ingrédient dans une famille (réglages) : nom, quantité par personne en grammes ou en pièces, magasin.

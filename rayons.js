@@ -56,7 +56,7 @@ const PHRASES=[
   ["gel douche","hygiene"],["pastille lave vaisselle","entretien"],["essuie tout","entretien"],["pate brisee","charcuterie"],
   ["pate feuilletee","charcuterie"],["pate a pizza","charcuterie"],["pate de campagne","charcuterie"],["pois chiche","sale"],["haricot rouge","sale"],
   ["petit suisse","cremerie"],["dessert lacte","cremerie"],["biscuit aperitif","sale"],["pain d epice","sucre"],
-  ["lardon fume","charcuterie"],["ras el hanout","sale"],["herbe de provence","sale"],["piment d espelette","sale"],["quatre epice","sale"],
+  ["lardon fume","charcuterie"],["saucisse de francfort","charcuterie"],["saucisse de strasbourg","charcuterie"],["ras el hanout","sale"],["herbe de provence","sale"],["piment d espelette","sale"],["quatre epice","sale"],
   ["fond de veau","sale"],["fleur de sel","sale"],["gros sel","sale"],["anis etoile","sale"],["baie de genievre","sale"],["graine de fenouil","sale"],
   ["basilic seche","sale"],["persil seche","sale"],["ciboulette sechee","sale"],["menthe sechee","sale"],["coriandre en poudre","sale"],["gingembre en poudre","sale"],
   ["ail en poudre","sale"],["oignon en poudre","sale"],["poivre 5 baie","sale"],["fenouil moulu","sale"],["chair de tomate","sale"],["poudre d amande","sucre"],["speculoos","sucre"],["amande emondee","sucre"],["abricot sec","sucre"],["fruit sec","sucre"],["raisin sec","sucre"],["pruneau","sucre"],["amande en poudre","sucre"],["amande effilee","sucre"],["arome","sucre"],["coulis de tomate","sale"],["tomate concassee","sale"],["fenouil en poudre","sale"],["tomate pelee","sale"],["boite de tomate","sale"],["coeur de palmier","sale"],

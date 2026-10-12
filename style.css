@@ -298,3 +298,4 @@ button.lock{background:none;border:0;font-size:16px;padding:0 4px;cursor:pointer
 h3.ray{margin:12px 4px 4px}
 .row.verif .tot{font-style:normal;font-weight:600;color:var(--fg);margin-left:4px}
 .row.verif .tot{white-space:nowrap}
+#hideas{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:inherit}

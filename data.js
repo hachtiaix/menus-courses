@@ -115,6 +115,7 @@ const FOODS=[
   {id:"roti-porc",icon:"🐖",cat:"prot",label:"Rôti de porc",words:["roti de porc"],kind:"g",q:150,store:"boucherie"},
   {id:"agneau",icon:"🐑",cat:"prot",label:"Côtes d'agneau",words:["cote d agneau","cotes d agneau","agneau"],kind:"n",q:2,store:"boucherie"},
   {id:"cuisse-poulet",icon:"🍗",cat:"prot",label:"Cuisses de poulet",words:["cuisse de poulet","cuisses de poulet"],kind:"n",q:1,store:"boucherie"},
+  {id:"francfort",icon:"svg:saucisse",cat:"prot",label:"Saucisses de Francfort",words:["saucisse de francfort","francfort","knacki","saucisse de strasbourg"],kind:"n",q:2,store:"auchan"},
   {id:"boudin-noir",icon:"svg:saucisse",cat:"prot",label:"Boudin noir",words:["boudin noir","boudin"],kind:"n",q:1,store:"boucherie"},
   {id:"boudin-blanc",icon:"svg:saucisse",cat:"prot",label:"Boudin blanc",words:["boudin blanc"],kind:"n",q:1,store:"boucherie"},
   {id:"poisson",icon:"🐟",cat:"pois",label:"Poisson",words:["poisson","saumon","cabillaud","colin","lieu","merlu"],kind:"g",q:150,store:"auchan"},
@@ -233,7 +234,7 @@ const mondayOf=ymd=>addDays(ymd,1-weekday(ymd));
 const habitMatches=(S,h,name)=>{
   if(h.recipe){const r=(S.recipes||{})[h.recipe],first=String(name).split(/\s*(?:,|\+)\s*/)[0]; // « Recette, accompagnement »
     return!!(r&&!r.deleted&&[name,first].some(x=>plain(r.name).trim()===plain(x).trim()))}
-  return typeOf(name)===h.type;
+  return typeOf(name)===h.type||(h.ideas||[]).some(x=>plain(x).trim()===plain(name).trim());
 };
 // Habitudes attendues pour un créneau (objets habitude).
 function habitsFor(S,key){
@@ -350,6 +351,8 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   const withRecipe=t=>{const p=split(t);return p.length>1&&p.some(x=>recKeys.has(key(x)))};
   for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text))&&!onlyOther(m.text)&&!withRecipe(m.text))
     names.set(key(m.text),{name:m.text,season:guessSeason(m.text)});
+  // idées de plats attachées à l'habitude du créneau (« Pâtes, Œufs », « Pâtes carbonara »…) : candidates aussi
+  if(slotKey)for(const h of habitsFor(S,slotKey))for(const idea of h.ideas||[])if(!names.has(key(idea)))names.set(key(idea),{name:idea,season:"all"});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
   const rows=[];
   for(const [k,x] of names){
@@ -399,7 +402,8 @@ function clean(k,id,r){
     days:[...new Set((Array.isArray(r.days)?r.days:[]).map(x=>parseInt(x,10)).filter(x=>x>=1&&x<=7))].sort().slice(0,7),
     state:r.state==="off"?"off":"on",auto:r.auto===true,
     last:/^\d{4}-\d{2}-\d{2}$/.test(r.last)?r.last:null,since:/^\d{4}-\d{2}-\d{2}$/.test(r.since)?r.since:null,
-    adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,ts,deleted}:null;
+    adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,
+    ideas:(Array.isArray(r.ideas)?r.ideas:[]).map(x=>str(x,80)).filter(Boolean).slice(0,12),ts,deleted}:null; // ideas : plats à proposer sur ce créneau
   if(k==="foods"){const q=Math.max(0.25,Math.min(2000,+r.q||0))||null;
     if(FOODS.some(f=>f.id===id))return{id,q,ts,deleted};
     const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;

@@ -106,3 +106,11 @@ test("habitude encore suivie : jamais modifiée, la nouvelle s'ajoute à côté"
   assert.ok(!r.change.some(c => c.id === "p"));
   assert.ok(r.add.some(a => a.type === "pizza" && a.days.join() === "1"));
 });
+
+test("idées de plats d'une habitude : proposées sur son créneau, et reconnues comme suivant l'habitude", () => {
+  const S = Data.cleanAll({ habits: { h: { type: "pates", days: [1], slot: "s", ts: 1, ideas: ["Pâtes, Saucisses de Francfort", "Pâtes, Œufs", "Pâtes carbonara"] } } });
+  const got = Data.suggest(S, "2026-12-10", 5, [], () => 0, "2026-12-14-s").map((x) => x.name);
+  for (const n of ["Pâtes, Saucisses de Francfort", "Pâtes, Œufs", "Pâtes carbonara"]) assert.ok(got.includes(n), n);
+  assert.ok(!Data.suggest(S, "2026-12-10", 5, [], () => 0, "2026-12-15-s").some((x) => x.name === "Pâtes, Œufs")); // mardi : non
+  assert.ok(Data.habitMatches(S, S.habits.h, "Pâtes, Œufs"));
+});
