@@ -66,7 +66,7 @@ const single=w=>/^choux-/i.test(w)?w.split("-").map(single).join("-"):/^choux$/i
 // accorde le premier mot, et le suivant si le premier est un adjectif (« 1 grosse pomme de terre »)
 const ADJ=/^(grosses?|petites?|moyennes?|grandes?|belles?|beaux?|bel|jeunes?|vieilles?|vieux|gros|petits?|grands?)$/i;
 // adjectif après le nom, accordé aussi (« 3 boudins blancs », « 4 steaks hachés », « 2 cordons bleus »)
-const POST=/^(blancs?|blanches?|noirs?|noires?|rouges?|verts?|vertes?|bleus?|jaunes?|frais|fraîches?|entiers?|entières?|mûrs?|mûres?|cuits?|cuites?|crus?|crues?|secs?|sèches?|cerises?|[^\s]{2,}ée?s?)$/i; // …ée?s? : haché, râpée, pané, fumé, émincé…
+const POST=/^(mignons?|blancs?|blanches?|noirs?|noires?|rouges?|verts?|vertes?|bleus?|jaunes?|frais|fraîches?|entiers?|entières?|mûrs?|mûres?|cuits?|cuites?|crus?|crues?|secs?|sèches?|cerises?|[^\s]{2,}ée?s?)$/i; // …ée?s? : haché, râpée, pané, fumé, émincé…
 const pluralFirst=(name,n)=>{const w=name.split(" "),f=x=>n>1?plural(x,n):single(x);
   w[0]=f(w[0]);if(w.length>1&&ADJ.test(w[0]))w[1]=f(w[1]);
   else if(w.length>1&&POST.test(w[1]))w[1]=n>1?plural(w[1],n):/^(frais|gros)$/i.test(w[1])?w[1]:w[1].replace(/s$/i,""); // adjectif : « 1 avocat mûr », « 1 cordon bleu »
