@@ -300,6 +300,9 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   for(const [k,m] of Object.entries(S.meals||{})){
     if(m.deleted||!m.text||k===slotKey)continue;
     (dates[key(m.text)]=dates[key(m.text)]||[]).push(k.slice(0,10));
+    // chaque élément compte aussi : « Courgettes farcies, Orzo » mangé hier → la recette Courgettes farcies aussi
+    const parts=String(m.text).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);
+    if(parts.length>1)for(const p of parts)(dates[key(p)]=dates[key(p)]||[]).push(k.slice(0,10));
   }
   const names=new Map();
   for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name&&!recipeDessert(r))names.set(key(r.name),{name:r.name,season:recipeSeason(r)});

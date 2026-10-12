@@ -118,3 +118,14 @@ test("desserts (recette de type Dessert, gâteau…) : jamais suggérés, sauf s
   for (const n of ["Gâteau au yaourt", "Tarte maison", "Brownies"]) assert.ok(!names.includes(n), n);
   for (const n of ["Crêpes", "Cake salé"]) assert.ok(names.includes(n), n);
 });
+
+test("une recette mangée dans un repas composé (« Courgettes farcies, Orzo ») compte comme déjà faite", () => {
+  const S = Data.cleanAll({
+    recipes: { c: { id: "c", name: "Courgettes farcies", serves: 4, ingredients: [] } },
+    meals: { "2026-10-12-m": { key: "2026-10-12-m", text: "Courgettes farcies, Orzo", servings: 4 } },
+  });
+  const s = Data.suggest(S, "2026-10-19", 20, [], () => 0.5);
+  const r = s.find((x) => x.name === "Courgettes farcies");
+  assert.equal(r.days, 7);
+  assert.ok(s.some((x) => x.name === "Courgettes farcies, Orzo"));
+});
