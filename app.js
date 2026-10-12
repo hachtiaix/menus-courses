@@ -25,6 +25,9 @@ async function sync(){
   if(syncing){again=true;return}
   syncing=true;
   try{
+    // nouveau type de données dans cette version (ex. associations) : on relit tout une fois, sinon ce qu'une ancienne
+    // version a reçu sans le connaître ne reviendrait jamais
+    if(LS.kinds!==Data.KINDS.join()){delete LS.since;LS.kinds=Data.KINDS.join()}
     const since=LS.since?Math.max(0,+LS.since-SYNC_OVERLAP):0;
     const r=await rpc("get_household_since",{p_code:code,p_since:since});
     if(!r.ok)throw 0;
@@ -514,7 +517,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v162";
+const BASE=4,VERSION="v163";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
