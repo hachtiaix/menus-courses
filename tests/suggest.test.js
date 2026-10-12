@@ -134,17 +134,18 @@ test("dessert deviné, sauf nom salé (crumble de légumes, cake au chèvre)", (
   for (const n of ["Crumble aux légumes d'été & chèvre frais", "Cake au jambon et olives", "Crumble de courgettes"]) assert.ok(!Data.guessDessert(n), n);
 });
 
-test("recette proposée avec son accompagnement : « Servi avec » de la fiche, sinon celui de la dernière fois", () => {
+test("recette proposée avec ce qu'on a déjà mis avec elle dans un repas", () => {
   const S = Data.cleanAll({
     recipes: {
-      b: { id: "b", name: "Boulettes de porc", serves: 4, ingredients: [], side: "Pâtes" },
+      b: { id: "b", name: "Boulettes de porc", serves: 4, ingredients: [] },
       c: { id: "c", name: "Courgettes farcies", serves: 4, ingredients: [] },
       p: { id: "p", name: "Poulet basquaise", serves: 4, ingredients: [] },
     },
-    meals: { "2026-08-10-m": { key: "2026-08-10-m", text: "Courgettes farcies, Orzo", servings: 4 } },
+    meals: { "2026-08-10-m": { key: "2026-08-10-m", text: "Courgettes farcies, Orzo", servings: 4 },
+             "2026-08-11-s": { key: "2026-08-11-s", text: "Pâtes, Boulettes de porc", servings: 4 } },
   });
   const names = Data.suggest(S, "2026-10-12", 20, [], () => 0.5).map((x) => x.name);
-  assert.ok(names.includes("Boulettes de porc, Pâtes"));
+  assert.ok(names.includes("Pâtes, Boulettes de porc"));
   assert.ok(names.includes("Courgettes farcies, Orzo"));
   assert.ok(!names.includes("Courgettes farcies"));
   assert.equal(names.filter((n) => n === "Courgettes farcies, Orzo").length, 1);
@@ -153,8 +154,9 @@ test("recette proposée avec son accompagnement : « Servi avec » de la fiche, 
 
 test("plusieurs accompagnements déjà faits avec une recette : un au hasard", () => {
   const S = Data.cleanAll({
-    recipes: { c: { id: "c", name: "Courgettes farcies", serves: 4, ingredients: [], side: "Riz" } },
+    recipes: { c: { id: "c", name: "Courgettes farcies", serves: 4, ingredients: [] } },
     meals: { "2026-08-10-m": { key: "2026-08-10-m", text: "Courgettes farcies, Orzo", servings: 4 },
+             "2026-06-10-m": { key: "2026-06-10-m", text: "Courgettes farcies, Riz", servings: 4 },
              "2026-07-10-m": { key: "2026-07-10-m", text: "Courgettes farcies, Semoule", servings: 4 } },
   });
   const got = new Set([0, 0.4, 0.7, 0.99].map((v) => Data.suggest(S, "2026-10-12", 20, [], () => v).find((x) => x.name.startsWith("Courgettes farcies, ")).name));

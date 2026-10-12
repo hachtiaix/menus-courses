@@ -331,14 +331,14 @@ function suggest(S,today,n,exclude,rnd,slotKey){
     if(parts.length>1)for(const p of parts)(dates[key(p)]=dates[key(p)]||[]).push(k.slice(0,10));
   }
   const names=new Map();
-  // une recette est proposée avec un accompagnement : celui de la fiche (« Servi avec ») et ceux déjà faits avec elle,
-  // tiré au hasard s'il y en a plusieurs ; seule si elle n'en a jamais eu
+  // une recette est proposée avec ce qu'on a déjà mis avec elle dans un repas (« Courgettes farcies, Orzo »),
+  // tiré au hasard s'il y a eu plusieurs accompagnements ; seule si elle n'en a jamais eu
   const split=t=>String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);
   const withs={};
   for(const m of Object.values(S.meals||{})){if(m.deleted||!m.text)continue;const p=split(m.text);if(p.length<2)continue;
     for(const x of p){const s=withs[key(x)]=withs[key(x)]||new Map();s.set(key(m.text),m.text)}}
   for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name&&!recipeDessert(r)){
-    const opts=new Map(withs[key(r.name)]||[]);if(r.side)opts.set(key(r.name+", "+r.side),r.name+", "+r.side);
+    const opts=new Map(withs[key(r.name)]||[]);
     const list=[...opts.values()].sort(),full=list.length?list[Math.floor(rnd()*list.length)%list.length]:r.name;
     names.set(key(full),{name:full,season:recipeSeason(r),dk:key(r.name)}); // dk : dates de la recette elle-même
   }
@@ -406,7 +406,7 @@ function clean(k,id,r){
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,ts,deleted}}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
-    dessert:r.dessert===true?true:r.dessert===false?false:null,side:str(r.side,80)||null, // side : servi avec (« Pâtes »)
+    dessert:r.dessert===true?true:r.dessert===false?false:null,
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
   return null;
 }
