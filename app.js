@@ -453,12 +453,16 @@ function suggestDialog(){
     next(0);
   };
 }
-// Accompagnements retenus (affichage) : pour chaque recette, les autres éléments des repas où elle a été servie
+// Accompagnements retenus (affichage) : pour chaque recette, et chaque féculent (pâtes, riz, frites…), ce qui a été mis avec
+// dans un repas (« Courgettes farcies, Orzo », « Pates, Boulettes de porc ») ou dans les idées d'une habitude (« Pâtes, Œufs »)
 function sidesLearned(){
   const rec=live(S.recipes).filter(r=>!Data.recipeDessert(r)),key=s=>Data.plain(s).trim(),out=new Map();
-  for(const m of live(S.meals)){if(!m.text)continue;const p=m.text.split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);if(p.length<2)continue;
-    for(const r of rec){if(!p.some(x=>key(x)===key(r.name)))continue;const o=out.get(r.name)||new Map();
-      const side=p.filter(x=>key(x)!==key(r.name)).join(", ");o.set(key(side),side);out.set(r.name,o)}}
+  const baseOf=x=>{const r=rec.find(r=>key(r.name)===key(x));if(r)return r.name;const f=Data.foodFor(x,true);return f&&f.cat==="fec"?f.label:null};
+  const texts=[...live(S.meals).map(m=>m.text),...live(S.habits).flatMap(h=>h.ideas||[])].filter(Boolean);
+  for(const t of texts){const p=t.split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);if(p.length<2)continue;
+    const hasRec=p.some(x=>rec.some(r=>key(r.name)===key(x))); // avec une recette : rangé sous la recette seulement (pas de doublon sous « Orzo »)
+    for(const x of p){const b=baseOf(x);if(!b||(hasRec&&!rec.some(r=>key(r.name)===key(x))))continue;const o=out.get(b)||new Map();
+      const side=p.filter(y=>y!==x).join(", ");o.set(key(side),side);out.set(b,o)}}
   return [...out].map(([recipe,s])=>({recipe,sides:[...s.values()]})).sort((a,b)=>a.recipe.localeCompare(b.recipe,"fr"));
 }
 // Habitudes apprises : ajoutées en silence (une fois par jour), oubliées après 24 mois sans être suivies ; l'admin les voit dans Réglages → Habitudes.
@@ -510,7 +514,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v158";
+const BASE=4,VERSION="v159";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -784,7 +788,7 @@ function renderSettings(){
    <div class="card">${hs.length?hs.map(h=>`<div class="row link" data-hedit="${h.id}"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}${h.adj?" · ajustée":""}</small>${(h.ideas||[]).map(x=>`<br><small class="mut">💡 ${esc(x)}</small>`).join("")}</span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
    <button class="btn" id="newh" style="width:100%">+ Habitude</button>
    ${(()=>{const acc=sidesLearned();return acc.length?`<h3 class="ray" style="margin-top:22px">🍽️ Accompagnements retenus</h3>
-     <p class="mut">Ce que vous avez déjà mis avec une recette dans un repas : 💡 la propose avec l'un d'eux, au hasard.</p>
+     <p class="mut">Ce que vous avez déjà mis avec une recette ou un féculent (pâtes, riz…), dans un repas ou une idée d'habitude : 💡 en propose un, au hasard.</p>
      <div class="card">${acc.map(x=>`<div class="row"><span class="t">${esc(x.recipe)}<br><small class="mut">avec ${esc(x.sides.join(" · "))}</small></span></div>`).join("")}</div>`:""})()}`,
    rayons:`<div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
    ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>`,
