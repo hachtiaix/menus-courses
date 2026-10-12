@@ -171,3 +171,17 @@ test("saison « décembre seulement »", () => {
   assert.ok(Data.suggest(S, "2026-12-01", 10, [], () => 0.5).some((x) => x.name === "Dinde aux marrons"));
   assert.ok(!Data.suggest(S, "2026-11-01", 10, [], () => 0.5).some((x) => x.name === "Dinde aux marrons"));
 });
+
+test("associations ajoutées à la main (« Pâtes, Œufs ») : proposées, et rangées sous la recette quand il y en a une", () => {
+  const S = Data.cleanAll({
+    habits: { h: { type: "pates", days: [1], slot: "s", ts: 1 } },
+    recipes: { b: { id: "b", name: "Boulettes de porc", serves: 4, ingredients: [] } },
+    combos: { c1: { id: "c1", text: "Pâtes, Œufs" }, c2: { id: "c2", text: "Pâtes, Saucisses de Francfort" }, c3: { id: "c3", text: "Boulettes de porc, Riz" }, ko: { id: "ko", text: "Pâtes" } },
+  });
+  assert.deepEqual(Object.keys(S.combos).sort(), ["c1", "c2", "c3"]);
+  const got = Data.suggest(S, "2026-12-10", 10, [], () => 0, "2026-12-14-s").map((x) => x.name);
+  assert.ok(got.includes("Pâtes, Œufs"));
+  assert.ok(got.includes("Pâtes, Saucisses de Francfort"));
+  assert.ok(got.includes("Boulettes de porc, Riz"));
+  assert.ok(!got.includes("Boulettes de porc"));
+});

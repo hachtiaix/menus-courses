@@ -454,15 +454,15 @@ function suggestDialog(){
   };
 }
 // Accompagnements retenus (affichage) : pour chaque recette, et chaque féculent (pâtes, riz, frites…), ce qui a été mis avec
-// dans un repas (« Courgettes farcies, Orzo », « Pates, Boulettes de porc ») ou dans les idées d'une habitude (« Pâtes, Œufs »)
+// dans un repas (« Courgettes farcies, Orzo ») ou dans une association ajoutée à la main (« Pâtes, Œufs », supprimable)
 function sidesLearned(){
   const rec=live(S.recipes).filter(r=>!Data.recipeDessert(r)),key=s=>Data.plain(s).trim(),out=new Map();
   const baseOf=x=>{const r=rec.find(r=>key(r.name)===key(x));if(r)return r.name;const f=Data.foodFor(x,true);return f&&f.cat==="fec"?f.label:null};
-  const texts=[...live(S.meals).map(m=>m.text),...live(S.habits).flatMap(h=>h.ideas||[])].filter(Boolean);
-  for(const t of texts){const p=t.split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);if(p.length<2)continue;
-    const hasRec=p.some(x=>rec.some(r=>key(r.name)===key(x))); // avec une recette : rangé sous la recette seulement (pas de doublon sous « Orzo »)
+  const texts=[...live(S.meals).map(m=>({t:m.text})),...live(S.combos||{}).map(c=>({t:c.text,id:c.id}))].filter(x=>x.t);
+  for(const {t,id} of texts){const p=t.split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);if(p.length<2)continue;
+    const hasRec=p.some(x=>rec.some(r=>key(r.name)===key(x))); // avec une recette : rangé sous la recette seulement
     for(const x of p){const b=baseOf(x);if(!b||(hasRec&&!rec.some(r=>key(r.name)===key(x))))continue;const o=out.get(b)||new Map();
-      const side=p.filter(y=>y!==x).join(", ");o.set(key(side),side);out.set(b,o)}}
+      const side=p.filter(y=>y!==x).join(", "),k=key(side);o.set(k,{side,id:id||(o.get(k)||{}).id});out.set(b,o)}}
   return [...out].map(([recipe,s])=>({recipe,sides:[...s.values()]})).sort((a,b)=>a.recipe.localeCompare(b.recipe,"fr"));
 }
 // Habitudes apprises : ajoutées en silence (une fois par jour), oubliées après 24 mois sans être suivies ; l'admin les voit dans Réglages → Habitudes.
@@ -514,7 +514,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v160";
+const BASE=4,VERSION="v161";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -785,11 +785,12 @@ function renderSettings(){
      const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
      return `<div class="row"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}${f.custom?`<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button>`:""}</div>`}).join("")}<button class="row add-food" data-fadd="${c}">+ Ajouter un ingrédient</button></div>`).join("")}`,
    habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
-   <div class="card">${hs.length?hs.map(h=>`<div class="row link" data-hedit="${h.id}"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}${h.adj?" · ajustée":""}</small>${(h.ideas||[]).map(x=>`<br><small class="mut">💡 ${esc(x)}</small>`).join("")}</span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
+   <div class="card">${hs.length?hs.map(h=>`<div class="row link" data-hedit="${h.id}"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}${h.adj?" · ajustée":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
    <button class="btn" id="newh" style="width:100%">+ Habitude</button>
-   ${(()=>{const acc=sidesLearned();return acc.length?`<h3 class="ray" style="margin-top:22px">🍽️ Accompagnements retenus</h3>
-     <p class="mut">Ce que vous avez déjà mis avec une recette ou un féculent (pâtes, riz…), dans un repas ou une idée d'habitude : 💡 en propose un, au hasard.</p>
-     <div class="card">${acc.map(x=>`<div class="row"><span class="t">${esc(x.recipe)}<br><small class="mut">avec ${esc(x.sides.join(" · "))}</small></span></div>`).join("")}</div>`:""})()}`,
+   ${(()=>{const acc=sidesLearned();return `<h3 class="ray" style="margin-top:22px">🍽️ Accompagnements</h3>
+     <p class="mut">Ce qui va avec une recette ou un féculent (pâtes, riz…) : appris de vos repas, ou ajouté ici. 💡 en propose un, au hasard.</p>
+     ${acc.length?`<div class="card">${acc.map(x=>`<div class="row"><span class="t">${esc(x.recipe)}<br><small class="mut">avec ${x.sides.map(s=>esc(s.side)+(s.id?` <button class="cdel" data-cdel="${s.id}" aria-label="Retirer">×</button>`:"")).join(" · ")}</small></span></div>`).join("")}</div>`:""}
+     <button class="btn sec" id="newc" style="width:100%">+ Association (ex. « Pâtes, Œufs »)</button>`})()}`,
    rayons:`<div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
    ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>`,
    foyer:`<div class="card"><div class="row"><span class="t">Code de cet appareil<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"} · ${STATE[status]}</small></span><button class="btn sec" id="setcode">Saisir</button></div>
@@ -842,6 +843,10 @@ function renderSettings(){
     alert(e.message==="code deja utilise"?"Ce code est déjà pris, choisissez-en un autre.":"Impossible de changer le code pour l'instant (hors ligne ?).");
   };
   on("#fabr","onclick",()=>recipeEditor(null));
+  on("#newc","onclick",()=>{const t=(prompt("Association, séparée par une virgule (ex. « Pâtes, Œufs »)")||"").trim();
+    if(!t)return;if(!/[,+]/.test(t)){alert("Séparez les deux par une virgule, par exemple « Pâtes, Œufs ».");return}
+    touch("combos",{id:"c-"+uid(),text:t.split(/\s*[,+]\s*/).filter(Boolean).map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(", ")});render()});
+  document.querySelectorAll("[data-cdel]").forEach(el=>el.onclick=()=>{const c=S.combos[el.dataset.cdel];if(c&&confirm(`Retirer l'association « ${c.text} » ?`)){touch("combos",{...c,deleted:true});render()}});
   const ol=()=>LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan";
   on("#ordl","onchange",e=>{LS.ordl=e.target.value;render()});
   const moveR=(i,d)=>{const ids=rayonOrder(ol()).map(r=>r.id);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];touch("lists",{...S.lists[ol()],order:ids});render()};
@@ -873,8 +878,6 @@ function habitEditor(h){
    <div class="days">${DAYS.map((d,i)=>`<label><input type="checkbox" value="${i+1}" ${h&&h.days.includes(i+1)?"checked":""}><span>${d.slice(0,3)}</span></label>`).join("")}</div>
    <div class="serv"><span>Moment</span><select id="hslot"><option value="s">Soir</option><option value="m" ${h&&h.slot==="m"?"selected":""}>Midi</option></select></div>
    <div class="serv"><span>Plat</span><div class="pick"><input type="text" id="hq" placeholder="Tapez : pâtes, soupe, une recette…" autocomplete="off"><div class="plist"></div></div></div>
-   <p class="mut" style="margin:10px 0 4px">Idées de plats à proposer (une par ligne, facultatif)</p>
-   <textarea id="hideas" rows="3" placeholder="Pâtes, Saucisses de Francfort&#10;Pâtes, Œufs&#10;Pâtes carbonara">${esc((h&&h.ideas||[]).join("\n"))}</textarea>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">${h?"Enregistrer":"Ajouter"}</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
@@ -885,8 +888,7 @@ function habitEditor(h){
     const what=pick();
     if(!what){alert("Choisissez un plat dans la liste.");$("#hq").focus();return}
     // modifiée à la main : elle redevient une habitude « à vous », et l'année se recompte
-    const ideas=$("#hideas").value.split("\n").map(x=>x.trim()).filter(Boolean).slice(0,12);
-    touch("habits",{...(h||{}),id:h?h.id:"h-"+uid(),days,slot:$("#hslot").value,...what,ideas,auto:false,adj:null,state:"on",since:todayKey()});close();render();
+    touch("habits",{...(h||{}),id:h?h.id:"h-"+uid(),days,slot:$("#hslot").value,...what,auto:false,adj:null,state:"on",since:todayKey()});close();render();
   };
 }
 // Nouvel ingrédient dans une famille (réglages) : nom, quantité par personne en grammes ou en pièces, magasin.

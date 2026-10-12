@@ -1,7 +1,7 @@
 // Données de l'app : nettoyage de ce qui arrive de l'extérieur, fusion et purge.
 // Sans accès au DOM, pour pouvoir être testé (tests/data.test.js).
 (function(root){
-const KINDS=["lists","items","meals","recipes","aisles","stores","habits","foods"];
+const KINDS=["lists","items","meals","recipes","aisles","stores","habits","foods","combos"]; // combos : associations ajoutées à la main (« Pâtes, Œufs »)
 const ID=/^[\w-]{1,64}$/, okId=id=>typeof id==="string"&&ID.test(id)&&id!=="__proto__";
 const str=(v,n)=>typeof v==="string"?v.slice(0,n):"";
 const int=(v,min,max,def)=>Math.max(min,Math.min(max,parseInt(v,10)||def));
@@ -234,7 +234,7 @@ const mondayOf=ymd=>addDays(ymd,1-weekday(ymd));
 const habitMatches=(S,h,name)=>{
   if(h.recipe){const r=(S.recipes||{})[h.recipe],first=String(name).split(/\s*(?:,|\+)\s*/)[0]; // « Recette, accompagnement »
     return!!(r&&!r.deleted&&[name,first].some(x=>plain(r.name).trim()===plain(x).trim()))}
-  return typeOf(name)===h.type||(h.ideas||[]).some(x=>plain(x).trim()===plain(name).trim());
+  return typeOf(name)===h.type;
 };
 // Habitudes attendues pour un créneau (objets habitude).
 function habitsFor(S,key){
@@ -336,7 +336,7 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // tiré au hasard s'il y a eu plusieurs accompagnements ; seule si elle n'en a jamais eu
   const split=t=>String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);
   const withs={};
-  for(const m of Object.values(S.meals||{})){if(m.deleted||!m.text)continue;const p=split(m.text);if(p.length<2)continue;
+  for(const m of [...Object.values(S.meals||{}),...Object.values(S.combos||{})]){if(!m||m.deleted||!m.text)continue;const p=split(m.text);if(p.length<2)continue;
     for(const x of p){const s=withs[key(x)]=withs[key(x)]||new Map();s.set(key(m.text),m.text)}}
   for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name&&!recipeDessert(r)){
     const opts=new Map(withs[key(r.name)]||[]);
@@ -351,8 +351,8 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   const withRecipe=t=>{const p=split(t);return p.length>1&&p.some(x=>recKeys.has(key(x)))};
   for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text))&&!onlyOther(m.text)&&!withRecipe(m.text))
     names.set(key(m.text),{name:m.text,season:guessSeason(m.text)});
-  // idées de plats attachées à l'habitude du créneau (« Pâtes, Œufs », « Pâtes carbonara »…) : candidates aussi
-  if(slotKey)for(const h of habitsFor(S,slotKey))for(const idea of h.ideas||[])if(!names.has(key(idea)))names.set(key(idea),{name:idea,season:"all"});
+  // associations ajoutées à la main sans recette (« Pâtes, Œufs ») : candidates comme un plat déjà fait
+  for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.text&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
   const rows=[];
   for(const [k,x] of names){
@@ -403,11 +403,12 @@ function clean(k,id,r){
     state:r.state==="off"?"off":"on",auto:r.auto===true,
     last:/^\d{4}-\d{2}-\d{2}$/.test(r.last)?r.last:null,since:/^\d{4}-\d{2}-\d{2}$/.test(r.since)?r.since:null,
     adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,
-    ideas:(Array.isArray(r.ideas)?r.ideas:[]).map(x=>str(x,80)).filter(Boolean).slice(0,12),ts,deleted}:null; // ideas : plats à proposer sur ce créneau
+    ts,deleted}:null;
   if(k==="foods"){const q=Math.max(0.25,Math.min(2000,+r.q||0))||null;
     if(FOODS.some(f=>f.id===id))return{id,q,ts,deleted};
     const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,ts,deleted}}
+  if(k==="combos"){const text=str(r.text,120);return text&&/[,+]/.test(text)?{id,text,ts,deleted}:null}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
     dessert:r.dessert===true?true:r.dessert===false?false:null,
