@@ -33,7 +33,7 @@ const PANTRY_WORDS=[
   "herbes de provence","thym","laurier","origan","romarin","estragon","aneth seche","sauge",
   "basilic seche","persil seche","ciboulette sechee","menthe sechee",
   // graines et entiers
-  "clou de girofle","girofle","anis etoile","badiane","cardamome","graine de sesame","sesame","graine de fenouil","baie de genievre","genievre",
+  "clou de girofle","girofle","anis etoile","badiane","cardamome","graine de sesame","sesame","graine de fenouil","fenouil moulu","fenouil en poudre","baie de genievre","genievre",
   // mélanges et aides
   "bouillon cube","cube de bouillon","bouillon","fond de veau","sauce soja","moutarde","vinaigre","huile","farine","sucre","levure","maizena","bicarbonate"];
 const pantryKey=name=>root.Rayons?root.Rayons.keyOf(name):plain(name);
