@@ -72,7 +72,9 @@ const TYPES=[
   {id:"soupe",dish:"Soupe",label:"Soupe",icon:"🍲",words:["soupe","veloute","potage","minestrone","gaspacho","gazpacho","bouillon","garbure"]},
   // « Junk food » regroupe burgers, hot-dogs, pizzas, croques, fajitas, friterie… (id gardé « burger » pour les habitudes existantes)
   {id:"burger",dish:"Junk food",label:"Junk food",icon:"🍔",words:["burger","hamburger","cheeseburger","hot dog","hotdog","pizza","calzone",
-    "croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food"]},
+    "croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food",
+    "burrito","nachos","nugget","tender","chicken wing","wing","fish and chip","panini","wrap","gyros","shawarma","durum","doner",
+    "mitraillette","americain","fricadelle","chili cheese","onion ring","corn dog","mcdo","mc do","mcdonald","kfc","burger king","quick","subway","five guys"]},
   {id:"salade",dish:"Salade",label:"Salade",icon:"🥗",words:["salade","taboule","poke"]},
   {id:"poisson",dish:"Poisson",label:"Poisson",icon:"🐟",words:["poisson","saumon","cabillaud","colin","truite","dorade","merlu","lieu","sole","crevette","moule","fruits de mer"]},
   {id:"gratin",dish:"Gratin",label:"Gratin",icon:"🧀",words:["gratin","parmentier","moussaka"]},
