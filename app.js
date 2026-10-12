@@ -4,8 +4,6 @@ const {cleanAll}=Data;
 let S=cleanAll(JSON.parse(LS.s||"null"));
 const ORDER=["auchan","lidl","drive","boucherie","fermiers"];
 for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"],["boucherie","Boucherie"],["fermiers","Au pré des fermiers"]]) S.lists[id]=S.lists[id]||{id,name,ts:0};
-for(const h of [{id:"h-pates-lundi",type:"pates",days:[1],slot:"s"},{id:"h-soupe-dimanche",type:"soupe",days:[7],slot:"s"},
-  {id:"h-burger-vensam",type:"burger",days:[5,6],slot:"s"}]) if(!S.habits[h.id])S.habits[h.id]={...h,state:"on",auto:false,ts:0};
 let tab=LS.tab||"auchan", code=LS.code||"", pending=JSON.parse(LS.pending||"{}"); // pending : modifications pas encore envoyées
 
 function save(){LS.s=JSON.stringify(S);LS.pending=JSON.stringify(pending)}
@@ -492,7 +490,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>x.name.toLowerCase()===name.toLowerCase())||Data.suite(S,name))||null;
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v139";
+const BASE=4,VERSION="v140";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
