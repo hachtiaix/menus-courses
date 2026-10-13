@@ -461,7 +461,7 @@ function suggestDialog(){
 function sidesLearned(){
   const rec=live(S.recipes).filter(r=>!Data.recipeDessert(r)),key=s=>Data.plain(s).trim(),out=new Map();
   const isRec=x=>rec.find(r=>key(r.name)===key(x)),starch=x=>{const f=Data.foodFor(x,true);return!!(f&&f.cat==="fec")};
-  const texts=[...live(S.meals).map(m=>({t:m.text})),...live(S.combos||{}).map(c=>({t:c.text,id:c.id}))].filter(x=>x.t);
+  const texts=[...live(S.meals).map(m=>({t:m.text})),...live(S.combos||{}).filter(c=>c.kind!=="plaisir").map(c=>({t:c.text,id:c.id}))].filter(x=>x.t);
   for(const {t,id} of texts){const p=t.split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);if(p.length<2)continue;
     // le plat principal : la recette ; sinon un type de plat (« Pâtes » avec œufs…) ; sinon ce qui n'est pas un féculent
     // (« Poulet rôti » avec pommes de terre : les pommes de terre sont l'accompagnement)
@@ -521,7 +521,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v169";
+const BASE=4,VERSION="v170";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -797,7 +797,11 @@ function renderSettings(){
    ${(()=>{const acc=sidesLearned();return `<h3 class="ray" style="margin-top:22px">🍽️ Accompagnements</h3>
      <p class="mut">Ce qui va avec une recette ou un féculent (pâtes, riz…) : appris de vos repas, ou ajouté ici. 💡 en propose un, au hasard.</p>
      ${acc.length?`<div class="card">${acc.map(x=>`<div class="row"><span class="t">${esc(x.recipe)}<br><small class="mut">avec ${x.sides.map(s=>esc(s.side)+(s.id?` <button class="cdel" data-cdel="${s.id}" aria-label="Retirer">×</button>`:"")).join(" · ")}</small></span></div>`).join("")}</div>`:""}
-     <button class="btn sec" id="newc" style="width:100%">+ Association (ex. « Pâtes, Œufs »)</button>`})()}`,
+     <button class="btn sec" id="newc" style="width:100%">+ Association (ex. « Pâtes, Œufs »)</button>
+     <h3 class="ray" style="margin-top:22px">😋 Plats plaisir</h3>
+     <p class="mut">Un seul toutes les 2 semaines dans 💡. Un plat dont le nom contient l'un de ces mots en fait partie.</p>
+     <div class="card" style="padding:12px 14px;line-height:2.1">${Data.plaisirList(S).map(x=>`<span class="chipw">${esc(x.word.charAt(0).toUpperCase()+x.word.slice(1))}<button class="cdel" data-pdel="${x.id||""}" data-pw="${esc(x.word)}" aria-label="Retirer">×</button></span>`).join(" ")}</div>
+     <button class="btn sec" id="newp" style="width:100%;margin-top:8px">+ Ajouter un plat plaisir</button>`})()}`,
    rayons:`<div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
    ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>`,
    foyer:`<div class="card"><div class="row"><span class="t">Code de cet appareil<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"} · ${STATE[status]}</small></span><button class="btn sec" id="setcode">Saisir</button></div>
@@ -853,6 +857,11 @@ function renderSettings(){
   on("#newc","onclick",()=>{const t=(prompt("Association, séparée par une virgule (ex. « Pâtes, Œufs »)")||"").trim();
     if(!t)return;if(!/[,+]/.test(t)){alert("Séparez les deux par une virgule, par exemple « Pâtes, Œufs ».");return}
     touch("combos",{id:"c-"+uid(),text:t.split(/\s*[,+]\s*/).filter(Boolean).map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(", ")});render()});
+  on("#newp","onclick",()=>{const t=(prompt("Plat plaisir à ajouter (ex. « Welsh »)")||"").trim();if(!t)return;
+    const w=Data.plain(t).trim(),off=live(S.combos||{}).find(c=>c.kind==="plaisir"&&c.off&&Data.plain(c.text).trim()===w);
+    if(off)touch("combos",{...off,deleted:true});else touch("combos",{id:"p-"+uid(),text:t,kind:"plaisir"});render()});
+  document.querySelectorAll("[data-pw]").forEach(el=>el.onclick=()=>{const id=el.dataset.pdel,w=el.dataset.pw;if(!confirm(`Retirer « ${w} » des plats plaisir ?`))return;
+    if(id&&S.combos[id])touch("combos",{...S.combos[id],deleted:true});else touch("combos",{id:"o-"+uid(),text:w,kind:"plaisir",off:true});render()});
   document.querySelectorAll("[data-cdel]").forEach(el=>el.onclick=()=>{const c=S.combos[el.dataset.cdel];if(c&&confirm(`Retirer l'association « ${c.text} » ?`)){touch("combos",{...c,deleted:true});render()}});
   const ol=()=>LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan";
   on("#ordl","onchange",e=>{LS.ordl=e.target.value;render()});

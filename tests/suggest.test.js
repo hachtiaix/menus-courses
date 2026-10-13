@@ -198,3 +198,15 @@ test("junk food (burgers, pizza, raclette…) : une fois toutes les 2 semaines a
   const wk3 = Data.suggest(S, "2026-12-10", 10, [], () => 0.5, "2026-12-30-s").map((x) => x.name); // 15 jours : possible
   assert.ok(wk3.includes("Pizza maison") || wk3.includes("Raclette"));
 });
+
+test("plats plaisir : mots ajoutés ou retirés par l'utilisateur", () => {
+  const S = Data.cleanAll({ combos: { a: { id: "a", text: "Welsh", kind: "plaisir" }, b: { id: "b", text: "kebab", kind: "plaisir", off: true }, c: { id: "c", text: "Pâtes, Œufs" } } });
+  Data.setPlaisir(S);
+  assert.equal(Data.typeOf("Welsh au cheddar"), "burger");
+  assert.equal(Data.typeOf("Kebab frites"), null);
+  assert.equal(Data.typeOf("Pizza"), "burger");
+  const names = Data.suggest(S, "2026-12-10", 10, [], () => 0.5).map((x) => x.name);
+  assert.ok(!names.includes("Welsh")); // un mot de la liste n'est pas un plat à proposer
+  Data.setPlaisir({});
+  assert.equal(Data.typeOf("Kebab frites"), "burger");
+});

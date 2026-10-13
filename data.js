@@ -70,8 +70,8 @@ const TYPES=[
   {id:"pates",dish:"Pâtes",label:"Pâtes",icon:"🍝",words:["pate","spaghetti","tagliatelle","penne","fusilli","macaroni","coquillette","carbonara","bolognaise",
     "lasagne","ravioli","gnocchi","linguine","farfalle","tortellini","cannelloni","pesto"]},
   {id:"soupe",dish:"Soupe",label:"Soupe",icon:"🍲",words:["soupe","veloute","potage","minestrone","gaspacho","gazpacho","bouillon","garbure"]},
-  // « Junk food » regroupe burgers, hot-dogs, pizzas, croques, fajitas, friterie… (id gardé « burger » pour les habitudes existantes)
-  {id:"burger",dish:"Junk food",label:"Junk food",icon:"🍔",words:["burger","hamburger","cheeseburger","hot dog","hotdog","pizza","croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food","raclette","fondue savoyarde","fondue bourguignonne","burrito","nachos","nugget","tapas","chicken wing","wing","chili cheese","mcdo","mc do","mcdonald"]},
+  // « Plat plaisir » (ex-junk food) regroupe burgers, hot-dogs, pizzas, croques, fajitas, friterie… (id gardé « burger » pour les habitudes existantes)
+  {id:"burger",dish:"Plat plaisir",label:"Plat plaisir",icon:"😋",words:["plat plaisir","burger","hamburger","cheeseburger","hot dog","hotdog","pizza","croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food","raclette","fondue savoyarde","fondue bourguignonne","burrito","nachos","nugget","tapas","chicken wing","wing","chili cheese","mcdo","mc do","mcdonald"]},
   {id:"salade",dish:"Salade",label:"Salade",icon:"🥗",words:["salade","taboule","poke"]},
   {id:"poisson",dish:"Poisson",label:"Poisson",icon:"🐟",words:["poisson","saumon","cabillaud","colin","truite","dorade","merlu","lieu","sole","crevette","moule","fruits de mer"]},
   {id:"gratin",dish:"Gratin",label:"Gratin",icon:"🧀",words:["gratin","parmentier","moussaka"]},
@@ -80,9 +80,17 @@ const TYPES=[
   {id:"riz",dish:"Riz",label:"Riz / curry",icon:"🍛",words:["riz","risotto","curry","paella","biryani","chili"]},
 ];
 const TYPE_IDS=TYPES.map(t=>t.id);
+// Plats plaisir : la liste de départ (ci-dessus) se modifie dans Réglages → Habitudes (mots ajoutés ou retirés, dans S.combos)
+let PLAISIR_ADD=[],PLAISIR_OFF=new Set();
+const plaisirWord=t=>words(t).trim().replace(/s$/,"");
+function setPlaisir(S){const cs=Object.values((S&&S.combos)||{}).filter(c=>c&&!c.deleted&&c.kind==="plaisir");
+  PLAISIR_ADD=cs.filter(c=>!c.off).map(c=>plaisirWord(c.text)).filter(Boolean);PLAISIR_OFF=new Set(cs.filter(c=>c.off).map(c=>plaisirWord(c.text)))}
+const wordsOfType=t=>t.id==="burger"?[...t.words.filter(w=>!PLAISIR_OFF.has(plaisirWord(w))),...PLAISIR_ADD]:t.words;
+function plaisirList(S){setPlaisir(S);const T=TYPES.find(t=>t.id==="burger"),cs=Object.values((S&&S.combos)||{}).filter(c=>c&&!c.deleted&&c.kind==="plaisir"&&!c.off);
+  return [...T.words.filter(w=>w!=="plat plaisir"&&!PLAISIR_OFF.has(plaisirWord(w))).map(w=>({word:w,def:true})),...cs.map(c=>({word:c.text,id:c.id}))]}
 function typeOf(name){
   const n=words(name);let best=null,at=Infinity;
-  for(const t of TYPES)for(const w of t.words){const m=n.match(new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? "));if(m&&m.index<at){at=m.index;best=t.id}}
+  for(const t of TYPES)for(const w of wordsOfType(t)){const m=n.match(new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? "));if(m&&m.index<at){at=m.index;best=t.id}}
   return best;
 }
 // 2e plat appris : parmi les 3 dernières fois où ce plat (ou ce type de plat) a été mangé, au moins 2 avaient
@@ -177,7 +185,7 @@ function emojiFor(label){const n=words(label);let best=null,len=0;
   for(const [w,e] of EMOJI)if(w.length>len&&new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? ").test(n)){best=e;len=w.length}
   return best}
 let CUSTOM=[];
-function setCustom(S){CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
+function setCustom(S){setPlaisir(S);CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
   .map(r=>({id:r.id,icon:emojiFor(r.label)||CAT_ICON[r.cat],cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
 const allFoods=()=>[...FOODS,...CUSTOM];
 // Aliments inconnus d'une suite (« Saucisses, Asperges » → ["Asperges"]) : ni ingrédient, ni recette, ni déjà à classer ou écarté.
@@ -322,6 +330,7 @@ function seeded(str){let h=2166136261;for(const c of String(str))h=Math.imul(h^c
 // - l'écart en jours avec le repas le plus proche (passé ou prévu) du même plat décide :
 //   d'abord le type d'habitude du créneau, puis les plats pas mangés à moins d'un mois, puis les plus anciens.
 function suggest(S,today,n,exclude,rnd,slotKey){
+  setPlaisir(S);
   const ref=slotKey?slotKey.slice(0,10):today,mon=mondayOf(ref),sun=addDays(mon,6),month=+ref.slice(5,7);
   rnd=rnd||(slotKey?seeded(slotKey):Math.random);
   const key=s=>plain(s).trim(),dates={};
@@ -353,7 +362,7 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text))&&!onlyOther(m.text)&&!withRecipe(m.text))
     names.set(key(m.text),{name:m.text,season:guessSeason(m.text)});
   // associations ajoutées à la main sans recette (« Pâtes, Œufs ») : candidates comme un plat déjà fait
-  for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.text&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
+  for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.kind!=="plaisir"&&c.text&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
   // junk food : une fois toutes les 2 semaines au plus (pas proposée s'il y en a une prévue ou mangée à moins de 14 jours du créneau)
   const near={};
@@ -414,7 +423,9 @@ function clean(k,id,r){
     if(FOODS.some(f=>f.id===id))return{id,q,ts,deleted};
     const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,ts,deleted}}
-  if(k==="combos"){const text=str(r.text,120);return text&&/[,+]/.test(text)?{id,text,ts,deleted}:null}
+  if(k==="combos"){const text=str(r.text,120);
+    if(r.kind==="plaisir")return text?{id,text:text.slice(0,40),kind:"plaisir",off:r.off===true,ts,deleted}:null; // mot de la liste des plats plaisir
+    return text&&/[,+]/.test(text)?{id,text,ts,deleted}:null}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
     dessert:r.dessert===true?true:r.dessert===false?false:null,
@@ -448,5 +459,5 @@ function prune(S,now){
   return n;
 }
 root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
-  TYPES,typeOf,companionFor,plain,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
+  TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
