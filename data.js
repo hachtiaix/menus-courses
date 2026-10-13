@@ -71,7 +71,7 @@ const TYPES=[
     "lasagne","ravioli","gnocchi","linguine","farfalle","tortellini","cannelloni","pesto"]},
   {id:"soupe",dish:"Soupe",label:"Soupe",icon:"🍲",words:["soupe","veloute","potage","minestrone","gaspacho","gazpacho","bouillon","garbure"]},
   // « Plat plaisir » (ex-junk food) regroupe burgers, hot-dogs, pizzas, croques, fajitas, friterie… (id gardé « burger » pour les habitudes existantes)
-  {id:"burger",dish:"Plat plaisir",label:"Plat plaisir",icon:"😋",words:["plat plaisir","burger","hamburger","cheeseburger","hot dog","hotdog","pizza","croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food","raclette","fondue savoyarde","fondue bourguignonne","burrito","nachos","nugget","tapas","chicken wing","wing","chili cheese","mcdo","mc do","mcdonald"]},
+  {id:"burger",dish:"Plat gourmand",label:"Plat gourmand",icon:"😋",words:["plat gourmand","plat plaisir","burger","hamburger","cheeseburger","hot dog","hotdog","pizza","croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food","raclette","fondue savoyarde","fondue bourguignonne","burrito","nachos","nugget","tapas","chicken wing","wing","chili cheese","mcdo","mc do","mcdonald"]},
   {id:"salade",dish:"Salade",label:"Salade",icon:"🥗",words:["salade","taboule","poke"]},
   {id:"poisson",dish:"Poisson",label:"Poisson",icon:"🐟",words:["poisson","saumon","cabillaud","colin","truite","dorade","merlu","lieu","sole","crevette","moule","fruits de mer"]},
   {id:"gratin",dish:"Gratin",label:"Gratin",icon:"🧀",words:["gratin","parmentier","moussaka"]},
@@ -87,7 +87,7 @@ function setPlaisir(S){const cs=Object.values((S&&S.combos)||{}).filter(c=>c&&!c
   PLAISIR_ADD=cs.filter(c=>!c.off).map(c=>plaisirWord(c.text)).filter(Boolean);PLAISIR_OFF=new Set(cs.filter(c=>c.off).map(c=>plaisirWord(c.text)))}
 const wordsOfType=t=>t.id==="burger"?[...t.words.filter(w=>!PLAISIR_OFF.has(plaisirWord(w))),...PLAISIR_ADD]:t.words;
 function plaisirList(S){setPlaisir(S);const T=TYPES.find(t=>t.id==="burger"),cs=Object.values((S&&S.combos)||{}).filter(c=>c&&!c.deleted&&c.kind==="plaisir"&&!c.off);
-  return [...T.words.filter(w=>w!=="plat plaisir"&&!PLAISIR_OFF.has(plaisirWord(w))).map(w=>({word:w,def:true})),...cs.map(c=>({word:c.text,id:c.id}))]}
+  return [...T.words.filter(w=>w!=="plat gourmand"&&w!=="plat plaisir"&&!PLAISIR_OFF.has(plaisirWord(w))).map(w=>({word:w,def:true})),...cs.map(c=>({word:c.text,id:c.id}))]}
 function typeOf(name){
   const n=words(name);let best=null,at=Infinity;
   for(const t of TYPES)for(const w of wordsOfType(t)){const m=n.match(new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? "));if(m&&m.index<at){at=m.index;best=t.id}}
