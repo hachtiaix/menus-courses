@@ -65,13 +65,13 @@ const inSeason=(season,month)=>season==="ete"?!(month>=11||month<=3):season==="h
 
 // Types de plats (pour les habitudes), reconnus dans le nom : l'expression la plus à gauche l'emporte
 // (« Salade de pâtes » → salade, « Gratin de pâtes » → gratin).
-const ONCE_A_WEEK=["burger"]; // types limités à une fois par semaine (junk food)
+const RARE_TYPES={burger:14}; // types espacés d'au moins N jours (junk food : une fois toutes les 2 semaines)
 const TYPES=[
   {id:"pates",dish:"Pâtes",label:"Pâtes",icon:"🍝",words:["pate","spaghetti","tagliatelle","penne","fusilli","macaroni","coquillette","carbonara","bolognaise",
     "lasagne","ravioli","gnocchi","linguine","farfalle","tortellini","cannelloni","pesto"]},
   {id:"soupe",dish:"Soupe",label:"Soupe",icon:"🍲",words:["soupe","veloute","potage","minestrone","gaspacho","gazpacho","bouillon","garbure"]},
   // « Junk food » regroupe burgers, hot-dogs, pizzas, croques, fajitas, friterie… (id gardé « burger » pour les habitudes existantes)
-  {id:"burger",dish:"Junk food",label:"Junk food",icon:"🍔",words:["burger","hamburger","cheeseburger","hot dog","hotdog","pizza","croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food","burrito","nachos","nugget","tapas","chicken wing","wing","chili cheese","mcdo","mc do","mcdonald"]},
+  {id:"burger",dish:"Junk food",label:"Junk food",icon:"🍔",words:["burger","hamburger","cheeseburger","hot dog","hotdog","pizza","croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food","raclette","fondue savoyarde","fondue bourguignonne","burrito","nachos","nugget","tapas","chicken wing","wing","chili cheese","mcdo","mc do","mcdonald"]},
   {id:"salade",dish:"Salade",label:"Salade",icon:"🥗",words:["salade","taboule","poke"]},
   {id:"poisson",dish:"Poisson",label:"Poisson",icon:"🐟",words:["poisson","saumon","cabillaud","colin","truite","dorade","merlu","lieu","sole","crevette","moule","fruits de mer"]},
   {id:"gratin",dish:"Gratin",label:"Gratin",icon:"🧀",words:["gratin","parmentier","moussaka"]},
@@ -355,9 +355,11 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // associations ajoutées à la main sans recette (« Pâtes, Œufs ») : candidates comme un plat déjà fait
   for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.text&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
-  // junk food : une fois par semaine au plus (déjà prévue ou mangée cette semaine-là → plus proposée)
-  const weekTypes=new Set(Object.entries(S.meals||{}).filter(([k,m])=>!m.deleted&&m.text&&k!==slotKey&&k.slice(0,10)>=mon&&k.slice(0,10)<=sun).map(([k,m])=>typeOf(m.text)).filter(Boolean));
-  const capped=x=>ONCE_A_WEEK.includes(typeOf(x))&&weekTypes.has(typeOf(x));
+  // junk food : une fois toutes les 2 semaines au plus (pas proposée s'il y en a une prévue ou mangée à moins de 14 jours du créneau)
+  const near={};
+  for(const [k,m] of Object.entries(S.meals||{})){if(m.deleted||!m.text||k===slotKey)continue;const t=typeOf(m.text);
+    if(!RARE_TYPES[t])continue;const gap=Math.abs(Date.parse(k.slice(0,10))-t0)/DAY;if(gap<RARE_TYPES[t])near[t]=true}
+  const capped=x=>{const t=typeOf(x);return !!(RARE_TYPES[t]&&near[t])};
   const rows=[];
   for(const [k,x] of names){
     if(ex.has(k)||!inSeason(x.season,month)||capped(x.name))continue;
