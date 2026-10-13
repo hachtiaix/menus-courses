@@ -25,7 +25,7 @@ const K={
   pain:"pain baguette brioche croissant viennoiserie gateau biscotte bun wrap tortilla",
   boucherie:"boeuf veau porc agneau poulet dinde canard lapin steak hache viande escalope roti cote filet bavette entrecote saucisse merguez chipolata poisson saumon cabillaud colin thon crevette moule huitre crabe dorade bar truite maquereau gambas",
   charcuterie:"jambon lardon bacon saucisson chorizo rillette terrine salami coppa knacki quiche pizza traiteur taboule surimi",
-  cremerie:"lait beurre creme yaourt yogourt fromage emmental gruyere comte mozzarella parmesan feta chevre camembert brie raclette reblochon roquefort mascarpone ricotta cheddar gouda edam maroille munster cantal tomme morbier mimolette oeuf skyr faisselle",
+  cremerie:"lait beurre creme yaourt yogourt fromage emmental gruyere comte mozzarella parmesan feta chevre camembert brie raclette reblochon roquefort mascarpone ricotta beaufort vacherin cheddar gouda edam maroille munster cantal tomme morbier mimolette oeuf skyr faisselle",
   sale:"chapelure pate spaghetti tagliatelle penne coquillette riz semoule quinoa lentille farine huile vinaigre sel poivre epice paprika cumin curry curcuma cannelle muscade cayenne colombo safran thym laurier origan romarin estragon sauge girofle badiane cardamome sesame genievre maizena bicarbonate soja moutarde mayonnaise ketchup sauce bouillon conserve olive cornichon chip cracker soupe puree concentre coulis",
   sucre:"sucre chocolat cafe the infusion cereale muesli confiture miel nutella madeleine compote levure vanille cacao bonbon biscuit",
   boissons:"eau jus soda coca limonade sirop boisson",
@@ -59,7 +59,7 @@ const PHRASES=[
   ["lardon fume","charcuterie"],["saucisse de francfort","charcuterie"],["saucisse de strasbourg","charcuterie"],["ras el hanout","sale"],["herbe de provence","sale"],["piment d espelette","sale"],["quatre epice","sale"],
   ["fond de veau","sale"],["fleur de sel","sale"],["gros sel","sale"],["anis etoile","sale"],["baie de genievre","sale"],["graine de fenouil","sale"],
   ["basilic seche","sale"],["persil seche","sale"],["ciboulette sechee","sale"],["menthe sechee","sale"],["coriandre en poudre","sale"],["gingembre en poudre","sale"],
-  ["ail en poudre","sale"],["oignon en poudre","sale"],["poivre 5 baie","sale"],["fenouil moulu","sale"],["chair de tomate","sale"],["poudre d amande","sucre"],["speculoos","sucre"],["amande emondee","sucre"],["abricot sec","sucre"],["fruit sec","sucre"],["raisin sec","sucre"],["pruneau","sucre"],["amande en poudre","sucre"],["amande effilee","sucre"],["arome","sucre"],["coulis de tomate","sale"],["tomate concassee","sale"],["fenouil en poudre","sale"],["tomate pelee","sale"],["boite de tomate","sale"],["coeur de palmier","sale"],
+  ["ail en poudre","sale"],["oignon en poudre","sale"],["poivre 5 baie","sale"],["fenouil moulu","sale"],["chair de tomate","sale"],["poudre d amande","sucre"],["oignon grelot","sale"],["viande des grison","charcuterie"],["fromage a raclette","cremerie"],["fromage a fondue","cremerie"],["speculoos","sucre"],["amande emondee","sucre"],["abricot sec","sucre"],["fruit sec","sucre"],["raisin sec","sucre"],["pruneau","sucre"],["amande en poudre","sucre"],["amande effilee","sucre"],["arome","sucre"],["coulis de tomate","sale"],["tomate concassee","sale"],["fenouil en poudre","sale"],["tomate pelee","sale"],["boite de tomate","sale"],["coeur de palmier","sale"],
 ].map(([p,r])=>[norm(p),r]);
 const map=new Map();for(const [w,r] of RULES)if(w&&!w.includes(" ")&&!map.has(w))map.set(w,r);
 
