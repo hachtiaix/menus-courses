@@ -14,7 +14,9 @@ const MIN_CODE=10;
 const cfg=window.CONFIG, canSync=()=>cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY&&code.length>=MIN_CODE;
 const H=()=>({apikey:cfg.SUPABASE_ANON_KEY,Authorization:"Bearer "+cfg.SUPABASE_ANON_KEY,"Content-Type":"application/json"});
 // Le code part dans le corps de la requête, jamais dans l'URL.
-const rpc=(fn,body)=>fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",headers:H(),body:JSON.stringify(body)});
+// délai maximal de 20 s : avec un réseau faible, une requête qui n'aboutit jamais bloquait la synchro pour de bon
+const rpc=(fn,body)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),20000);
+  return fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",headers:H(),body:JSON.stringify(body),signal:c.signal}).finally(()=>clearTimeout(t))};
 let syncing=false,again=false;
 // Synchro par différences : on ne reçoit que ce qui a changé depuis la dernière visite (date du serveur,
 // avec 1 minute de recouvrement pour ne rien rater) et on n'envoie que nos modifications.
@@ -521,7 +523,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v172";
+const BASE=4,VERSION="v173";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
