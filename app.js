@@ -523,7 +523,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v173";
+const BASE=4,VERSION="v174";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -991,10 +991,11 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout
 addEventListener("online",sync);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});
 // Récupère les changements des autres appareils ; les siens partent tout de suite (touch).
-// Récupère les changements des autres appareils toutes les minutes (les siens partent tout de suite).
+// Récupère les changements des autres appareils (les siens partent tout de suite).
 let lastSync=0;
 setInterval(()=>{const a=document.activeElement,onList=tab!=="menus"&&tab!=="settings";
-  if(document.hidden||(a&&a.matches("input,textarea,select"))||Date.now()-lastSync<60000)return;lastSync=Date.now();sync()},5000);
+  // toutes les 15 s quand l'app est visible (à deux sur les menus ou les listes) ; l'affichage attend la fin d'une saisie (safeRender)
+  if(document.hidden||Date.now()-lastSync<15000)return;lastSync=Date.now();sync()},5000);
 if("serviceWorker" in navigator){
   const had=!!navigator.serviceWorker.controller;
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update());
