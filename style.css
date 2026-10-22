@@ -310,3 +310,4 @@ p.count{margin:0 4px 2px;font-size:12px;text-align:right}h3.ray.letter{margin:10
 /* listes de choix de plats : défilantes (au doigt aussi) */
 .slotw .sug{max-height:min(46vh,340px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #add .sug{max-height:min(46vh,340px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.slotw .sug{margin-left:0}

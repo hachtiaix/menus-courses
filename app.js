@@ -531,7 +531,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v175";
+const BASE=4,VERSION="v176";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -544,6 +544,15 @@ function scaleText(t,f){
 // Date du jour au format des clés de repas (AAAA-MM-JJ), à midi pour éviter les décalages UTC.
 const todayKey=()=>{const x=new Date();x.setHours(12,0,0,0);return x.toISOString().slice(0,10)};
 // Un créneau du planning. Jour passé : plus rien à compléter, le repas reste visible et déplaçable.
+// Liste de choix sous (ou au-dessus) du champ : au bas de l'écran (derniers jours de la semaine, clavier ouvert) elle s'ouvre
+// vers le haut et sa hauteur s'adapte à la place visible, pour ne jamais passer sous la barre du bas.
+function placeBox(box,host,slot){
+  const vv=window.visualViewport,navH=(document.querySelector("nav")||{offsetHeight:64}).offsetHeight,
+    bottom=(vv?vv.offsetTop+vv.height:innerHeight)-navH-6,topEdge=(document.querySelector("header")||{offsetHeight:60}).offsetHeight+6,
+    r=slot.getBoundingClientRect(),below=bottom-r.bottom-4,above=r.top-topEdge-4,want=Math.min(box.scrollHeight,340);
+  if(below>=Math.min(want,180)||below>=above){box.style.maxHeight=Math.max(110,Math.min(340,below))+"px";return}
+  box.style.top="auto";box.style.bottom=(host.offsetHeight-slot.offsetTop+4)+"px";box.style.maxHeight=Math.max(110,Math.min(340,above))+"px";
+}
 function slotHtml(key,label,past){
   const e=S.meals[key]||{},n=e.servings||BASE,b=bought(e),extras=extrasOf(key),has2=extras.length>=MAX_DISHES-1; // has2 : plus de place pour un plat de plus
   const lock=past?(e.text?'readonly title="Jour passé"':"disabled"):b?'readonly title="Ingrédients déjà achetés : déplacez le repas avec ⇄"':"";
@@ -633,8 +642,7 @@ function renderMenus(){
       box.addEventListener("touchstart",e=>{sy=e.touches[0].clientY;moved=false;el._pick=Date.now()},{passive:true});
       box.addEventListener("touchmove",e=>{if(Math.abs(e.touches[0].clientY-sy)>8)moved=true;el._pick=Date.now()},{passive:true});
       box.addEventListener("touchend",e=>{el._pick=Date.now();if(moved)return;const b=e.target.closest("button");if(!b)return;e.preventDefault();choose(b)});
-      el.closest(".slotw").appendChild(box);
-      requestAnimationFrame(()=>box.scrollIntoView({block:"nearest"}));
+      const sw=el.closest(".slotw");sw.appendChild(box);placeBox(box,sw,el.closest(".slot"));
     };
     // créneau vide touché sans rien taper : les meilleures suggestions (saison, pas faites depuis un mois)
     el.tips=()=>{if(el.readOnly||el.disabled||el.value.trim())return;
