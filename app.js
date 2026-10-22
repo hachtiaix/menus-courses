@@ -127,11 +127,19 @@ function renderList(id){
   const closeSug=()=>form.querySelectorAll(".sug").forEach(x=>x.remove());
   inp.oninput=()=>{
     closeSug();const q=nm(inp.value.trim());if(!q)return;
-    const hits=known().filter(e=>nm(e.name).startsWith(q)||nm(e.name).includes(" "+q)) // début du nom ou d'un mot (« fraîche » → Crème fraîche).sort((a,b)=>b.n-a.n||b.ts-a.ts).slice(0,8);
+    const hits=known().filter(e=>nm(e.name).startsWith(q)||nm(e.name).includes(" "+q)) // début du nom ou d'un mot (« fraîche » → Crème fraîche)
+      .sort((a,b)=>b.n-a.n||b.ts-a.ts).slice(0,25);
     if(!hits.length)return;
     const box=document.createElement("div");box.className="sug";
     box.innerHTML=hits.map(e=>`<button type="button" data-t="${esc(e.text)}">${esc(e.text)}</button>`).join("");
-    box.onpointerdown=ev=>{const b=ev.target.closest("button");if(!b)return;ev.preventDefault();addToList(id,b.dataset.t);inp.value="";closeSug();render();$("#new").focus()};
+    // au toucher : on choisit seulement si le doigt n'a pas bougé (la liste défile au doigt) ; à la souris, tout de suite
+    const choose=b=>{addToList(id,b.dataset.t);inp.value="";closeSug();render();$("#new").focus()};
+    box.onmousedown=ev=>ev.preventDefault();
+    box.onpointerdown=ev=>{if(ev.pointerType==="touch")return;const b=ev.target.closest("button");if(!b)return;ev.preventDefault();choose(b)};
+    let sy=0,moved=false;
+    box.addEventListener("touchstart",ev=>{sy=ev.touches[0].clientY;moved=false},{passive:true});
+    box.addEventListener("touchmove",ev=>{if(Math.abs(ev.touches[0].clientY-sy)>8)moved=true},{passive:true});
+    box.addEventListener("touchend",ev=>{if(moved)return;const b=ev.target.closest("button");if(!b)return;ev.preventDefault();choose(b)});
     form.appendChild(box);
   };
   inp.onblur=()=>setTimeout(closeSug,150);
@@ -523,7 +531,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v174";
+const BASE=4,VERSION="v175";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -612,18 +620,25 @@ function renderMenus(){
       clearSug();if(!hits.length)return;
       const box=document.createElement("div");box.className="sug";
       box.innerHTML=hits.map(x=>`<button type="button" data-t="${esc(x.t)}" ${x.food?'data-food="1"':""}>${ico(x.icon)} ${esc(x.food?x.t.split(/[,+]/).pop().trim():x.t)}${x.note?` <small class="mut">${esc(x.note)}</small>`:""}</button>`).join("");
-      // iPhone : sans ça, toucher une suggestion ferme d'abord le champ (et validait le texte à moitié tapé)
-      box.addEventListener("touchstart",e=>{el._pick=Date.now();e.preventDefault()},{passive:false});box.onmousedown=e=>e.preventDefault();
-      box.onpointerdown=e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();el._pick=Date.now();
+      // iPhone : toucher une suggestion ne doit pas fermer le champ ; mais la liste doit pouvoir défiler au doigt :
+      // au toucher, on choisit seulement si le doigt n'a pas bougé (relâché sur le même bouton) ; à la souris, tout de suite
+      const choose=b=>{el._pick=Date.now();
         if(b.dataset.food){addChip(b.dataset.t.split(/[,+]/).pop().trim());clearSug();el.focus();return} // pastille, puis l'aliment suivant
         // plat déjà fait qui est une suite d'aliments (« Steak haché », « Poulet, riz ») : en pastilles, on continue la saisie
         const t=b.dataset.t,tags=live(S.recipes).some(r=>norm(r.name)===norm(t))?null:Data.suiteTags(S,t);
         if(tags)tags.forEach(x=>addChip(x.t));else addChip(t);clearSug();el.focus()};
+      box.onmousedown=e=>e.preventDefault();
+      box.onpointerdown=e=>{if(e.pointerType==="touch")return;const b=e.target.closest("button");if(!b)return;e.preventDefault();choose(b)};
+      let sy=0,moved=false;
+      box.addEventListener("touchstart",e=>{sy=e.touches[0].clientY;moved=false;el._pick=Date.now()},{passive:true});
+      box.addEventListener("touchmove",e=>{if(Math.abs(e.touches[0].clientY-sy)>8)moved=true;el._pick=Date.now()},{passive:true});
+      box.addEventListener("touchend",e=>{el._pick=Date.now();if(moved)return;const b=e.target.closest("button");if(!b)return;e.preventDefault();choose(b)});
       el.closest(".slotw").appendChild(box);
+      requestAnimationFrame(()=>box.scrollIntoView({block:"nearest"}));
     };
     // créneau vide touché sans rien taper : les meilleures suggestions (saison, pas faites depuis un mois)
     el.tips=()=>{if(el.readOnly||el.disabled||el.value.trim())return;
-      showBox(Data.suggest(S,todayKey(),5,[],undefined,el.dataset.m).map(x=>({t:x.name,icon:x.habit?typeById(x.habit).icon:"💡",note:x.days==null?"jamais fait":`il y a ${x.days} j`})))};
+      showBox(Data.suggest(S,todayKey(),12,[],undefined,el.dataset.m).map(x=>({t:x.name,icon:x.habit?typeById(x.habit).icon:"💡",note:x.days==null?"jamais fait":`il y a ${x.days} j`})))};
     // Suite d'aliments en cours de saisie : pastilles devant le champ, Entrée valide l'aliment et passe au suivant.
     el._items=[];
     const drawChips=()=>{const w=el.parentElement;let c=w.querySelector(".chips");
@@ -652,7 +667,7 @@ function renderMenus(){
         .map(({f})=>({t:head+f.label,icon:f.icon,food:true})):[];
       if(el._items.length){showBox([...foods.slice(0,3),...live(S.recipes).filter(r=>norm(r.name).includes(seg)).slice(0,3).map(r=>({t:r.name,icon:"📖"}))]);return}
       if(cut>=0){showBox(foods);return}
-      showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,5)
+      showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,40)
         .filter(x=>!foods.some(f=>norm(f.t)===norm(x.t))).map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"}))]);
     };
     // Fin de saisie en pastilles : seulement si le champ reste vraiment quitté (l'iPhone le quitte un instant quand on
