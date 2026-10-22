@@ -531,7 +531,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v176";
+const BASE=4,VERSION="v177";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -646,7 +646,8 @@ function renderMenus(){
     };
     // créneau vide touché sans rien taper : les meilleures suggestions (saison, pas faites depuis un mois)
     el.tips=()=>{if(el.readOnly||el.disabled||el.value.trim())return;
-      showBox(Data.suggest(S,todayKey(),12,[],undefined,el.dataset.m).map(x=>({t:x.name,icon:x.habit?typeById(x.habit).icon:"💡",note:x.days==null?"jamais fait":`il y a ${x.days} j`})))};
+      // 10 idées tirées au hasard parmi les 30 meilleures (saison, pas faites récemment) : une liste différente à chaque ouverture
+      showBox(Data.suggest(S,todayKey(),30,[],Math.random,el.dataset.m).map(v=>[Math.random(),v]).sort((p,q)=>p[0]-q[0]).slice(0,10).map(p=>p[1]).map(x=>({t:x.name,icon:x.habit?typeById(x.habit).icon:"💡",note:x.days==null?"jamais fait":`il y a ${x.days} j`})))};
     // Suite d'aliments en cours de saisie : pastilles devant le champ, Entrée valide l'aliment et passe au suivant.
     el._items=[];
     const drawChips=()=>{const w=el.parentElement;let c=w.querySelector(".chips");
