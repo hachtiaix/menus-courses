@@ -531,7 +531,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v178";
+const BASE=4,VERSION="v179";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1020,7 +1020,8 @@ let lastSync=0;
 setInterval(()=>{const a=document.activeElement,onList=tab!=="menus"&&tab!=="settings";
   // une fois par minute quand l'app est visible (même si un champ est sélectionné : on ne fait que lire) ; l'affichage attend la fin d'une saisie.
   // Chaque validation d'un repas relit aussi les changements de l'autre téléphone (sync lit avant d'envoyer), et l'ouverture d'un onglet aussi.
-  if(document.hidden||Date.now()-lastSync<60000)return;lastSync=Date.now();sync()},5000);
+  // sur l'onglet Menus (à deux sur la semaine) : toutes les 15 s ; ailleurs, une fois par minute
+  if(document.hidden||Date.now()-lastSync<(tab==="menus"?15000:60000))return;lastSync=Date.now();sync()},5000);
 window.syncSoon=()=>{if(!document.hidden&&Date.now()-lastSync>8000){lastSync=Date.now();sync()}};
 if("serviceWorker" in navigator){
   const had=!!navigator.serviceWorker.controller;
