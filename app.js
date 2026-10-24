@@ -531,7 +531,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v177";
+const BASE=4,VERSION="v178";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -800,7 +800,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
     close();render();if(after)after();
   };
 }
-$("#tabs").onclick=e=>{const t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t){tab=LS.tab=t;render();scrollTo(0,0)}};
+$("#tabs").onclick=e=>{const t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t){tab=LS.tab=t;render();scrollTo(0,0);if(window.syncSoon)syncSoon()}};
 $("#cfg").onclick=()=>{stab="recettes";tab=LS.tab="settings";render();scrollTo(0,0)};
 let stab="recettes"; // onglet des réglages ; « Recettes » à chaque ouverture
 const STABS=[["recettes","Recettes"],["aliments","Ingrédients"],["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
@@ -1018,8 +1018,10 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});
 // Récupère les changements des autres appareils (les siens partent tout de suite).
 let lastSync=0;
 setInterval(()=>{const a=document.activeElement,onList=tab!=="menus"&&tab!=="settings";
-  // toutes les 15 s quand l'app est visible (à deux sur les menus ou les listes) ; l'affichage attend la fin d'une saisie (safeRender)
-  if(document.hidden||Date.now()-lastSync<15000)return;lastSync=Date.now();sync()},5000);
+  // une fois par minute quand l'app est visible (même si un champ est sélectionné : on ne fait que lire) ; l'affichage attend la fin d'une saisie.
+  // Chaque validation d'un repas relit aussi les changements de l'autre téléphone (sync lit avant d'envoyer), et l'ouverture d'un onglet aussi.
+  if(document.hidden||Date.now()-lastSync<60000)return;lastSync=Date.now();sync()},5000);
+window.syncSoon=()=>{if(!document.hidden&&Date.now()-lastSync>8000){lastSync=Date.now();sync()}};
 if("serviceWorker" in navigator){
   const had=!!navigator.serviceWorker.controller;
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update());
