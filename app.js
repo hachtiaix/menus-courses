@@ -129,6 +129,11 @@ function renderList(id){
     closeSug();const q=nm(inp.value.trim());if(!q)return;
     const hits=known().filter(e=>nm(e.name).startsWith(q)||nm(e.name).includes(" "+q)) // début du nom ou d'un mot (« fraîche » → Crème fraîche)
       .sort((a,b)=>b.n-a.n||b.ts-a.ts).slice(0,25);
+    // « cube de bouillon », « bouillon » : on propose les 3 sortes en premier, pas le bouillon sans précision
+    if(q.length>=3&&["cube de bouillon","bouillon"].some(b=>b.startsWith(q)||q.startsWith(b))){
+      const B=["Bouillon de légumes","Bouillon de volailles","Bouillon de bœuf"],bk=B.map(b=>nm(b));
+      const others=hits.filter(e=>!bk.includes(nm(e.name))&&!/^(cubes? de )?bouillons?$/.test(nm(e.name)));
+      hits.splice(0,hits.length,...B.map(b=>({name:b,text:b})),...others)}
     if(!hits.length)return;
     const box=document.createElement("div");box.className="sug";
     box.innerHTML=hits.map(e=>`<button type="button" data-t="${esc(e.text)}">${esc(e.text)}</button>`).join("");
@@ -531,7 +536,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v181";
+const BASE=4,VERSION="v182";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
