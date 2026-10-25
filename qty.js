@@ -24,7 +24,17 @@ function num(s){
 }
 const stripDe=s=>s.trim().replace(/^(de\s+|des\s+|d['’]\s*)/i,"").trim();
 
-function parse(text){
+// Synonymes : « cube de bouillon », « bouillon de légume », « cubes de bouillon volaille »…
+// → un seul nom, pour cumuler les lignes (« bouillon de légumes » / « bouillon de volaille »).
+const BOUILLON_SKIP=new Set(["cube","cubes","tablette","tablettes","de","d","en","au","aux","du","bouillon","bouillons"]);
+function canon(name){const w=String(name||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z ]+/g," ").split(/\s+/).filter(Boolean);
+  if(!w.some(x=>/^bouillons?$/.test(x)))return name;
+  const rest=w.filter(x=>!BOUILLON_SKIP.has(x));
+  if(!rest.length||rest.every(x=>/^legumes?$/.test(x)))return "bouillon de légumes";
+  if(rest.every(x=>/^(volailles?|poulets?)$/.test(x)))return "bouillon de volaille";
+  return name}
+function parse(text){const p=parse0(text);if(p.name)p.name=canon(p.name);return p}
+function parse0(text){
   const t=String(text||"").trim();
   if(/\s\+\s/.test(t)){ // ancienne ligne combinée : on additionne les boîtes
     const parts=t.split(/\s\+\s/).map(x=>parse(x)),last=parts[parts.length-1];

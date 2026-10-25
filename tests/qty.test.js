@@ -69,3 +69,11 @@ test("pluriels : -eau/-au → x, chou(x), chou-fleur, adjectifs après le nom", 
   assert.equal(up("1 poisson frais"), "2 poissons frais");
   assert.equal(up("1 noix de saint-jacques"), "2 noix de saint-jacques");
 });
+
+test("bouillon : synonymes cumulés", () => {
+  assert.equal(Qty.parse("cube de bouillon").name, "bouillon de légumes");
+  assert.equal(Qty.parse("Bouillon de legume").name, "bouillon de légumes");
+  assert.equal(Qty.parse("2 cubes de bouillon de volaille").name, "bouillon de volaille");
+  assert.equal(Qty.parse("bouillon de boeuf").name, "bouillon de boeuf");
+  assert.equal(Qty.add("1 cube de bouillon", "2 bouillons de légumes"), "3 bouillons de légumes");
+});
