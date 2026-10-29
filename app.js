@@ -224,7 +224,9 @@ function addBoxes(list,p,except){
 // Ordre des rayons d'un magasin : celui choisi dans les réglages, puis les autres dans l'ordre par défaut.
 function rayonOrder(list){const o=(S.lists[list]&&S.lists[list].order)||[];
   return [...o.map(x=>Rayons.byId[x]).filter(Boolean),...Rayons.list.filter(r=>!o.includes(r.id))]}
-function rayonOf(text){const n=Qty.parse(text).name||text,k=Rayons.keyOf(n);return (S.aisles[k]&&!S.aisles[k].deleted&&S.aisles[k].rayon)||Rayons.guess(n)}
+// une boîte de légumes (« 1 boîte de tomates ») : rayon conserves (épicerie salée), pas fruits et légumes
+function rayonOf(text){const p=Qty.parse(text),n=p.name||text,k=Rayons.keyOf(n);if(S.aisles[k]&&!S.aisles[k].deleted&&S.aisles[k].rayon)return S.aisles[k].rayon;
+  const g=Rayons.guess(n);return g==="fruits"&&(p.kind==="box"||p.kind==="boxany")?"sale":g}
 // Rayon d'un nouvel article (jamais vu, nom inconnu) : choix obligatoire avant de l'ajouter
 function rayonAsk(name,done){
   const ov=document.createElement("div");ov.className="ov";
@@ -568,7 +570,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v189";
+const BASE=4,VERSION="v190";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);

@@ -47,7 +47,7 @@ for(const [r,list] of Object.entries(K)){
 const PHRASES=[
   ["pomme de terre","fruits"],["petit pois","fruits"],["haricot vert","fruits"],["chou fleur","fruits"],
   ["pain de mie","pain"],["pain au chocolat","pain"],
-  ["thon en boite","sale"],["sardine en boite","sale"],["sauce tomate","sale"],["pate a tartiner","sucre"],
+  ["thon en boite","sale"],["sardine en boite","sale"],["sauce tomate","sale"],["pulpe de tomate","sale"],["tomate en boite","sale"],["tomate pelee","sale"],["tomate concassee","sale"],["coulis de tomate","sale"],["passata","sale"],["pesto","sale"],["pate a tartiner","sucre"],
   ["lait concentre","sucre"],["fromage blanc","cremerie"],
   ["creme fraiche","cremerie"],["creme hydratante","hygiene"],["the glace","boissons"],["jus de","boissons"],
   ["noix de saint jacque","boucherie"],["osso buco","boucherie"],["osso bucco","boucherie"],["jarret","boucherie"],["blanc de poulet","charcuterie"],["jambon cru","charcuterie"],
