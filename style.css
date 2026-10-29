@@ -311,3 +311,22 @@ p.count{margin:0 4px 2px;font-size:12px;text-align:right}h3.ray.letter{margin:10
 .slotw .sug{max-height:min(46vh,340px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #add .sug{max-height:min(46vh,340px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .slotw .sug{margin-left:0}
+
+/* « + » unifiés : rond vert pâle + texte vert (comme le + des recettes) ; bouton d'ajout de liste rond comme le gros + */
+.addrow{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;font:inherit;font-weight:600;color:var(--accent);text-align:left;padding:10px 4px;margin:4px 0;cursor:pointer}
+.addrow i{flex:none;width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:22px;line-height:1;
+  background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.row.add-food.addrow{opacity:1;color:var(--accent);padding:10px 0}
+.btn.addb{width:48px;border-radius:50%;padding:0;font-size:26px;font-weight:500;line-height:1}
+.seg button{font-size:14px;padding-left:2px;padding-right:2px}
+.ov{z-index:30} /* les fenêtres passent au-dessus de la barre du bas (les boutons Ajouter étaient cachés dessous) */
+/* listes : boutons d'un article affichés seulement quand on le touche, sur une ligne dessous */
+.row.item{flex-wrap:wrap}.row.item .t{flex:1;cursor:pointer}
+.row.item .ctl{display:none}
+.row.item.open .ctl{display:flex;align-items:center;justify-content:flex-end;gap:10px;width:100%;padding:2px 0 4px}
+.row.item.open{background:color-mix(in srgb,var(--accent) 6%,transparent);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px}
+.row.item .pill.ied{width:30px;height:30px;padding:0;font-size:14px}
+/* « + » exactement comme le gros + des recettes : rond vert plein, + blanc fin, ombre */
+.addrow i{width:42px;height:42px;background:var(--accent);color:#fff;font-size:28px;font-weight:400;box-shadow:0 3px 10px rgba(0,0,0,.22);padding-bottom:3px;box-sizing:border-box}
+.btn.addb{font-size:32px;font-weight:400;padding:0 0 3px;box-shadow:0 3px 10px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center}
+.addrow:active i,.btn.addb:active{transform:scale(.94)}
