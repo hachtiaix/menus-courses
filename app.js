@@ -93,10 +93,13 @@ function renderList(id){
   // 🏠 à vérifier au placard : en gris, « Il en manque » (devient un article à acheter) ou « J'en ai » (retiré)
   // 🏠 avec les quantités demandées par chaque repas (pour voir s'il en reste assez), et le total quand il s'additionne ;
   // seulement pour ce qui se mesure vraiment (beurre, farine, sucre…), pas pour les épices, l'huile ou le vinaigre
+  // (et pour les boîtes de conserve : combien de boîtes)
   const QTY_PANTRY=/^(beurre|farine|sucre|maizena|levure)/;
   const need=i=>{const k=Data.pantryKey(pantryName(i.text)),out=[],withQty=QTY_PANTRY.test(Data.plain(pantryName(i.text)).trim());
-    for(const mk of i.meals||[]){const m=S.meals[mk];if(!m||m.deleted||!m.text)continue;const r=recipeOf(m.text);
-      const B=(r&&r.serves)||BASE,n=m.servings||BASE,lines=r&&withQty?r.ingredients.filter(g=>Data.pantryKey(pantryName(g.t))===k).map(g=>Qty.buy(g.t,n/B,B)):[];
+    for(const mk of i.meals||[]){const m=S.meals[mk];if(!m||m.deleted||!m.text)continue;const r=recipeOf(m.text),a=m.added;
+      // ce que le repas a demandé (enregistré à l'ajout), sinon la recette
+      const B=a?a.b||BASE:(r&&r.serves)||BASE,n=a?a.n:m.servings||BASE,src=a?a.items:r?r.ingredients:[];
+      const lines=src.filter(g=>Data.pantryKey(pantryName(g.t))===k&&(withQty||isCan(g.t))).map(g=>Qty.buy(g.t,n/B,B));
       out.push({meal:m.text,lines})}
     const all=out.flatMap(x=>x.lines),tot=all.length>1?all.reduce((s,t)=>s&&Qty.add(s,t)):all[0];
     const q=t=>{const nm=pantryName(t),j=t.toLowerCase().lastIndexOf(nm.toLowerCase());return (j>0?t.slice(0,j):"").replace(/\s+(?:de|d['’])\s*$/i,"").trim()};
@@ -161,7 +164,11 @@ function renderList(id){
 // Ajoute un article à une liste en cumulant avec un article identique non coché (« 1 oignon » + « 3 oignons » = « 4 oignons »).
 // Ingrédient « placard » d'un repas : une seule ligne 🏠 « à vérifier » (sans quantité), gardée jusqu'au dernier repas qui en a besoin.
 // Rien si on l'achète déjà (article normal) ; pas de doublon si deux repas en ont besoin.
-const pantryOf=t=>Data.isPantry(S,pantryName(t));
+// boîtes de conserve (« 1 boîte de haricots rouges », « thon en boîte ») : à vérifier au placard, comme les épices
+const isCan=t=>{const k=Qty.parse(t).kind;return k==="box"||k==="boxany"||/\b(boites?|conserves?)\b/.test(Data.plain(t))};
+const pantryOf=t=>{const nm=pantryName(t),r=S.stores[Data.pantryKey(nm)];
+  if(r&&!r.deleted&&r.pantry!=null)return r.pantry; // choix fait à la main (🏠 dans la recette)
+  return Data.isPantry(S,nm)||isCan(t)};
 // nom seul, sans la mesure : « 2 c. à soupe de moutarde » → « moutarde »
 const MEASURE=/^(?:c\.?\s*[àa]\s*(?:s|c)\.?|c\.?\s*s\.?|c\.?\s*c\.?|cs|cc|càs|càc|cuil(?:l[eè]re)?s?\.?(?:\s*[àa]\s*(?:soupe|café|cafe))?|c\.?(?:\s*[àa]\s*(?:soupe|café|cafe))|pinc[ée]es?|sachets?|pots?|bocal|bocaux|tubes?|brins?|feuilles?|traits?|filets?|noisettes?|morceaux?|bâtons?|branches?|cubes?|tablettes?)\s+(?:de\s+|d['’]\s*)/i;
 const pantryName=t=>{let nm=(Qty.parse(t).name||t).trim();for(let i=0;i<2;i++)nm=nm.replace(MEASURE,"");return nm};
@@ -536,7 +543,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v184";
+const BASE=4,VERSION="v185";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -807,7 +814,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
     const ids=new Set(prev?prev.ids||[]:[]);
     if(!prev||sig(prev.items,prev.n)!==sig(now,n)){
       if(prev)prev.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,prev.n/(prev.b||BASE),prev.b||BASE)));
-      rows.filter(x=>x.on).forEach(x=>(pantryOf(x.orig||x.shown)?addCheck(x.store,x.shown,mealKey&&mealKey.slice(0,10),mealKey):addToList(x.store,x.shown)).forEach(i=>ids.add(i)));
+      rows.filter(x=>x.on).forEach(x=>(pantryOf(x.orig||x.shown)||isCan(x.shown)?addCheck(x.store,x.shown,mealKey&&mealKey.slice(0,10),mealKey):addToList(x.store,x.shown)).forEach(i=>ids.add(i)));
       pan.forEach(g=>addCheck(g.store,g.t,mealKey&&mealKey.slice(0,10),mealKey).forEach(i=>ids.add(i)));
     }
     // la recette ne change pas avec les quantités achetées ; seuls les ingrédients ajoutés (+ Ingrédient) s'y ajoutent
