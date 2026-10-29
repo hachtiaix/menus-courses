@@ -210,3 +210,15 @@ test("plats plaisir : mots ajoutés ou retirés par l'utilisateur", () => {
   Data.setPlaisir({});
   assert.equal(Data.typeOf("Kebab frites"), "burger");
 });
+
+test("deux plats principaux le même repas (« Hachis parmentier, Chili con carne ») : proposés chacun seul", () => {
+  const S = { meals: { "2026-09-22-s": { text: "Hachis parmentier, Chili con carne", servings: 4 },
+    "2026-09-10-s": { text: "Lasagnes", servings: 4 } }, recipes: {
+    r1: { name: "Lasagnes", ingredients: [] } } , combos: {} };
+  S.meals["2026-09-15-s"] = { text: "Lasagnes, Chili con carne", servings: 4 };
+  const names = Data.suggest(S, "2026-10-29", 30, [], () => 0.5).map(x => x.name);
+  assert.ok(names.includes("Hachis parmentier"), names.join(" | "));
+  assert.ok(names.includes("Chili con carne"), names.join(" | "));
+  assert.ok(names.includes("Lasagnes"), names.join(" | "));
+  assert.ok(!names.some(n => n.includes(",")), names.join(" | "));
+});

@@ -345,8 +345,13 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // une recette est proposée avec ce qu'on a déjà mis avec elle dans un repas (« Courgettes farcies, Orzo »),
   // tiré au hasard s'il y a eu plusieurs accompagnements ; seule si elle n'en a jamais eu
   const split=t=>String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);
+  // plat principal : une recette, ou un plat reconnu (gratin, chili…) qui n'est pas un aliment de base (riz, pâtes, œufs)
+  const recKeys=new Set(Object.values(S.recipes||{}).filter(r=>r&&!r.deleted&&r.name).map(r=>key(r.name)));
+  const isMain=x=>recKeys.has(key(x))||(!!typeOf(x)&&!foodFor(x));
+  // deux plats principaux le même jour (« Hachis parmentier, Chili con carne ») : ce n'est pas un plat + accompagnement
+  const twoMains=t=>split(t).filter(isMain).length>=2;
   const withs={};
-  for(const m of [...Object.values(S.meals||{}),...Object.values(S.combos||{})]){if(!m||m.deleted||!m.text)continue;const p=split(m.text);if(p.length<2)continue;
+  for(const m of [...Object.values(S.meals||{}),...Object.values(S.combos||{})]){if(!m||m.deleted||!m.text||twoMains(m.text))continue;const p=split(m.text);if(p.length<2)continue;
     for(const x of p){const s=withs[key(x)]=withs[key(x)]||new Map();s.set(key(m.text),m.text)}}
   for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name&&!recipeDessert(r)){
     const opts=new Map(withs[key(r.name)]||[]);
@@ -357,12 +362,13 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   const dessert=x=>{const r=Object.values(S.recipes||{}).find(r=>r&&!r.deleted&&r.name&&key(r.name)===key(x));return r?recipeDessert(r):guessDessert(x)};
   const onlyOther=t=>{const p=String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);return p.length&&p.every(x=>{const f=foodFor(x);return dessert(x)||(f&&f.cat==="autre")})};
   // un plat composé avec une recette (« Courgettes farcies, Orzo ») est déjà proposé par la recette (avec un de ses accompagnements)
-  const recKeys=new Set(Object.values(S.recipes||{}).filter(r=>r&&!r.deleted&&r.name).map(r=>key(r.name)));
   const withRecipe=t=>{const p=split(t);return p.length>1&&p.some(x=>recKeys.has(key(x)))};
-  for(const [k,m] of Object.entries(S.meals||{}))if(!m.deleted&&m.text&&!names.has(key(m.text))&&!onlyOther(m.text)&&!withRecipe(m.text))
-    names.set(key(m.text),{name:m.text,season:guessSeason(m.text)});
+  for(const [k,m] of Object.entries(S.meals||{})){if(m.deleted||!m.text)continue;
+    // deux plats principaux : chacun est proposé seul
+    for(const t of twoMains(m.text)?split(m.text).filter(x=>isMain(x)&&!recKeys.has(key(x))):[m.text])
+      if(!names.has(key(t))&&!onlyOther(t)&&!withRecipe(t))names.set(key(t),{name:t,season:guessSeason(t)})}
   // associations ajoutées à la main sans recette (« Pâtes, Œufs ») : candidates comme un plat déjà fait
-  for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.kind!=="plaisir"&&c.text&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
+  for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.kind!=="plaisir"&&c.text&&!twoMains(c.text)&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
   // junk food : une fois toutes les 2 semaines au plus (pas proposée s'il y en a une prévue ou mangée à moins de 14 jours du créneau)
   const near={};
