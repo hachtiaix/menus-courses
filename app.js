@@ -5,6 +5,7 @@ let S=cleanAll(JSON.parse(LS.s||"null"));
 const ORDER=["auchan","lidl","drive","boucherie","fermiers"];
 for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"],["boucherie","Boucherie"],["fermiers","Au pré des fermiers"]]) S.lists[id]=S.lists[id]||{id,name,ts:0};
 let openIt=null; // article de liste dont les boutons sont affichés
+let addOpen=false; // case « Ajouter un article » ouverte (par le + flottant)
 let tab=LS.tab||"auchan", code=LS.code||"", pending=JSON.parse(LS.pending||"{}"); // pending : modifications pas encore envoyées
 
 function save(){LS.s=JSON.stringify(S);LS.pending=JSON.stringify(pending)}
@@ -109,13 +110,13 @@ function renderList(id){
     return `<div class="row verif"><span class="t" data-e="${i.id}">🏠 ${esc(i.text)}${nd.total?` <b class="tot">${esc(nd.total)}</b>`:""}</span><button class="pill vok" data-vok="${i.id}">Il en manque</button><button class="pill vno" data-d="${i.id}">J'en ai</button><small class="for">${esc(nd.detail||"pour un repas")}</small></div>`};
   const rowItem=i=>
 `<div class="row item ${i.done?"done":""} ${openIt===i.id?"open":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-o="${i.id}">${esc(i.text)}</span><span class="ctl">${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span><button class="pill imv" data-imv="${i.id}" aria-label="Changer de liste">⇄</button><button class="pill ied" data-e="${i.id}" aria-label="Modifier">✏️</button>`:""}<button class="x" data-d="${i.id}" aria-label="Supprimer">×</button></span></div>`;
-  $("#view").innerHTML=`<form id="add"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off" enterkeyhint="done"></form><button class="fab" id="fabl" aria-label="Ajouter un article">+</button>`+
+  $("#view").innerHTML=`<form id="add" class="${addOpen?"":"hid"}"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off" enterkeyhint="done"></form><button class="fab" id="fabl" aria-label="Ajouter un article">+</button>`+
    // 🏠 à vérifier au placard : tous ensemble en haut de la liste
    (items.some(i=>i.check)?`<h3 class="ray">🏠 À vérifier au placard</h3><div class="card">${items.filter(i=>i.check).map(row).join("")}</div>`:"")+
    (items.length?rayonOrder(id).map(r=>{const g=items.filter(i=>!i.done&&!i.check&&rayonOf(i.text)===r.id);
       return g.length?`<h3 class="ray">${r.icon} ${esc(r.label)}</h3><div class="card">${g.map(row).join("")}</div>`:""}).join("")+
     (items.some(i=>i.done)?`<h3 class="ray">✅ Dans le caddie</h3><div class="card">${items.filter(i=>i.done).map(row).join("")}</div>`:"")+`
-   ${items.some(i=>i.done)?`<button class="btn sec" id="clr">Retirer les articles cochés</button>`:""}`:`<div class="empty">Liste vide</div>`);
+   ${items.some(i=>i.done)?`<button class="btn sec" id="clr">Retirer les articles cochés</button>`:""}`:`<div class="empty">Liste vide<br><small>Touchez + pour ajouter un article</small></div>`);
   // Suggestions : articles déjà saisis (toutes listes, même retirés) et ingrédients des recettes,
   // dont le nom commence par ce qui est tapé ; les plus fréquents d'abord.
   const nm=Data.plain;
@@ -151,10 +152,12 @@ function renderList(id){
     box.addEventListener("touchend",ev=>{if(moved)return;const b=ev.target.closest("button");if(!b)return;ev.preventDefault();choose(b)});
     form.appendChild(box);
   };
-  inp.onblur=()=>setTimeout(closeSug,150);
+  // case quittée sans rien taper : elle se referme (le + flottant la rouvre)
+  inp.onblur=()=>setTimeout(()=>{closeSug();if(!inp.isConnected||document.activeElement===inp||inp.value.trim())return;addOpen=false;form.classList.add("hid")},300);
   $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){addToList(id,t);render();$("#new").focus()}};
-  // + flottant (comme dans Recettes) : ajoute ce qui est tapé, sinon remonte et ouvre la saisie
-  $("#fabl").onclick=()=>{if($("#new").value.trim())$("#add").requestSubmit();else{scrollTo({top:0,behavior:"smooth"});$("#new").focus()}};
+  // + flottant (comme dans Recettes) : ouvre la case en haut (clavier) ; si on a déjà tapé, ajoute l'article
+  $("#fabl").onclick=()=>{if($("#new").value.trim()){$("#add").requestSubmit();return}
+    addOpen=true;form.classList.remove("hid");scrollTo(0,0);inp.focus()};
 
   document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.q],t=Qty.step(i.text,+el.dataset.dir);if(t){touch("items",{...i,text:t});render()}});
   document.querySelectorAll("[data-imv]").forEach(el=>el.onclick=()=>moveItemDialog(S.items[el.dataset.imv]));
@@ -549,7 +552,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v187";
+const BASE=4,VERSION="v188";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
