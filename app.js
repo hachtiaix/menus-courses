@@ -222,6 +222,8 @@ function addBoxes(list,p,except){
 }
 // Rayon d'un article : celui choisi une fois par l'utilisateur, sinon deviné d'après le nom.
 // Ordre des rayons d'un magasin : celui choisi dans les réglages, puis les autres dans l'ordre par défaut.
+// v191 : parcours de notre Auchan appliqué une fois à la liste Auchan (l'ordre reste modifiable dans Réglages → Rayons)
+if(!LS.auchanOrder191&&S.lists.auchan){LS.auchanOrder191=1;if((S.lists.auchan.order||[]).join()!==Rayons.list.map(r=>r.id).join())setTimeout(()=>touch("lists",{...S.lists.auchan,order:Rayons.list.map(r=>r.id)}),3000)}
 function rayonOrder(list){const o=(S.lists[list]&&S.lists[list].order)||[];
   return [...o.map(x=>Rayons.byId[x]).filter(Boolean),...Rayons.list.filter(r=>!o.includes(r.id))]}
 // une boîte de légumes (« 1 boîte de tomates ») : rayon conserves (épicerie salée), pas fruits et légumes
@@ -570,7 +572,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v190";
+const BASE=4,VERSION="v191";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);

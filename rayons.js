@@ -1,21 +1,21 @@
 // Rayons (d'après les grands rayons du site Auchan), dans l'ordre d'un parcours en magasin,
 // et devinette du rayon d'un article à partir de son nom.
 (function(){
-const RAYONS=[
+const RAYONS=[ // ordre du parcours dans notre Auchan
   ["fruits","🥕","Fruits, légumes"],
-  ["pain","🥖","Pain, pâtisserie"],
+  ["pain","🥖","Boulangerie"],
   ["boucherie","🥩","Boucherie, volaille, poisson"],
-  ["charcuterie","🥓","Charcuterie, traiteur"],
-  ["cremerie","🧀","Produits laitiers, œufs, fromages"],
-  ["sale","🥫","Épicerie salée"],
-  ["sucre","🍫","Épicerie sucrée"],
-  ["boissons","🧃","Eaux, jus, sodas"],
-  ["alcools","🍷","Vins, bières, alcools"],
+  ["cremerie","🧀","Fromages, crèmerie"],
+  ["charcuterie","🥓","Traiteur, charcuterie"],
   ["surgeles","🧊","Surgelés"],
+  ["sale","🥫","Épicerie salée"],
+  ["alcools","🍷","Bières, vins, alcools"],
+  ["sucre","🍫","Épicerie sucrée"],
+  ["animaux","🐾","Bébé, animalerie"],
   ["hygiene","🧴","Hygiène, beauté"],
-  ["entretien","🧽","Entretien, maison"],
-  ["animaux","🐾","Animalerie"],
-  ["autres","🛒","Autres"],
+  ["entretien","🧽","Entretien"],
+  ["boissons","🧃","Eaux, sodas, jus"],
+  ["autres","🛒","Non-alimentaire, autres"],
 ].map(([id,icon,label])=>({id,icon,label}));
 
 // Mots-clés (sans accents, au singulier). Les expressions de plusieurs mots passent avant les mots seuls.
@@ -46,14 +46,14 @@ for(const [r,list] of Object.entries(K)){
 // Expressions prioritaires (plusieurs mots ou ambiguïtés)
 const PHRASES=[
   ["pomme de terre","fruits"],["petit pois","fruits"],["haricot vert","fruits"],["chou fleur","fruits"],
-  ["pain de mie","pain"],["pain au chocolat","pain"],
+  ["pain de mie","pain"],["pate fraiche","charcuterie"],["ravioli frais","charcuterie"],["gnocchi frais","charcuterie"],["plat cuisine","charcuterie"],["couche","animaux"],["petit pot","animaux"],["lait infantile","animaux"],["lait bebe","animaux"],["lingette bebe","animaux"],["pain au chocolat","pain"],
   ["thon en boite","sale"],["sardine en boite","sale"],["sauce tomate","sale"],["pulpe de tomate","sale"],["tomate en boite","sale"],["tomate pelee","sale"],["tomate concassee","sale"],["coulis de tomate","sale"],["passata","sale"],["pesto","sale"],["pate a tartiner","sucre"],
   ["lait concentre","sucre"],["fromage blanc","cremerie"],
   ["creme fraiche","cremerie"],["creme hydratante","hygiene"],["the glace","boissons"],["jus de","boissons"],
   ["noix de saint jacque","boucherie"],["osso buco","boucherie"],["osso bucco","boucherie"],["jarret","boucherie"],["blanc de poulet","charcuterie"],["jambon cru","charcuterie"],
-  ["legume surgele","surgeles"],["poisson pane","surgeles"],["papier toilette","hygiene"],["brosse a dent","hygiene"],
+  ["legume surgele","surgeles"],["poisson pane","surgeles"],["papier toilette","entretien"],["essuie tout","entretien"],["essuie-tout","entretien"],["mouchoir","hygiene"],["brosse a dent","hygiene"],
   ["liquide vaisselle","entretien"],["sac poubelle","entretien"],["papier alu","entretien"],["film alimentaire","entretien"],
-  ["gel douche","hygiene"],["pastille lave vaisselle","entretien"],["essuie tout","entretien"],["pate brisee","charcuterie"],
+  ["gel douche","hygiene"],["pastille lave vaisselle","entretien"],["essuie tout","entretien"],["essuie-tout","entretien"],["pate brisee","charcuterie"],
   ["pate feuilletee","charcuterie"],["pate a pizza","charcuterie"],["pate de campagne","charcuterie"],["pois chiche","sale"],["haricot rouge","sale"],
   ["petit suisse","cremerie"],["dessert lacte","cremerie"],["biscuit aperitif","sale"],["pain d epice","sucre"],
   ["lardon fume","charcuterie"],["saucisse de francfort","charcuterie"],["saucisse de strasbourg","charcuterie"],["ras el hanout","sale"],["herbe de provence","sale"],["piment d espelette","sale"],["quatre epice","sale"],
