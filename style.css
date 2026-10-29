@@ -330,3 +330,4 @@ p.count{margin:0 4px 2px;font-size:12px;text-align:right}h3.ray.letter{margin:10
 .addrow i{width:42px;height:42px;background:var(--accent);color:#fff;font-size:28px;font-weight:400;box-shadow:0 3px 10px rgba(0,0,0,.22);padding-bottom:3px;box-sizing:border-box}
 .btn.addb{font-size:32px;font-weight:400;padding:0 0 3px;box-shadow:0 3px 10px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center}
 .addrow:active i,.btn.addb:active{transform:scale(.94)}
+#add .sug{right:0} /* plus de bouton à droite du champ : + flottant */
