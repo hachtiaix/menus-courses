@@ -345,9 +345,9 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // une recette est proposée avec ce qu'on a déjà mis avec elle dans un repas (« Courgettes farcies, Orzo »),
   // tiré au hasard s'il y a eu plusieurs accompagnements ; seule si elle n'en a jamais eu
   const split=t=>String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);
-  // plat principal : une recette, ou un plat reconnu (gratin, chili…) qui n'est pas un aliment de base (riz, pâtes, œufs)
+  // plat principal : une recette, une viande ou un poisson, ou un plat reconnu (gratin, chili…) qui n'est pas un aliment de base (riz, pâtes)
   const recKeys=new Set(Object.values(S.recipes||{}).filter(r=>r&&!r.deleted&&r.name).map(r=>key(r.name)));
-  const isMain=x=>recKeys.has(key(x))||(!!typeOf(x)&&!foodFor(x));
+  const isMain=x=>{if(recKeys.has(key(x)))return true;const f=foodFor(x);return f?f.cat==="prot"||f.cat==="pois":!!typeOf(x)};
   // deux plats principaux le même jour (« Hachis parmentier, Chili con carne ») : ce n'est pas un plat + accompagnement
   const twoMains=t=>split(t).filter(isMain).length>=2;
   const withs={};

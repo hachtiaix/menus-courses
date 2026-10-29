@@ -222,3 +222,12 @@ test("deux plats principaux le même repas (« Hachis parmentier, Chili con carn
   assert.ok(names.includes("Lasagnes"), names.join(" | "));
   assert.ok(!names.some(n => n.includes(",")), names.join(" | "));
 });
+
+test("deux viandes le même repas (« Steak haché, Poulet, Riz ») : pas proposées ensemble ; plusieurs accompagnements gardés", () => {
+  const S = { meals: { "2026-09-22-s": { text: "Steak haché, Poulet, Riz", servings: 4 },
+    "2026-09-12-s": { text: "Lasagnes", servings: 4 }, "2026-09-05-s": { text: "Lasagnes, Riz, Salade", servings: 4 } },
+    recipes: { r1: { name: "Lasagnes", ingredients: [] } }, combos: {} };
+  const names = Data.suggest(S, "2026-10-29", 30, [], () => 0.5).map(x => x.name);
+  assert.ok(!names.includes("Steak haché, Poulet, Riz"), names.join(" | "));
+  assert.ok(names.includes("Lasagnes, Riz, Salade"), names.join(" | "));
+});

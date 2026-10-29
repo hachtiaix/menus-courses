@@ -536,7 +536,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v183";
+const BASE=4,VERSION="v184";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -605,7 +605,7 @@ function renderMenus(){
     for(const [t,recipe] of [...live(S.recipes).map(r=>[r.name,true]),...live(S.meals).map(m=>[m.text,false]).filter(x=>x[0])]){const k=norm(t);if(!seen.has(k)){seen.add(k);out.push({t,recipe})}}
     // écarte les fragments saisis à moitié (ex. « Pom » quand « Pommes de terre… » existe)
     return out.filter(x=>x.recipe||!out.some(y=>y!==x&&norm(y.t).length>norm(x.t).length&&norm(y.t).startsWith(norm(x.t))))};
-  const commit=(el,t,quiet)=>{ // quiet : enregistre le repas sans ouvrir la fenêtre des ingrédients
+  const commit=(el,t,quiet,after)=>{ // after : une fois la fenêtre des ingrédients fermée // quiet : enregistre le repas sans ouvrir la fenêtre des ingrédients
     const key=el.dataset.m,o=S.meals[key]||{};
     if(key.slice(0,10)<todayKey()){el.value=o.text||"";return}
     // plat remplacé ou effacé : on retire des listes ce que l'ancien plat y avait ajouté
@@ -625,7 +625,7 @@ function renderMenus(){
     // Entrée pour finir : chaque aliment inconnu de ce repas est décrit tout de suite (famille, quantité, unité, magasin ;
     // « Plus tard » : il reste une simple ligne et sera redemandé), puis la fenêtre des ingrédients s'ouvre avec les quantités.
     const waiting=Data.unknownFoods(S,t).map(p=>({id:"c-"+uid(),label:p.charAt(0).toUpperCase()+p.slice(1)}));
-    const next=i=>i<waiting.length?foodEditor(null,waiting[i],()=>next(i+1),`${i+1}/${waiting.length}`):ingredientsDialog(known?known.name:t,key);
+    const next=i=>i<waiting.length?foodEditor(null,waiting[i],()=>next(i+1),`${i+1}/${waiting.length}`):ingredientsDialog(known?known.name:t,key,undefined,after);
     next(0);
   };
   const clearSug=()=>document.querySelectorAll(".sug").forEach(x=>x.remove());
@@ -661,6 +661,10 @@ function renderMenus(){
       w.classList.toggle("editing",el._items.length>0);el.placeholder=el._items.length?"Ajouter…":el.dataset.ph;
       c.innerHTML=el._items.map((t,i)=>{const r=live(S.recipes).some(x=>norm(x.name)===norm(t)),f=Data.foodFor(t);return `<i class="tag ${r?"rcp":f?f.cat:"autre"}">${r?"📖 ":""}${esc(t.charAt(0).toUpperCase()+t.slice(1))}<b data-ci="${i}">×</b></i>`}).join("");
       c.onpointerdown=e=>{const x=e.target.closest("[data-ci]");e.preventDefault();if(x){el._items.splice(+x.dataset.ci,1);drawChips()}el.focus()}};
+    // un seul plat principal (recette, viande ou poisson) par plat : les suivants partent chacun dans un nouveau plat
+    // du même repas (à la fin de la saisie) ; les accompagnements (riz, salade, haricots verts…) restent ensemble
+    const isRcp=t=>live(S.recipes).some(r=>norm(r.name)===norm(t));
+    const isMain=t=>{if(isRcp(t))return true;const f=Data.foodFor(t);return !!f&&(f.cat==="prot"||f.cat==="pois")};
     const addChip=t=>{t=t.trim();if(!t)return;el._items.push(t);el.value="";drawChips();
       setTimeout(()=>{if(!el._finish&&document.activeElement!==el)el.focus()},60)}; // l'iPhone peut avoir quitté le champ : on y revient
     el.dataset.ph=el.placeholder;
@@ -688,10 +692,18 @@ function renderMenus(){
     // touche une suggestion ou une pastille, puis on y revient : dans ce cas on ne valide rien).
     el.onblur=()=>{setTimeout(clearSug,150);if(!el._items.length&&!el._finish&&!el.value.trim())return;
       clearTimeout(el._done);el._done=setTimeout(()=>{if(document.activeElement===el)return;
-        const full=[...el._items,el.value.trim()].filter(Boolean).join(", ");el._items=[];el.value=full;
+        let parts=[...el._items,...el.value.split(/\s*[,+]\s*/)].map(x=>x.trim()).filter(Boolean);
+        const extra=parts.filter(isMain).slice(1);if(extra.length)parts=parts.filter(x=>!extra.includes(x));
+        const full=parts.join(", ");el._items=[];el.value=full;
         // Entrée dans la case vide : on ouvre les ingrédients ; sinon (case quittée) on enregistre sans rien ouvrir (🥕 pour les ingrédients)
         const fin=el._finish;el._finish=false;
-        if(norm(full)!==norm(el._orig||""))commit(el,full,!fin);else render()},Date.now()-(el._pick||0)<800?900:400)};
+        // 2e plat principal sur la même ligne : nouveau plat du même repas, même nombre de personnes ;
+        // avec Entrée, sa fenêtre des ingrédients s'ouvre après celle du premier
+        const key=el.dataset.m,base=key.replace(/\d+$/,""),k2s=[];
+        if(extra.length&&key.slice(0,10)>=todayKey()){const n=(S.meals[key]&&S.meals[key].servings)||(S.meals[base]&&S.meals[base].servings)||+LS.defN||BASE;
+          for(const t of extra){const r=live(S.recipes).find(x=>norm(x.name)===norm(t)),k2=addSecond(base,n,r?r.name:t.charAt(0).toUpperCase()+t.slice(1),true);if(!k2)break;k2s.push(k2)}}
+        const more=i=>{if(i<k2s.length)ingredientsDialog(S.meals[k2s[i]].text,k2s[i],undefined,()=>more(i+1))};
+        if(norm(full)!==norm(el._orig||""))commit(el,full,!fin,()=>{if(fin)more(0)});else{render();if(fin)more(0)}},Date.now()-(el._pick||0)<800?900:400)};
     el.onchange=null; // tout passe par Entrée et la sortie de la case (onblur)
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
