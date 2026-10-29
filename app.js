@@ -154,7 +154,12 @@ function renderList(id){
   };
   // case quittée sans rien taper : elle se referme (le + flottant la rouvre)
   inp.onblur=()=>setTimeout(()=>{closeSug();if(!inp.isConnected||document.activeElement===inp||inp.value.trim())return;addOpen=false;form.classList.add("hid")},300);
-  $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(t){addToList(id,t);render();$("#new").focus()}};
+  // article jamais vu et que l'app ne sait pas ranger : on demande son rayon (retenu pour la suite)
+  $("#add").onsubmit=e=>{e.preventDefault();const t=$("#new").value.trim();if(!t)return;
+    const add=()=>{addToList(id,t);render();$("#new").focus()};
+    const nm=Qty.parse(t).name||t,k=Rayons.keyOf(nm);
+    if(S.aisles[k]&&!S.aisles[k].deleted||Rayons.guess(nm)!=="autres")return add();
+    $("#new").blur();rayonAsk(nm,r=>{touch("aisles",{id:k,rayon:r});add()})};
   // + flottant (comme dans Recettes) : ouvre la case en haut (clavier) ; si on a déjà tapé, ajoute l'article
   $("#fabl").onclick=()=>{if($("#new").value.trim()){$("#add").requestSubmit();return}
     addOpen=true;form.classList.remove("hid");scrollTo(0,0);inp.focus()};
@@ -220,6 +225,17 @@ function addBoxes(list,p,except){
 function rayonOrder(list){const o=(S.lists[list]&&S.lists[list].order)||[];
   return [...o.map(x=>Rayons.byId[x]).filter(Boolean),...Rayons.list.filter(r=>!o.includes(r.id))]}
 function rayonOf(text){const n=Qty.parse(text).name||text,k=Rayons.keyOf(n);return (S.aisles[k]&&!S.aisles[k].deleted&&S.aisles[k].rayon)||Rayons.guess(n)}
+// Rayon d'un nouvel article (jamais vu, nom inconnu) : choix obligatoire avant de l'ajouter
+function rayonAsk(name,done){
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Dans quel rayon ?</h2>
+   <p class="mut">« ${esc(name.charAt(0).toUpperCase()+name.slice(1))} » est nouveau : choisissez son rayon (retenu pour la prochaine fois).</p>
+   <div class="raygrid">${Rayons.list.map(r=>`<button type="button" class="btn sec" data-ray="${r.id}">${r.icon} ${esc(r.label)}</button>`).join("")}</div>
+   <div class="acts"><button class="btn sec" id="rno">Annuler</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();$("#rno").onclick=close;
+  ov.querySelectorAll("[data-ray]").forEach(b=>b.onclick=()=>{close();done(b.dataset.ray)});
+}
 function itemEditor(i){
   const cur=rayonOf(i.text),ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Modifier l'article</h2>
@@ -552,7 +568,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v188";
+const BASE=4,VERSION="v189";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
