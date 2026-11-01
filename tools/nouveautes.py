@@ -9,7 +9,7 @@ import datetime, html, json, pathlib, re, sys, time, urllib.request
 
 UA = {"User-Agent": "MenusCourses/1.0 (application familiale ; +https://github.com/hachtiaix/menus-courses)",
       "Accept-Language": "fr-FR,fr"}
-MAX_PREP, PER_SITE, MAX_PAGES = 30, 8, 60
+MAX_PREP, PER_SITE, MAX_PAGES = 30, 8, 90
 OUT = pathlib.Path(__file__).resolve().parent.parent / "nouveautes.json"
 # pas des plats : sucré, boissons, apéritif, sauces, pains
 NOT_DISH = re.compile(r"sabl|bredele|bonbon|cr[eê]pe|g[aâ]teau|\bcake|tarte au suc|tartes? sucr|dessert|cookie|biscuit|muffin|"
@@ -17,7 +17,10 @@ NOT_DISH = re.compile(r"sabl|bredele|bonbon|cr[eê]pe|g[aâ]teau|\bcake|tarte au
                       r"ap[ée]ritif|amuse|\bdips?\b|houmous|tartinade|sauce|vinaigrette|compote|truffe|caramel|meringue|"
                       r"macaron|beignet|gaufre|pancake|friandise|chutney|confit\b|rillettes|terrine|toast|verrine|"
                       r"mignardise|punch|vin chaud|liqueur|cr[eè]me (?:dessert|anglaise|br[uû]l)|mousse au|panna|tiramisu|"
-                      r"cheesecake|brownie|flan|clafoutis|crumble|fondant|financier|madeleine|donut|marbr|yaourt|douceur|[àa] tartiner", re.I)
+                      r"cheesecake|brownie|flan|clafoutis|crumble|fondant|financier|madeleine|donut|marbr|yaourt|douceur|[àa] tartiner|"
+                      r"toasts?\b|tartines?\b|bruschetta|crostini|canap[ée]s?\b|mouillettes?", re.I)
+# recettes écrites pour un robot de cuisine (on n'en a pas)
+ROBOT = re.compile(r"thermomix|cookeo|companion|monsieur cuisine|robot (?:cuiseur|multifonction|chauffant)|\btm ?[56]\b", re.I)
 
 def get(url):
     with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=25) as r:
@@ -64,6 +67,10 @@ def category(x):
     c = x.get("recipeCategory")
     return " ".join(c) if isinstance(c, list) else str(c or "")
 
+def robot(x):
+    txt = " ".join(str(x.get(k) or "") for k in ("name", "keywords", "recipeCategory", "description"))
+    return bool(ROBOT.search(txt))
+
 def collect(site, urls, keep):
     out, seen = [], 0
     for url in urls:
@@ -75,7 +82,7 @@ def collect(site, urls, keep):
         except Exception as e:  # une page qui ne répond pas : on passe à la suivante
             print(f"  {site} : {url} ignorée ({e})", file=sys.stderr); x = None
         time.sleep(1)  # une page par seconde, pour ménager les sites
-        if x and 0 < minutes(x.get("prepTime")) <= MAX_PREP and keep(x):
+        if x and 0 < minutes(x.get("prepTime")) <= MAX_PREP and keep(x) and not robot(x):
             out.append(item(site, url, x))
     # presque le même plat deux fois (« Wrap chaud au four » / « Recette wrap chaud au four ») : un seul
     uniq, keys = [], set()
