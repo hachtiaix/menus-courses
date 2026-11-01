@@ -438,14 +438,16 @@ function tidyIngredient(line){
   if(p){const rest=p[2].replace(/^\p{Lu}(?=\p{Ll})/u,c=>c.toLowerCase());t=p[1]+" "+(root.Qty&&root.Qty.agree?root.Qty.agree(rest,n):rest)}
   return t.slice(0,200);
 }
-// Recette prévue pour 1 ou 2 personnes : adaptée pour 3 ou 4, le nombre qui donne les quantités les plus justes
-// (2 escalopes → 4 escalopes pour 4 plutôt que 3 pour 3 ; 250 g → 375 g pour 3 ou 500 g pour 4) ; à égalité, 4.
+// Recette prévue pour un autre nombre que 3 ou 4 personnes : adaptée pour 3 ou 4, celui qui donne les quantités
+// les plus rondes (pour 6 : 3 œufs → 2 œufs pour 4 plutôt que 1 ½ pour 3). À égalité, le nombre qui tombe exactement
+// (2 → 4, 6 → 3, 8 → 4), puis 4.
 function adaptServes(serves,ingredients,steps){
-  const Q=root.Qty;if(!(serves>=1&&serves<=2)||!Q||!Q.cook)return{serves,ingredients,steps,from:null};
+  const Q=root.Qty;if(!(serves>=1)||serves===3||serves===4||!Q||!Q.cook)return{serves,ingredients,steps,from:null};
   const rough=(t,f)=>{const p=Q.parse(t);if(p.n==null)return 0;const x=p.n*f;
     if(p.kind==="mass"||p.kind==="vol")return Math.abs(x-Math.round(x/5)*5)<1e-9?0:0.5; // grammes, ml : multiples de 5
     const r=Math.abs(x-Math.round(x));return r<1e-9?0:Math.abs(r-0.5)<1e-9?1:2}; // pièces, cuillères : entiers, sinon demis
-  const pen=T=>ingredients.reduce((a,t)=>a+rough(t,T/serves),0),T=pen(3)<pen(4)?3:4,f=T/serves;
+  const exact=T=>serves%T===0||T%serves===0,pen=T=>ingredients.reduce((a,t)=>a+rough(t,T/serves),0);
+  const p3=pen(3),p4=pen(4),T=p3!==p4?(p3<p4?3:4):exact(3)!==exact(4)?(exact(3)?3:4):4,f=T/serves;
   return{serves:T,ingredients:ingredients.map(t=>Q.cook(t,f,true)),steps:steps?Q.cookSteps(steps,f,ingredients,true):steps,from:serves};
 }
 // réponse de la fonction « recette » (données schema.org de la page) → recette prête à vérifier et enregistrer

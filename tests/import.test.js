@@ -73,6 +73,18 @@ test("recette pour 1 ou 2 personnes : adaptée pour 3 ou 4 (quantités justes), 
   assert.deepEqual(a.ingredients, ["4 escalopes de veau", "2 oeufs", "100 g de chapelure", "2 cuillères à soupe d'huile", "sel"]);
   assert.equal(a.steps, "Battre 2 oeufs. Paner 4 escalopes.");
   assert.deepEqual(Data.adaptServes(4, ["400 g de pâtes"], "").ingredients, ["400 g de pâtes"]); // déjà pour 4 : rien ne change
+  // pour 6 : 3 ou 4 selon les quantités les plus rondes
+  const six = Data.adaptServes(6, ["6 escalopes", "2 oeufs", "600 g de pâtes"], "Cuire 600 g de pâtes.");
+  assert.equal(six.serves, 3); // 3 escalopes, 1 œuf, 300 g (pour 4 : 1,33 œuf)
+  assert.deepEqual(six.ingredients, ["3 escalopes", "1 oeuf", "300 g de pâtes"]);
+  assert.equal(six.steps, "Cuire 300 g de pâtes.");
+  const six4 = Data.adaptServes(6, ["6 escalopes", "3 oeufs", "600 g de pâtes", "3 cuillères à soupe d'huile"], "");
+  assert.equal(six4.serves, 4); // 4 escalopes, 2 œufs, 400 g, 2 cuillères (pour 3 : 1 ½ œuf, 1 ½ cuillère)
+  assert.deepEqual(six4.ingredients, ["4 escalopes", "2 oeufs", "400 g de pâtes", "2 cuillères à soupe d'huile"]);
+  assert.equal(Data.adaptServes(6, ["300 g de riz"], "").serves, 3); // égalité : le nombre exact (6 → 3)
+  assert.equal(Data.adaptServes(8, ["800 g de boeuf"], "").serves, 4);
+  assert.deepEqual(Data.adaptServes(8, ["800 g de boeuf"], "").ingredients, ["400 g de boeuf"]);
+  assert.equal(Data.adaptServes(3, ["3 oeufs"], "").from, null); // pour 3 : rien ne change
   assert.equal(Data.adaptServes(4, ["400 g de pâtes"], "").from, null);
   const r = Data.fromSchema({ name: "Pâtes", yield: "2 personnes", ingredients: ["250 g de spaghetti"], steps: [{ s: "", t: "Cuire 250 g de spaghetti." }] }, "");
   assert.equal(r.serves, 4); assert.equal(r.from, 2);
