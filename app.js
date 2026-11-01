@@ -588,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v227";
+const BASE=4,VERSION="v228";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1390,6 +1390,23 @@ if(/[?&]maj=/.test(location.search))history.replaceState(null,"",location.pathna
 if(LS.autoFrom){const from=LS.autoFrom;delete LS.autoFrom;if(from!==VERSION)setTimeout(()=>toast(`✓ Application mise à jour (${VERSION})`),300)}
 if(LS.updFrom){const from=LS.updFrom;delete LS.updFrom;tab=LS.tab="settings";stab="foyer";
   setTimeout(()=>toast(from===VERSION?`✓ Déjà à jour : version ${VERSION}`:`✓ Mise à jour installée : version ${VERSION}`),300)}
+// Fenêtres : tirées vers le bas (depuis la poignée, ou quand leur contenu est tout en haut), elles se ferment comme sur
+// iPhone. Même effet que toucher à côté : chaque fenêtre garde sa règle (confirmation, « Ne pas ajouter aux listes »…) ;
+// si elle reste ouverte (choix obligatoire, confirmation refusée), elle revient en place.
+{let drag=null;
+  document.addEventListener("touchstart",e=>{const sh=e.target.closest(".ov>.sheet");if(!sh||e.touches.length>1)return;
+    const onGrab=!!e.target.closest(".grab");
+    if(!onGrab&&(sh.scrollTop>0||e.target.closest("input,textarea,select,.sug,.plist,.igl,.scanbox")))return;
+    drag={sh,y:e.touches[0].clientY,t:Date.now(),dy:0}},{passive:true});
+  document.addEventListener("touchmove",e=>{if(!drag)return;const dy=e.touches[0].clientY-drag.y;
+    if(dy<=0&&!drag.dy){drag=null;return} // vers le haut : on laisse défiler le contenu
+    drag.dy=Math.max(0,dy);drag.sh.style.transition="none";drag.sh.style.transform=`translateY(${drag.dy}px)`;e.preventDefault()},{passive:false});
+  document.addEventListener("touchend",()=>{if(!drag)return;const {sh,dy,t}=drag;drag=null;const ov=sh.parentElement;
+    sh.style.transition="transform .2s ease";
+    if(dy>110||(dy>50&&dy/(Date.now()-t)>0.3)){ // assez loin, ou un petit coup rapidesh.style.transform="translateY(100%)";
+      setTimeout(()=>{ov.dispatchEvent(new MouseEvent("click",{bubbles:true}));if(ov.isConnected)sh.style.transform=""},180)}
+    else sh.style.transform=""});
+}
 // message en haut de l'écran ; avec undo : bouton « Annuler » pendant 5 s
 function toast(msg,undo){document.querySelectorAll(".toast").forEach(x=>x.remove());
   const t=document.createElement("div");t.className="toast"+(undo?" undo":"");const m=document.createElement("span");m.textContent=msg;t.appendChild(m);
