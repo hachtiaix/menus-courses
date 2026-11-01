@@ -588,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v229";
+const BASE=4,VERSION="v230";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -939,10 +939,10 @@ function renderSettings(inRecipes){
      ${acc.length?`<div class="card">${acc.map(x=>`<div class="row"><span class="t">${esc(x.recipe)}<br><small class="mut">avec ${x.sides.map(s=>esc(s.side)+(s.id?` <button class="cdel" data-cdel="${s.id}" aria-label="Retirer">×</button>`:"")).join(" · ")}</small></span></div>`).join("")}</div>`:""}
      <button class="addrow" id="newc"><i>+</i>Ajouter un accompagnement</button>
      <h3 class="ray" style="margin-top:22px">😋 Plats gourmands</h3>
-     <p class="mut">Plats riches (gratins, tartiflette…) : cochez « Plat gourmand » dans la recette. Dans 💡 : 4 au plus par semaine, un même plat pas deux fois en 4 semaines ; les gratins de pâtes et pâtes riches forment une seule famille (après l'un d'eux, aucun pendant 4 semaines, puis un seul, au hasard).</p>
+     <p class="mut">Plats riches (gratins, tartiflette…) : cochez « Plat gourmand » dans la recette. Dans 💡 : 4 au plus par semaine, un même plat pas deux fois en 4 semaines ; les gratins de pâtes et pâtes riches forment une seule famille (après l'un d'eux, aucun pendant 4 semaines, puis un seul, au hasard). La junk food compte aussi, sans case à cocher.</p>
      <div class="card" style="padding:12px 14px;line-height:2.1">${live(S.recipes).filter(r=>r.gourmand).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<span class="chipw">${esc(r.name)}</span>`).join(" ")||`<span class="mut">Aucune recette cochée pour l'instant</span>`}</div>
      <h3 class="ray" style="margin-top:22px">🍔 Junk food</h3>
-     <p class="mut">Un seul toutes les 2 semaines dans 💡. Un plat dont le nom contient l'un de ces mots en fait partie.</p>
+     <p class="mut">Une seule toutes les 2 semaines dans 💡, et elle compte dans les 4 plats gourmands de la semaine. Un plat dont le nom contient l'un de ces mots en fait partie.</p>
      <div class="card" style="padding:12px 14px;line-height:2.1">${Data.plaisirList(S).map(x=>`<span class="chipw">${esc(x.word.charAt(0).toUpperCase()+x.word.slice(1))}<button class="cdel" data-pdel="${x.id||""}" data-pw="${esc(x.word)}" aria-label="Retirer">×</button></span>`).join(" ")}</div>
      <button class="addrow" id="newp"><i>+</i>Ajouter une junk food</button>`})()}`,
    rayons:`<div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>

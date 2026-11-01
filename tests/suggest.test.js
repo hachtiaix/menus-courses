@@ -274,3 +274,19 @@ test("plats gourmands : 4 semaines d'écart, 4 au plus par semaine, gratins de p
   // la case est gardée au nettoyage
   assert.equal(Data.clean("recipes", "x", { name: "A", gourmand: true, ingredients: [] }).gourmand, true);
 });
+
+test("junk food : compte comme plat gourmand sans case (4 par semaine, même plat pas avant 4 semaines)", () => {
+  const R = (n, g) => ({ name: n, ingredients: [], gourmand: g === true, ts: 1 });
+  const recipes = { a: R("Tartiflette", true), b: R("Burger maison"), c: R("Pizza maison"), d: R("Poulet rôti") };
+  const S = meals => Data.cleanAll({ recipes, meals });
+  const names = (s, slot) => Data.suggest(s, "2026-12-30", 30, [], () => 0.5, slot).map(x => x.name);
+  // burger il y a 20 jours : la règle junk food (14 j) est passée, mais le même burger attend 4 semaines ; la pizza peut venir
+  let got = names(S({ "2026-12-10-s": { text: "Burger maison", ts: 1 } }));
+  assert.ok(!got.includes("Burger maison"), got.join(", ")); assert.ok(got.includes("Pizza maison"), got.join(", "));
+  // 3 plats gourmands + une pizza tapée sans recette dans la semaine : 4, plus de tartiflette pour un autre soir
+  const week = { "2026-12-28-s": { text: "Raclette", ts: 1 }, "2026-12-29-s": { text: "Fondue savoyarde", ts: 1 },
+    "2026-12-30-m": { text: "Tartiflette", ts: 1 }, "2026-12-31-s": { text: "Pizza", ts: 1 } };
+  const S2 = Data.cleanAll({ recipes: { ...recipes, e: R("Raclette", true), f: R("Fondue savoyarde", true), g: R("Croziflette", true) }, meals: week });
+  got = Data.suggest(S2, "2026-12-30", 30, [], () => 0.5, "2027-01-01-s").map(x => x.name);
+  assert.ok(!got.includes("Croziflette"), got.join(", ")); assert.ok(got.includes("Poulet rôti"));
+});

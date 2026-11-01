@@ -383,7 +383,8 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // en 4 semaines ; gratins de pâtes et pâtes riches (gourmands de type pâtes) : une seule famille, après l'un d'eux aucun
   // pendant 4 semaines, ensuite un seul, tiré au hasard
   const gKeys=new Set(Object.values(S.recipes||{}).filter(r=>r&&!r.deleted&&r.name&&r.gourmand===true).map(r=>key(r.name)));
-  const isG=t=>gKeys.has(key(t))||split(t).some(p=>gKeys.has(key(p))),isFam=t=>isG(t)&&typeOf(t)==="pates";
+  // la junk food (burger, pizza…, reconnue par son nom) compte aussi comme plat gourmand, sans case à cocher
+  const isG=t=>gKeys.has(key(t))||split(t).some(p=>gKeys.has(key(p)))||typeOf(t)==="burger",isFam=t=>isG(t)&&typeOf(t)==="pates";
   let gWeek=0,famNear=false;
   for(const [k,m] of Object.entries(S.meals||{})){if(m.deleted||!m.text||k===slotKey||!isG(m.text))continue;const d=k.slice(0,10);
     if(d>=mon&&d<=sun)gWeek++;
@@ -409,7 +410,7 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // aucun plat connu pour une habitude de type : on propose le type lui-même (« Pâtes », « Soupe »…)
   for(const t of types)if(!habit.some(x=>x.habit===t)){
     const dish=(TYPES.find(y=>y.id===t)||{}).dish,dk=key(dish||"");
-    if(dish&&!ex.has(dk)&&!capped(dish)&&!(dates[dk]||[]).some(d=>d>=mon&&d<=sun))habit.push({name:dish,days:null,habit:t});
+    if(dish&&!ex.has(dk)&&!capped(dish)&&!gBlocked({name:dish})&&!(dates[dk]||[]).some(d=>d>=mon&&d<=sun))habit.push({name:dish,days:null,habit:t});
   }
   const rest=rows.filter(x=>!tag(x));
   const fresh=rest.filter(x=>x.gap==null||x.gap>30).sort((a,b)=>b.score-a.score);
