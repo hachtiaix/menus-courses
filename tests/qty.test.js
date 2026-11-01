@@ -108,3 +108,12 @@ test("cookSteps : quantités des étapes (unités et ingrédients), pas les dur�
   assert.equal(Qty.cookSteps("Cuire 12 min à 180°, découper 30 sablés.", 2, ings), "Cuire 12 min à 180°, découper 30 sablés.");
   assert.equal(Qty.cookSteps("1. Ajouter 2 œufs", 1.5, ings), "1. Ajouter 3 œufs");
 });
+
+test("cookSteps : un/une, pincées, jaune d'œuf, « de » pour les fractions, fourchettes laissées", () => {
+  const ings = ["125 g de farine", "1/4 de sachet de levure", "1 oeuf", "Curcuma"];
+  assert.equal(Qty.cookSteps("Ajouter 1/4 de sachet de levure.", 2, ings), "Ajouter ½ sachet de levure.");
+  assert.equal(Qty.cookSteps("Incorporer 2 pincées de sel et 1 jaune d'œuf.", 2, ings), "Incorporer 4 pincées de sel et 2 jaunes d'œuf.");
+  assert.equal(Qty.cookSteps("Verser dans un cornet de papier, 2 ou 3 gouttes de citron.", 2, ings), "Verser dans un cornet de papier, 2 ou 3 gouttes de citron.");
+  assert.equal(Qty.cookSteps("Ajouter une grosse cuillère à soupe de curcuma.", 2, ings), "Ajouter 2 grosses cas de curcuma.");
+  assert.equal(Qty.cook("une petite boite de concentré", 2), "2 petites boites de concentré");
+});
