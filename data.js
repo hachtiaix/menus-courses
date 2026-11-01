@@ -438,6 +438,16 @@ function tidyIngredient(line){
   if(p){const rest=p[2].replace(/^\p{Lu}(?=\p{Ll})/u,c=>c.toLowerCase());t=p[1]+" "+(root.Qty&&root.Qty.agree?root.Qty.agree(rest,n):rest)}
   return t.slice(0,200);
 }
+// Recette prévue pour 1 ou 2 personnes : adaptée pour 3 ou 4, le nombre qui donne les quantités les plus justes
+// (2 escalopes → 4 escalopes pour 4 plutôt que 3 pour 3 ; 250 g → 375 g pour 3 ou 500 g pour 4) ; à égalité, 4.
+function adaptServes(serves,ingredients,steps){
+  const Q=root.Qty;if(!(serves>=1&&serves<=2)||!Q||!Q.cook)return{serves,ingredients,steps,from:null};
+  const rough=(t,f)=>{const p=Q.parse(t);if(p.n==null)return 0;const x=p.n*f;
+    if(p.kind==="mass"||p.kind==="vol")return Math.abs(x-Math.round(x/5)*5)<1e-9?0:0.5; // grammes, ml : multiples de 5
+    const r=Math.abs(x-Math.round(x));return r<1e-9?0:Math.abs(r-0.5)<1e-9?1:2}; // pièces, cuillères : entiers, sinon demis
+  const pen=T=>ingredients.reduce((a,t)=>a+rough(t,T/serves),0),T=pen(3)<pen(4)?3:4,f=T/serves;
+  return{serves:T,ingredients:ingredients.map(t=>Q.cook(t,f,true)),steps:steps?Q.cookSteps(steps,f,ingredients,true):steps,from:serves};
+}
 // réponse de la fonction « recette » (données schema.org de la page) → recette prête à vérifier et enregistrer
 function fromSchema(x,url){
   const name=unent(x&&x.name).replace(/\s*[:\-–|]\s*(la meilleure recette|recette).*$/i,"").replace(/^(.{6,}?)\s+:\s+.*$/,"$1").replace(/^recette\s+(?:de\s+|d['’]\s*)?/i,"").replace(/^./,c=>c.toUpperCase()).slice(0,80);
@@ -445,8 +455,8 @@ function fromSchema(x,url){
   const ingredients=[].concat(x&&x.ingredients||[]).map(tidyIngredient).filter(Boolean).slice(0,80);
   const st=[].concat(x&&x.steps||[]).slice(0,80),lines=[];let k=0;
   for(const p of st){const sec=unent(p&&p.s),t=unent(p&&p.t);if(sec&&sec!==lines.__sec){lines.push("# "+sec);lines.__sec=sec;k=0}if(t)lines.push(`${++k}. ${t}`)}
-  const prep=isoMinutes(x&&x.prep);
-  return{name,serves,ingredients,steps:lines.join("\n").slice(0,4000),source:SOURCE.test(url||"")?url:null,prep:prep||null};
+  const prep=isoMinutes(x&&x.prep),a=adaptServes(serves,ingredients,lines.join("\n"));
+  return{name,serves:a.serves,from:a.from,ingredients:a.ingredients,steps:String(a.steps||"").slice(0,4000),source:SOURCE.test(url||"")?url:null,prep:prep||null};
 }
 // Période planifiée (du samedi au vendredi) : les 7 soirs et les midis du samedi et du dimanche
 function planSlots(ymd){const d=new Date(ymd+"T12:00"),toSat=(6-d.getDay()+7)%7||7,sat=addDays(ymd,toSat),out=[];
@@ -516,6 +526,6 @@ function prune(S,now){
   for(const id of Object.keys(S.meals||{})){const d=Date.parse(id.slice(0,10));if(d&&now-d>MEAL_TTL){delete S.meals[id];n++}}
   return n;
 }
-root.Data={KINDS,okId,str,clean,cleanAll,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
+root.Data={KINDS,okId,str,clean,cleanAll,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
   TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

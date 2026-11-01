@@ -588,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v224";
+const BASE=4,VERSION="v225";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1284,6 +1284,7 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
   $("#cm").onclick=()=>{if(n>1){n--;draw()}};$("#cp").onclick=()=>{if(n<30){n++;draw()}};
   $("#cx").onclick=close;$("#ced").onclick=()=>{close();recipeEditor(r)};$("#cpl").onclick=()=>{close();planRecipe(r)};
 }
+const readMsg=p=>`✓ Recette lue${p.from?` (prévue pour ${p.from}, adaptée pour ${p.serves})`:""} : vérifiez, puis « Enregistrer ».`;
 // pre : recette importée (pré-remplie, à vérifier) ; after(recette) : appelé une fois enregistrée
 function recipeEditor(r,pre,after){
   const lists=live(S.lists).sort(listSort);
@@ -1316,9 +1317,9 @@ function recipeEditor(r,pre,after){
   if(lk)lk.oninput=async()=>{const u=lk.value.trim().replace(/[?#].*$/,""),m=$("#rlinkm");if(!u)return m.textContent="";
     if(!Data.SOURCE.test(u)){m.textContent="Collez le lien d'une recette Marmiton ou CuisineAZ.";return}
     m.textContent="Lecture de la recette…";lk.disabled=true;
-    try{fill(await fetchRecipe(u));m.textContent="✓ Recette lue : vérifiez, puis « Enregistrer »."}catch(e){m.textContent="⚠ "+e.message}
+    try{const p=await fetchRecipe(u);fill(p);m.textContent=readMsg(p)}catch(e){m.textContent="⚠ "+e.message}
     lk.disabled=false};
-  if(pre){fill(pre);if(lk){lk.value=pre.source||"";$("#rlinkm").textContent="✓ Recette lue : vérifiez, puis « Enregistrer »."}}
+  if(pre){fill(pre);if(lk){lk.value=pre.source||"";$("#rlinkm").textContent=readMsg(pre)}}
   // toucher à côté de la fenêtre : on ferme seulement si rien n'a changé (sinon on demande)
   const snap=()=>[...ov.querySelectorAll("input,textarea,select,.pan")].map(e=>e.classList.contains("pan")?e.classList.contains("on"):e.value).join("\u0001");
   const start=pre?null:snap(); // recette importée : pas encore enregistrée, on demande toujours
@@ -1327,16 +1328,18 @@ function recipeEditor(r,pre,after){
   $("#no").onclick=close;
   // Texte collé : une ligne d'ingrédient par ligne (puces, titres et étapes ignorés), « pour 6 personnes » règle le nombre.
   $("#paste").oninput=()=>{const v=$("#paste").value;if(!/\n/.test(v.trim()))return;
-    const lines=[],all=v.split(/\r?\n/);
+    let lines=[],st="",pour=0;const all=v.split(/\r?\n/);
     for(let [k,l] of all.entries()){l=l.replace(/^\s*(?:[-•*·▪◦–—]|\d+[.)](?=\s))\s*/,"").trim();
-      if(/^(pr[ée]paration|[ée]tapes?|instructions?)\b/i.test(l)){ // la suite : les étapes
-        const st=all.slice(k+1).map(x=>x.trim()).filter(Boolean).join("\n");if(st&&!$("#stp").value.trim())$("#stp").value=st;break}
-      const p=l.match(/pour\s+(\d+)\s*(?:pers|parts?|couverts?)/i);if(p){$("#sv").value=p[1];continue}
+      if(/^(pr[ée]paration|[ée]tapes?|instructions?)\b/i.test(l)){st=all.slice(k+1).map(x=>x.trim()).filter(Boolean).join("\n");break} // la suite : les étapes
+      const p=l.match(/pour\s+(\d+)\s*(?:pers|parts?|couverts?)/i);if(p){pour=+p[1];continue}
       if(!l||/^ingr[ée]dients?\s*:?$/i.test(l)||l.length>80)continue;lines.push(l)}
     if(!lines.length)return;
+    // prévue pour 1 ou 2 : adaptée pour 3 ou 4 (le nombre qui tombe le plus juste), étapes comprises
+    const a=pour?Data.adaptServes(pour,lines,st):{serves:0,ingredients:lines,steps:st,from:null};lines=a.ingredients;
+    if(pour)$("#sv").value=a.serves;if(a.steps&&!$("#stp").value.trim())$("#stp").value=a.steps;
     [...ov.querySelectorAll(".ed-row")].filter(el=>!el.querySelector(".ing").value.trim()).forEach(el=>el.remove());
     $("#eds").insertAdjacentHTML("beforeend",lines.map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})).join(""));
-    $("#paste").value="";toast(`✓ ${lines.length} ingrédient${lines.length>1?"s":""} ajouté${lines.length>1?"s":""}`)};
+    $("#paste").value="";toast(`✓ ${lines.length} ingrédient${lines.length>1?"s":""} ajouté${lines.length>1?"s":""}${a.from?` · prévue pour ${a.from}, adaptée pour ${a.serves}`:""}`)};
   $("#more").onclick=()=>{$("#eds").insertAdjacentHTML("beforeend",rowH({t:""}));$("#eds").lastChild.querySelector(".ing").focus()};
   if(r)$("#del").onclick=()=>{if(confirm("Supprimer cette recette ?")){touch("recipes",{...r,deleted:true});close();render()}};
   $("#ok").onclick=()=>{

@@ -65,3 +65,17 @@ test("placard : ail, cornichons, mayonnaise, ketchup ; à acheter : lait, crème
   for (const n of ["lait demi-écrémé", "crème fraîche", "oeufs", "oignon rouge", "citron vert (pour le jus)", "poulet", "pommes de terre", "concentré de tomate", "pesto", "harissa", "olives vertes dénoyautées", "câpres", "jus de citron"])
     assert.ok(!home(n), n);
 });
+
+test("recette pour 1 ou 2 personnes : adaptée pour 3 ou 4 (quantités justes), étapes comprises, écriture gardée", () => {
+  const a = Data.adaptServes(2, ["2 escalopes de veau", "1 oeuf", "50 g de chapelure", "1 cuillère à soupe d'huile", "sel"], "Battre 1 oeuf. Paner 2 escalopes.");
+  assert.equal(a.serves, 4);
+  assert.equal(a.from, 2);
+  assert.deepEqual(a.ingredients, ["4 escalopes de veau", "2 oeufs", "100 g de chapelure", "2 cuillères à soupe d'huile", "sel"]);
+  assert.equal(a.steps, "Battre 2 oeufs. Paner 4 escalopes.");
+  assert.deepEqual(Data.adaptServes(4, ["400 g de pâtes"], "").ingredients, ["400 g de pâtes"]); // déjà pour 4 : rien ne change
+  assert.equal(Data.adaptServes(4, ["400 g de pâtes"], "").from, null);
+  const r = Data.fromSchema({ name: "Pâtes", yield: "2 personnes", ingredients: ["250 g de spaghetti"], steps: [{ s: "", t: "Cuire 250 g de spaghetti." }] }, "");
+  assert.equal(r.serves, 4); assert.equal(r.from, 2);
+  assert.deepEqual(r.ingredients, ["500 g de spaghetti"]);
+  assert.equal(r.steps, "1. Cuire 500 g de spaghetti.");
+});

@@ -144,7 +144,8 @@ function nice(x,dec){if(x>=100)return String(Math.round(x/10)*10);if(x>=20)retur
   const q=Math.max(1,Math.round(x*4)),w=Math.floor(q/4),r=["","¼","½","¾"][q%4];return w?(r?w+" "+r:String(w)):r}
 // « cuillère(s) à café », « c. à c. », « càc » → « cac » ; à soupe → « cas » (invariables)
 const spoon=t=>t.replace(/\b(?:cuill[eè]res?|cuil\.?|c\.?)\s*(?:à|a)\.?\s*(?:(caf[ée])|(soupe)|([cs]))(?![a-z])\.?/gi,(m,c,so,l)=>c||(l&&/c/i.test(l))?"cac":"cas");
-function cook(text,f){const t=spoon(String(text||"").trim()).replace(/^(une?)\s+(?=\S)/i,"1 ");
+// keep : garder l'écriture de la recette (« cuillère à soupe » reste tel quel) — pour enregistrer, pas pour afficher
+function cook(text,f,keep){const t=(keep?String(text||"").trim():spoon(String(text||"").trim())).replace(/^(une?)\s+(?=\S)/i,"1 ");
   // cuillères seules : on compte tout en cac (1 cas = 3 cac) puis on regroupe → « 5 cas + 1 cac de sucre », « 1 ½ cac »
   {const ps=t.split(/\s*\+\s*|\s+et\s+(?=[\d½¼¾⅓⅔])/);let T=0,tail="",ok=true;
     for(const p of ps){const m=p.match(NUM),r=m&&p.slice(m[0].length).match(/^(ca[cs])\b(.*)$/i);
@@ -164,13 +165,13 @@ function cook(text,f){const t=spoon(String(text||"").trim()).replace(/^(une?)\s+
 // Étapes : on adapte les quantités avec une unité (g, cl, cac…) et celles d'un ingrédient de la recette
 // (« 2 œufs », « 1 gousse de vanille ») ; durées, températures et autres nombres ne bougent pas.
 const pl=w=>single(String(w||"").toLowerCase().replace(/œ/g,"oe").normalize("NFD").replace(/[\u0300-\u036f]/g,""));
-function cookSteps(text,f,ings){const t=String(text||"");if(f===1)return t;
+function cookSteps(text,f,ings,keep){const t=String(text||"");if(f===1)return t;
   const heads=new Set((ings||[]).map(i=>{const w=stripDe(String(parse(i).name||"")).split(/\s+/);return pl(ADJ.test(w[0])&&w[1]?w[1]:w[0])}).filter(x=>x.length>2&&!/^(des|les|une|aux|pour)$/.test(x)));
-  return spoon(t).replace(/(^|[\s(«"'’])((?:une?(?=\s)|\d+(?:[.,]\d+)?(?:\s*[½¼¾⅓⅔])?|[½¼¾⅓⅔])\s*[^\s\d,.;:!?()\n][^,.;:!?()\n]*?)(?=\s+(?:et|puis|ou|pendant|dans|sur|avec)\s|[,.;:!?()\n]|$)/gi,(m,pre,q)=>{const q0=q;
+  return (keep?t:spoon(t)).replace(/(^|[\s(«"'’])((?:une?(?=\s)|\d+(?:[.,]\d+)?(?:\s*[½¼¾⅓⅔])?|[½¼¾⅓⅔])\s*[^\s\d,.;:!?()\n][^,.;:!?()\n]*?)(?=\s+(?:et|puis|ou|pendant|dans|sur|avec)\s|[,.;:!?()\n]|$)/gi,(m,pre,q)=>{const q0=q;
     q=q.replace(/^une?\s+/i,"1 ");const n=q.match(NUM);if(!n)return m;const rest=q.slice(n[0].length),w=rest.split(/\s+/);
     if(/^(ou|à|a|-)\s*\d/i.test(rest))return m; // « 2 ou 3 gouttes » : on laisse
     const unit=MASS.test(rest)||VOL.test(rest)||/^(ca[cs]|pinc[ée]es?|sachets?|verres?|tranches?|bols?|tasses?|noix|noisettes?|gouttes?|brins?|feuilles?|morceaux?)\b/i.test(rest);
     const ing=w.slice(0,4).some(x=>heads.has(pl(x.replace(/^[dl]['’]/i,"")).replace(/[^a-z-]/g,"")));
-    return unit||ing?pre+cook(q,f):m})}
+    return unit||ing?pre+cook(q,f,keep):m})}
 window.Qty={parse,format,key,buy,add,step,boxLines,cook,cookSteps,agree:pluralFirst}; // agree : « ½ oignons rouges » → « oignon rouge »
 })();
