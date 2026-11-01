@@ -57,3 +57,11 @@ test("propositions : période du samedi au vendredi (7 soirs + midis du week-end
   assert.equal(Data.planSlots("2026-11-06")[0], "2026-11-07-m"); // vendredi → le lendemain
   assert.equal(Data.isoMinutes("PT1H30M"), 90);
 });
+
+test("placard : ail, câpres, olives, jus de citron, mayonnaise, ketchup ; à acheter : lait, crème, œufs, oignon, concentré de tomate, pesto, harissa", () => {
+  const S = { stores: {} }, home = n => Data.isPantry(S, n);
+  for (const n of ["ail", "petite gousse d'ail", "câpres", "olives vertes dénoyautées", "jus de citron", "mayonnaise", "ketchup", "cornichons", "sauce Worcestershire", "tabasco"])
+    assert.ok(home(n), n);
+  for (const n of ["lait demi-écrémé", "crème fraîche", "oeufs", "oignon rouge", "citron vert (pour le jus)", "poulet", "pommes de terre", "concentré de tomate", "pesto", "harissa"])
+    assert.ok(!home(n), n);
+});

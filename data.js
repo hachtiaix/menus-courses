@@ -35,7 +35,9 @@ const PANTRY_WORDS=[
   // graines et entiers
   "clou de girofle","girofle","anis etoile","badiane","cardamome","graine de sesame","sesame","graine de fenouil","fenouil moulu","fenouil en poudre","baie de genievre","genievre",
   // mélanges et aides
-  "bouillon cube","cube de bouillon","bouillon","fond de veau","sauce soja","moutarde","vinaigre","huile","farine","sucre","levure","maizena","bicarbonate","chapelure","beurre","arome","amande amere","extrait de vanille","sucre vanille","miel"];
+  "bouillon cube","cube de bouillon","bouillon","fond de veau","sauce soja","moutarde","vinaigre","huile","farine","sucre","levure","maizena","bicarbonate","chapelure","beurre","arome","amande amere","extrait de vanille","sucre vanille","miel",
+  // ail et pots du placard (ajoutés le 2026-11-01)
+  "ail","capre","cornichon","olive","jus de citron","mayonnaise","ketchup","tabasco","worcestershire","nuoc mam"]; // concentré de tomate, pesto, harissa : achetés
 const pantryKey=name=>root.Rayons?root.Rayons.keyOf(name):plain(name);
 function isPantry(S,name){
   const r=(S.stores||{})[pantryKey(name)];
