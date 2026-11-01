@@ -466,3 +466,7 @@ body.withaz #view .card[data-lc],body.withaz #view h3.letter{margin-right:24px}
 body.withaz #view .count{margin-right:28px}
 .az{top:calc(var(--hh,70px) + 128px)} /* sous la case de recherche */
 .grab{width:44px;height:6px;margin:-6px auto 10px;padding:8px 0;background-clip:content-box;box-sizing:content-box;cursor:grab;touch-action:none} /* poignée : on la tire vers le bas pour fermer */
+/* case « Plat gourmand » de la fiche recette */
+.serv.chk{gap:10px;align-items:flex-start;cursor:pointer}
+.serv.chk input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--accent)}
+.serv.chk small{display:block}

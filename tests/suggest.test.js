@@ -246,3 +246,31 @@ test("type de plat : gratins de pâtes et pâtes au poisson sont des pâtes (hab
   const S = { recipes: {} }, h = { type: "pates", slot: "s", days: [1] };
   assert.ok(Data.habitMatches(S, h, "Gratin de penne"));
 });
+
+test("plats gourmands : 4 semaines d'écart, 4 au plus par semaine, gratins de pâtes et pâtes riches en une seule famille", () => {
+  const R = (n, g) => ({ name: n, ingredients: [], gourmand: g === true, ts: 1 });
+  const recipes = { a: R("Tartiflette", true), b: R("Gratin de penne", true), c: R("Gratin de macaronis", true), d: R("Pâtes carbonara", true),
+    e: R("Poulet rôti"), f: R("Spaghetti bolognaise"), g: R("Raclette", true), h: R("Fondue savoyarde", true), i: R("Lasagnes", true) };
+  const S = meals => Data.cleanAll({ recipes, meals });
+  const names = (s, slot) => Data.suggest(s, "2026-12-30", 30, [], () => 0.5, slot).map(x => x.name);
+  const fam = ["Gratin de penne", "Gratin de macaronis", "Pâtes carbonara", "Lasagnes"];
+  // un plat gourmand mangé il y a 10 jours : pas reproposé ; un plat ordinaire : toujours là
+  let got = names(S({ "2026-12-20-s": { text: "Tartiflette", ts: 1 } }));
+  assert.ok(!got.includes("Tartiflette")); assert.ok(got.includes("Poulet rôti"));
+  // il y a 6 semaines : de nouveau proposé
+  assert.ok(names(S({ "2026-11-18-s": { text: "Tartiflette", ts: 1 } })).includes("Tartiflette"));
+  // famille : un gratin de penne il y a 15 jours → aucun plat de la famille ; les pâtes ordinaires restent
+  got = names(S({ "2026-12-15-s": { text: "Gratin de penne", ts: 1 } }));
+  assert.ok(fam.every(n => !got.includes(n)), got.join(", ")); assert.ok(got.includes("Spaghetti bolognaise"));
+  // plus de 4 semaines après : un seul plat de la famille, tiré au hasard
+  got = names(S({ "2026-11-20-s": { text: "Gratin de penne", ts: 1 } }));
+  assert.equal(got.filter(n => fam.includes(n)).length, 1, got.join(", "));
+  // déjà 4 plats gourmands dans la semaine (lun. 28 déc. → dim. 3 janv.) : plus aucun pour un autre soir
+  const week = { "2026-12-28-s": { text: "Raclette", ts: 1 }, "2026-12-29-s": { text: "Fondue savoyarde", ts: 1 }, "2026-12-30-m": { text: "Gratin de macaronis", ts: 1 } };
+  assert.ok(names(S(week), "2027-01-01-s").includes("Tartiflette")); // 3 dans la semaine : encore possible
+  got = names(S({ ...week, "2026-12-31-s": { text: "Tartiflette", ts: 1 } }), "2027-01-01-s");
+  assert.ok(![...Object.values(recipes)].some(r => r.gourmand && got.includes(r.name)), got.join(", "));
+  assert.ok(got.includes("Poulet rôti"));
+  // la case est gardée au nettoyage
+  assert.equal(Data.clean("recipes", "x", { name: "A", gourmand: true, ingredients: [] }).gourmand, true);
+});

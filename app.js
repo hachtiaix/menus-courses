@@ -588,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v228";
+const BASE=4,VERSION="v229";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -887,7 +887,7 @@ const STABS=[["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
 // Liste des recettes (onglet Menus → Recettes) : recherche, A-Z, toucher = vue cuisine
 function recipesHtml(){const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
   return `${rs.length>3?`<input type="search" id="rq" class="rsearch" placeholder="🔍 Chercher une recette ou un ingrédient" autocomplete="off">`:""}${rs.length?`<p class="mut count">${rs.length} recette${rs.length>1?"s":""}</p>`:""}${rs.length?(()=>{const g={};for(const r of rs){const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();(g[/[A-Z]/.test(L)?L:"#"]=g[/[A-Z]/.test(L)?L:"#"]||[]).push(r)}
-     return Object.keys(g).sort().map(L=>`<h3 class="ray letter" data-l="${L}">${L}</h3><div class="card" data-lc="${L}">${g[L].map(r=>`<div class="row link" data-r="${r.id}" data-q="${esc(Data.plain(r.name+" "+r.ingredients.map(i=>i.t).join(" ")))}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`+azHtml(rs)+`<button class="fab" id="fabr" aria-label="Nouvelle recette" title="Nouvelle recette">+</button>`}
+     return Object.keys(g).sort().map(L=>`<h3 class="ray letter" data-l="${L}">${L}</h3><div class="card" data-lc="${L}">${g[L].map(r=>`<div class="row link" data-r="${r.id}" data-q="${esc(Data.plain(r.name+" "+r.ingredients.map(i=>i.t).join(" ")))}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${r.gourmand?" · 😋 gourmand":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`+azHtml(rs)+`<button class="fab" id="fabr" aria-label="Nouvelle recette" title="Nouvelle recette">+</button>`}
 // Index A-Z sur le bord droit (comme les Contacts) : toucher une lettre, ou glisser le doigt dessus, saute à ses recettes
 const lettre=r=>{const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();return /[A-Z]/.test(L)?L:"#"};
 function azHtml(rs){const ls=[...new Set(rs.map(lettre))].sort();
@@ -939,12 +939,16 @@ function renderSettings(inRecipes){
      ${acc.length?`<div class="card">${acc.map(x=>`<div class="row"><span class="t">${esc(x.recipe)}<br><small class="mut">avec ${x.sides.map(s=>esc(s.side)+(s.id?` <button class="cdel" data-cdel="${s.id}" aria-label="Retirer">×</button>`:"")).join(" · ")}</small></span></div>`).join("")}</div>`:""}
      <button class="addrow" id="newc"><i>+</i>Ajouter un accompagnement</button>
      <h3 class="ray" style="margin-top:22px">😋 Plats gourmands</h3>
+     <p class="mut">Plats riches (gratins, tartiflette…) : cochez « Plat gourmand » dans la recette. Dans 💡 : 4 au plus par semaine, un même plat pas deux fois en 4 semaines ; les gratins de pâtes et pâtes riches forment une seule famille (après l'un d'eux, aucun pendant 4 semaines, puis un seul, au hasard).</p>
+     <div class="card" style="padding:12px 14px;line-height:2.1">${live(S.recipes).filter(r=>r.gourmand).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<span class="chipw">${esc(r.name)}</span>`).join(" ")||`<span class="mut">Aucune recette cochée pour l'instant</span>`}</div>
+     <h3 class="ray" style="margin-top:22px">🍔 Junk food</h3>
      <p class="mut">Un seul toutes les 2 semaines dans 💡. Un plat dont le nom contient l'un de ces mots en fait partie.</p>
      <div class="card" style="padding:12px 14px;line-height:2.1">${Data.plaisirList(S).map(x=>`<span class="chipw">${esc(x.word.charAt(0).toUpperCase()+x.word.slice(1))}<button class="cdel" data-pdel="${x.id||""}" data-pw="${esc(x.word)}" aria-label="Retirer">×</button></span>`).join(" ")}</div>
-     <button class="addrow" id="newp"><i>+</i>Ajouter un plat gourmand</button>`})()}`,
+     <button class="addrow" id="newp"><i>+</i>Ajouter une junk food</button>`})()}`,
    rayons:`<div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
    ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>`,
-   foyer:`<div class="card"><div class="row"><span class="t">Code de cet appareil<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"} · ${STATE[status]}</small></span><button class="btn sec" id="setcode">Saisir</button></div>
+   foyer:`<div class="card"><div class="row"><span class="t">Version de l'app<br><small class="mut">${VERSION}</small></span><button class="btn sec" id="upd">Mettre à jour</button></div></div>
+   <div class="card"><div class="row"><span class="t">Code de cet appareil<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"} · ${STATE[status]}</small></span><button class="btn sec" id="setcode">Saisir</button></div>
    <div class="row"><span class="t">Scanner le QR code<br><small class="mut">Montré par l'autre téléphone (⚙︎ → Synchro → QR code)</small></span><button class="btn sec" id="scancode">📷 Scanner</button></div>
    ${code?`<div class="row"><span class="t">Montrer le QR code<br><small class="mut">À scanner avec l'autre téléphone</small></span><button class="btn sec" id="qrcode">QR code</button></div>
    <div class="row"><span class="t">Copier le code<br><small class="mut">Pour le coller sur un autre appareil</small></span><button class="btn sec" id="cpcode">Copier</button></div>`:""}
@@ -954,7 +958,7 @@ function renderSettings(inRecipes){
    <div class="card"><div class="row"><span class="t">Exporter<br><small class="mut">Un fichier avec tout (recettes, ingrédients, habitudes, rayons…), à enregistrer sur Google Drive</small></span><button class="btn sec" id="exp">Exporter</button></div>
    <div class="row"><span class="t">Importer<br><small class="mut">Remet ce qui manque depuis un fichier de sauvegarde</small></span><button class="btn sec" id="imp">Importer</button></div></div>
    <input type="file" id="impf" accept=".json,application/json" hidden>
-   <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`,
+`,
   }[stab];
   $("#view").innerHTML=tabs+body;
   document.querySelectorAll("[data-stab]").forEach(b=>b.onclick=()=>{stab=b.dataset.stab;render();scrollTo(0,0)});
@@ -1023,10 +1027,10 @@ function renderSettings(inRecipes){
   on("#newc","onclick",()=>{const t=(prompt("Association, séparée par une virgule (ex. « Pâtes, Œufs »)")||"").trim();
     if(!t)return;if(!/[,+]/.test(t)){alert("Séparez les deux par une virgule, par exemple « Pâtes, Œufs ».");return}
     touch("combos",{id:"c-"+uid(),text:t.split(/\s*[,+]\s*/).filter(Boolean).map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(", ")});render()});
-  on("#newp","onclick",()=>{const t=(prompt("Plat gourmand à ajouter (ex. « Welsh »)")||"").trim();if(!t)return;
+  on("#newp","onclick",()=>{const t=(prompt("Junk food à ajouter (ex. « Welsh »)")||"").trim();if(!t)return;
     const w=Data.plain(t).trim(),off=live(S.combos||{}).find(c=>c.kind==="plaisir"&&c.off&&Data.plain(c.text).trim()===w);
     if(off)touch("combos",{...off,deleted:true});else touch("combos",{id:"p-"+uid(),text:t,kind:"plaisir"});render()});
-  document.querySelectorAll("[data-pw]").forEach(el=>el.onclick=()=>{const id=el.dataset.pdel,w=el.dataset.pw;if(!confirm(`Retirer « ${w} » des plats gourmands ?`))return;
+  document.querySelectorAll("[data-pw]").forEach(el=>el.onclick=()=>{const id=el.dataset.pdel,w=el.dataset.pw;if(!confirm(`Retirer « ${w} » de la junk food ?`))return;
     if(id&&S.combos[id])touch("combos",{...S.combos[id],deleted:true});else touch("combos",{id:"o-"+uid(),text:w,kind:"plaisir",off:true});render()});
   document.querySelectorAll("[data-cdel]").forEach(el=>el.onclick=()=>{const c=S.combos[el.dataset.cdel];if(c&&confirm(`Retirer l'association « ${c.text} » ?`)){touch("combos",{...c,deleted:true});render()}});
   const ol=()=>LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan";
@@ -1296,6 +1300,7 @@ function recipeEditor(r,pre,after){
    <input type="text" id="rn" placeholder="Nom du plat" value="${esc(r?r.name:"")}" style="width:100%;margin-bottom:10px">
    <div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${r?r.serves||BASE:BASE}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div>
    <div class="serv"><span>Type</span><select id="sdes"><option value="p">Plat</option><option value="d" ${Data.recipeDessert(r||{name:""})?"selected":""}>Dessert (jamais proposé dans les menus)</option></select></div>
+   <label class="serv chk"><input type="checkbox" id="sgou" ${r&&r.gourmand?"checked":""}><span>😋 Plat gourmand <small class="mut">riche : 4 au plus par semaine dans 💡</small></span></label>
    <div class="serv"><span>Saison</span><select id="ssn">${[["all","Toute l'année"],["ete","Été (pas de novembre à mars)"],["hiver","Hiver (pas de mai à septembre)"],["dec","Décembre seulement (Noël)"]]
      .map(([v,l])=>`<option value="${v}" ${v===Data.recipeSeason(r||{name:""})?"selected":""}>${l}</option>`).join("")}</select></div>
    <p class="mut">Ingrédients pour ce nombre de personnes, avec la quantité en premier. Le magasin est celui proposé par défaut.</p>
@@ -1321,7 +1326,7 @@ function recipeEditor(r,pre,after){
     lk.disabled=false};
   if(pre){fill(pre);if(lk){lk.value=pre.source||"";$("#rlinkm").textContent=readMsg(pre)}}
   // toucher à côté de la fenêtre : on ferme seulement si rien n'a changé (sinon on demande)
-  const snap=()=>[...ov.querySelectorAll("input,textarea,select,.pan")].map(e=>e.classList.contains("pan")?e.classList.contains("on"):e.value).join("\u0001");
+  const snap=()=>[...ov.querySelectorAll("input,textarea,select,.pan")].map(e=>e.classList.contains("pan")?e.classList.contains("on"):e.type==="checkbox"?e.checked:e.value).join("\u0001");
   const start=pre?null:snap(); // recette importée : pas encore enregistrée, on demande toujours
   ov.onclick=e=>{if(e.target===ov){if(snap()===start||confirm(pre?"Abandonner cette recette importée ?":"Abandonner les modifications de la recette ?"))close();return}const x=e.target.closest(".x");if(x)x.parentNode.remove();
     const p=e.target.closest(".pan");if(p)p.classList.toggle("on")}; // 🏠 placard : vaut pour toutes les recettes
@@ -1349,7 +1354,7 @@ function recipeEditor(r,pre,after){
       touch("stores",{...(S.stores[k]||{id:k,last:[],def:null,n:0}),id:k,name:(S.stores[k]&&S.stores[k].name)||nm,pantry:g.pan})}
     ings.forEach(g=>delete g.pan);
     if(!name){$("#rn").focus();return}
-    const saved={id:r?r.id:uid(),name,steps:$("#stp").value.trim(),season:$("#ssn").value,dessert:$("#sdes").value==="d",serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings,source:src,prep};
+    const saved={id:r?r.id:uid(),name,steps:$("#stp").value.trim(),season:$("#ssn").value,dessert:$("#sdes").value==="d",serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings,source:src,prep,gourmand:$("#sgou").checked||null};
     touch("recipes",saved);close();if(after){render();after(S.recipes[saved.id]);return}render();
   };
 }
