@@ -591,7 +591,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v237";
+const BASE=4,VERSION="v238";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -908,8 +908,8 @@ $("#tabs").onclick=e=>{let t=(e.target.closest("[data-t]")||{dataset:{}}).datase
   if(window.syncSoon)syncSoon()}};
 // Menus : aujourd'hui en haut de l'écran (ouverture de l'app ou de l'onglet)
 const toToday=()=>{const d=document.querySelector(".day.today");if(d)scrollTo(0,Math.max(0,d.getBoundingClientRect().top+scrollY-(document.querySelector("header").offsetHeight+8)))};
-$("#cfg").onclick=()=>{stab="habitudes";tab=LS.tab="settings";render();scrollTo(0,0)};
-let stab="habitudes"; // onglet des réglages ; « Habitudes » à chaque ouverture
+$("#cfg").onclick=()=>{stab="foyer";tab=LS.tab="settings";render();scrollTo(0,0)};
+let stab="foyer"; // onglet des réglages ; « Synchro » à chaque ouverture
 const STABS=[["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
 // Liste des recettes (onglet Menus → Recettes) : recherche, A-Z, toucher = vue cuisine
 function recipesHtml(){const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
@@ -947,7 +947,7 @@ function renderRecipes(){
   else{$("#title").innerHTML=`Recettes <span class="hicon">📖</span>`;$("#view").innerHTML=rseg("rec")+recipesHtml();wireRecipes()}
   document.querySelectorAll("[data-rv]").forEach(b=>b.onclick=()=>{rview=b.dataset.rv;render();scrollTo(0,0)})}
 function renderSettings(inRecipes){
-  if(!inRecipes&&stab==="aliments")stab="habitudes";
+  if(!inRecipes&&stab==="aliments")stab="foyer";
   if(inRecipes)$("#title").innerHTML=`Recettes <span class="hicon">📖</span>`;else $("#title").textContent="Réglages";
   const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
   const hs=live(S.habits).filter(h=>h.state==="on").sort((a,b)=>a.days[0]-b.days[0]||b.slot.localeCompare(a.slot));
