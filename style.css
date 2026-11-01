@@ -342,3 +342,6 @@ p.count{margin:0 4px 2px;font-size:12px;text-align:right}h3.ray.letter{margin:10
 .row.item.open .x{border-radius:50%;background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.12);color:var(--mut)}
 .row.item.open .ctl{justify-content:flex-start}.row.item.open .ctl .stp.sm{margin-right:auto} /* − + à gauche, ⇄ ✏️ × à droite */
 .cook .row .t{font-size:17px}
+.steps-h{margin:16px 2px 6px;font-size:15px}
+#stp{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px;border:1px solid #d5dae1;border-radius:10px;background:transparent;color:inherit;resize:vertical}
+.steps{margin:0;padding:6px 14px 6px 34px}.steps li{padding:8px 0;font-size:17px;line-height:1.4;border-bottom:1px solid rgba(0,0,0,.06)}.steps li:last-child{border:0}

@@ -572,7 +572,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v198";
+const BASE=4,VERSION="v199";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1013,7 +1013,7 @@ function cookView(r){const B=r.serves||BASE;let n=B;
     $("#cl").innerHTML=r.ingredients.map(i=>`<div class="row"><span class="t">${esc(Qty.cook(i.t,n/B))}</span></div>`).join("")};
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(r.name)}</h2>
    <div class="serv"><span>Pour</span><button class="btn sec" id="cm">−</button><b id="cn"></b><button class="btn sec" id="cp">+</button><span>personnes</span></div>
-   <p class="mut" id="cb"></p><div id="cl" class="card cook"></div>
+   <p class="mut" id="cb"></p><div id="cl" class="card cook"></div>${(r.steps||"").trim()?`<h3 class="steps-h">Étapes</h3><ol class="card steps">${r.steps.split(/\n+/).map(x=>x.replace(/^\s*(?:\d+\s*[.)-]|[-•*])\s*/,"").trim()).filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`:""}
    <div class="acts"><button class="btn sec" id="ced">✏️ Modifier</button><button class="btn sec" id="cpl">📅 Au menu</button><button class="btn" id="cx">Fermer</button></div></div>`;
   document.body.appendChild(ov);draw();
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};
@@ -1035,6 +1035,8 @@ function recipeEditor(r){
    <textarea id="paste" rows="3" placeholder="📋 Collez ici toute la liste d'ingrédients : une ligne par ingrédient"></textarea>
    <div id="eds">${(r?r.ingredients:[{t:""},{t:""},{t:""}]).map(rowH).join("")}</div>
    <button class="addrow" id="more"><i>+</i>Ajouter un ingrédient</button>
+   <h3 class="steps-h">Étapes</h3>
+   <textarea id="stp" rows="6" placeholder="Une étape par ligne&#10;Faire revenir l'oignon&#10;Ajouter la viande…">${esc(r&&r.steps||"")}</textarea>
    <div class="acts">${r?`<button class="btn sec danger" id="del">Supprimer</button>`:""}<button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();
@@ -1043,9 +1045,10 @@ function recipeEditor(r){
   $("#no").onclick=close;
   // Texte collé : une ligne d'ingrédient par ligne (puces, titres et étapes ignorés), « pour 6 personnes » règle le nombre.
   $("#paste").oninput=()=>{const v=$("#paste").value;if(!/\n/.test(v.trim()))return;
-    const lines=[];
-    for(let l of v.split(/\r?\n/)){l=l.replace(/^\s*(?:[-•*·▪◦–—]|\d+[.)](?=\s))\s*/,"").trim();
-      if(/^(pr[ée]paration|[ée]tapes?|instructions?)\b/i.test(l))break;
+    const lines=[],all=v.split(/\r?\n/);
+    for(let [k,l] of all.entries()){l=l.replace(/^\s*(?:[-•*·▪◦–—]|\d+[.)](?=\s))\s*/,"").trim();
+      if(/^(pr[ée]paration|[ée]tapes?|instructions?)\b/i.test(l)){ // la suite : les étapes
+        const st=all.slice(k+1).map(x=>x.trim()).filter(Boolean).join("\n");if(st&&!$("#stp").value.trim())$("#stp").value=st;break}
       const p=l.match(/pour\s+(\d+)\s*(?:pers|parts?|couverts?)/i);if(p){$("#sv").value=p[1];continue}
       if(!l||/^ingr[ée]dients?\s*:?$/i.test(l)||l.length>80)continue;lines.push(l)}
     if(!lines.length)return;
@@ -1061,7 +1064,7 @@ function recipeEditor(r){
       touch("stores",{...(S.stores[k]||{id:k,last:[],def:null,n:0}),id:k,name:(S.stores[k]&&S.stores[k].name)||nm,pantry:g.pan})}
     ings.forEach(g=>delete g.pan);
     if(!name){$("#rn").focus();return}
-    touch("recipes",{id:r?r.id:uid(),name,season:$("#ssn").value,dessert:$("#sdes").value==="d",serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings});close();render();
+    touch("recipes",{id:r?r.id:uid(),name,steps:$("#stp").value.trim(),season:$("#ssn").value,dessert:$("#sdes").value==="d",serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings});close();render();
   };
 }
 // Mise à jour automatique : à l'ouverture et au retour dans l'app, si une nouvelle version est en ligne, on recharge
