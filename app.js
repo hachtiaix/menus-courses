@@ -76,7 +76,7 @@ const SHORT={auchan:"Auchan",lidl:"Lidl",drive:"Drive",boucherie:"Boucherie",fer
   MENU_ICON="🍽️",LOGO={auchan:"icons/auchan.svg",lidl:"icons/lidl.svg"},PICTO={fermiers:"icons/ferme.svg"}; // logos du domaine public (Wikimedia Commons)
 const live=o=>Object.values(o).filter(x=>!x.deleted);
 // Image d'ingrédient : emoji, ou dessin maison « svg:nom » (icons/nom.svg) quand l'emoji n'existe pas (saucisse).
-const ico=i=>/^svg:[a-z-]+$/.test(i||"")?`<img class="ico" src="icons/${i.slice(4)}.svg" alt="">`:(i||"");
+const ico=i=>/^svg:[a-z-]+$/.test(i||"")?`<img class="ico" src="icons/${i.slice(4)}.svg" alt="">`:esc(String(i||""));
 function render(){
   Data.setCustom(S);
   const hd=document.querySelector("header");if(hd)document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");
@@ -390,7 +390,7 @@ function planRecipe(r){
     }
     const n=+LS.defN||r.serves||BASE;
     touch("meals",{key,text:r.name,servings:n});applyCompanion(key);close();
-    tab=LS.tab="menus";const d=new Date(key.slice(0,10)+"T12:00"),m=monday();LS.wk=(+LS.wk||0)+Math.floor((d-m)/(7*864e5)+1e-9);
+    tab=LS.tab="menus";const d=new Date(key.slice(0,10)+"T12:00"),m=monday();setWk(wkOff()+Math.floor((d-m)/(7*864e5)+1e-9));
     render();ingredientsDialog(r.name,key);
   };
 }
@@ -471,7 +471,7 @@ function suggestDialog(){
       ||Data.suggest(S,today,12,taken,undefined,r.key+"2").find(fits)||null;
   };
   for(const r of rows)side(r);
-  if(!live_().length){alert("Aucune recette à suggérer pour l'instant : ajoutez des recettes dans ⚙︎ Réglages.");return}
+  if(!live_().length){alert("Aucune recette à suggérer pour l'instant : ajoutez des recettes dans 📖 Recettes.");return}
   const label=k=>new Date(k.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric"})+(k.endsWith("-m")?" midi":" soir");
   const note=x=>(x.habit?typeById(x.habit).icon+" comme d'habitude · ":"")+(x.days==null?"jamais cuisiné":`il y a ${x.days} jours`);
   const rowH=(r,i)=>r.off||!r.sug?"":`<div class="sugrow" data-i="${i}">
@@ -523,6 +523,7 @@ function sidesLearned(){
     // le plat principal : la recette ; sinon un type de plat (« Pâtes » avec œufs…) ; sinon ce qui n'est pas un féculent
     // (« Poulet rôti » avec pommes de terre : les pommes de terre sont l'accompagnement)
     let bases=p.filter(isRec);
+    if(!bases.length)bases=p.filter(x=>{const f=Data.foodFor(x,true);return!!f&&(f.cat==="prot"||f.cat==="pois")}).slice(0,1); // viande, poisson
     if(!bases.length)bases=[...p.filter(x=>Data.typeOf(x)&&!starch(x)),...p.filter(x=>Data.typeOf(x))].slice(0,1); // « Poulet curry » avant « Riz »
     if(!bases.length)bases=p.filter(x=>!starch(x));
     for(const x of bases){const r=isRec(x),b=r?r.name:(Data.foodFor(x,true)||{}).label||x.charAt(0).toUpperCase()+x.slice(1);
@@ -576,9 +577,13 @@ function applyCompanion(key){
 }
 // Recette d'un plat : une recette enregistrée, sinon une suite d'aliments (« viande rouge, haricots verts »).
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
-function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
+// semaine affichée : décalage par rapport à la semaine en cours, oublié après 6 h sans y toucher
+// (sinon, l'app rouverte des jours plus tard restait sur une autre semaine)
+const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
+const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
+function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v210";
+const BASE=4,VERSION="v211";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -777,12 +782,12 @@ function renderMenus(){
   document.querySelectorAll("[data-sm]").forEach(el=>el.onclick=()=>step(el.dataset.sm,-1));
   document.querySelectorAll("[data-sp]").forEach(el=>el.onclick=()=>step(el.dataset.sp,1));
   $("#sugg").onclick=suggestDialog;
-  $("#pv").onclick=()=>{LS.wk=(+LS.wk||0)-1;render()};$("#nx").onclick=()=>{LS.wk=(+LS.wk||0)+1;render()};
+  $("#pv").onclick=()=>{setWk(wkOff()-1);render()};$("#nx").onclick=()=>{setWk(wkOff()+1);render()};
 }
 // after : appelé une fois la fenêtre fermée (validée ou ignorée) ; step : « Repas 2/5 · mardi soir »
 function ingredientsDialog(name,mealKey,startN,after,step){
   // Plat ou aliment inconnu tapé seul : une ligne sans quantité, comme dans une suite ; il attend dans
-  // Réglages → Ingrédients → ⏳ À classer. Les recettes se créent dans Réglages → Recettes.
+  // 📖 Recettes → Ingrédients → ⏳ À classer. Les recettes se créent dans 📖 Recettes.
   const r=recipeOf(name)||{name,serves:1,virtual:true,ingredients:[{t:name,store:"auchan"}]};
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
@@ -797,7 +802,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
    ${r&&meal&&meal.text&&!prev&&meal.ts<LEGACY_TS?`<p class="homewarn" style="margin:6px 0">⚠ Ce repas date d'avant le suivi des ajouts : vérifiez qu'il n'est pas déjà dans vos listes avant d'ajouter.</p>`:""}
    ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
    ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
-   <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans ⚙︎ → Ingrédients.":`Recette pour ${B} personne${B>1?"s":""}.`}</p>
+   <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans 📖 Recettes → Ingrédients.":`Recette pour ${B} personne${B>1?"s":""}.`}</p>
    <div id="ings" class="card">${r.ingredients.filter(i=>!pantryOf(i.t)).map(rowH).join("")}</div><button class="addrow" id="more"><i>+</i>Ajouter un ingrédient</button>`
    :`<p class="mut">Nouvelle recette : un ingrédient par ligne, quantité en premier (ex. « 400 g de pâtes »).</p><div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${n}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div><textarea id="ta" rows="7" placeholder="400 g de pâtes&#10;200 g de lardons&#10;2 oeufs&#10;crème fraîche"></textarea>`}
    <div class="acts"><button class="btn sec" id="no">Ne pas ajouter<br>aux listes</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour<br>les listes":"Ajouter<br>aux listes"}</button></div></div>`;
@@ -861,7 +866,11 @@ function ingredientsDialog(name,mealKey,startN,after,step){
   };
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-st2]");if(b){tab=LS.tab=b.dataset.st2;render();scrollTo(0,0)}});
-$("#tabs").onclick=e=>{let t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t==="recettes")rview="rec";if(t==="courses")t=S.lists[LS.store]&&!S.lists[LS.store].deleted?LS.store:"auchan";if(t){tab=LS.tab=t;render();scrollTo(0,0);if(window.syncSoon)syncSoon()}};
+$("#tabs").onclick=e=>{let t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t==="recettes")rview="rec";if(t==="courses")t=S.lists[LS.store]&&!S.lists[LS.store].deleted?LS.store:"auchan";if(t){tab=LS.tab=t;render();scrollTo(0,0);
+  if(t==="menus")toToday();
+  if(window.syncSoon)syncSoon()}};
+// Menus : aujourd'hui en haut de l'écran (ouverture de l'app ou de l'onglet)
+const toToday=()=>{const d=document.querySelector(".day.today");if(d)scrollTo(0,Math.max(0,d.getBoundingClientRect().top+scrollY-(document.querySelector("header").offsetHeight+8)))};
 $("#cfg").onclick=()=>{stab="habitudes";tab=LS.tab="settings";render();scrollTo(0,0)};
 let stab="habitudes"; // onglet des réglages ; « Habitudes » à chaque ouverture
 const STABS=[["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
@@ -936,11 +945,14 @@ function renderSettings(inRecipes){
     try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k);
       await Promise.all(["./","index.html","app.js","data.js","qty.js","rayons.js","style.css","config.js","sw.js"].map(f=>fetch(f,{cache:"reload"}).catch(()=>{})))}catch(_){}
     location.replace(location.pathname+"?maj="+Date.now())});
-  const askCode=(msg,def)=>{
+  const askCode=(msg,def,min=MIN_CODE)=>{
     let c=prompt(msg,def);
-    while(c!==null&&c.trim().length<MIN_CODE)c=prompt(`Trop court : au moins ${MIN_CODE} caractères. Par exemple trois mots et un nombre.`,c.trim());
+    while(c!==null&&c.trim().length<min)c=prompt(`Trop court : au moins ${min} caractères. Par exemple trois mots et un nombre.`,c.trim());
     return c===null?null:c.trim();
   };
+  // code solide tiré au hasard (sans 0/O ni 1/l/I pour éviter les confusions) : xxxx-xxxx-xxxx-xxxx
+  const strongCode=()=>{const A="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",v=crypto.getRandomValues(new Uint32Array(16));
+    return [...v].map(x=>A[x%A.length]).join("").match(/.{4}/g).join("-")};
   // Rejoindre un foyer existant : ne change que cet appareil.
   const cp=$("#cpcode");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(code);cp.textContent="Copié ✓"}catch(_){alert("Copie impossible sur cet appareil.")}};
   on("#setcode","onclick",()=>{
@@ -949,10 +961,10 @@ function renderSettings(inRecipes){
   });
   // Renommer le foyer côté serveur : il faut que le code actuel soit valide.
   const ren=$("#rencode");if(ren)ren.onclick=async()=>{
-    const n=askCode(`Nouveau code du foyer, au moins ${MIN_CODE} caractères. Gardez-le secret :`,"");
+    const n=askCode("Nouveau code du foyer (16 caractères au moins). Celui proposé est tiré au hasard : gardez-le, puis « Copier » pour le coller sur l'autre téléphone.",strongCode(),16);
     if(!n||n===code)return;
     const r=await rpc("change_household_code",{p_old:code,p_new:n}).catch(()=>null);
-    if(r&&r.ok){code=LS.code=n;sync();render();alert("Code changé. Sur les autres appareils : ⚙︎ → Saisir, puis le nouveau code.");return}
+    if(r&&r.ok){code=LS.code=n;sync();render();alert("Code changé. Sur les autres appareils : ⚙︎ → Synchro → Saisir, puis le nouveau code.");return}
     const e=r?await r.json().catch(()=>({})):{};
     alert(e.message==="code deja utilise"?"Ce code est déjà pris, choisissez-en un autre.":"Impossible de changer le code pour l'instant (hors ligne ?).");
   };
@@ -1080,7 +1092,10 @@ function recipeEditor(r){
    <div class="acts">${r?`<button class="btn sec danger" id="del">Supprimer</button>`:""}<button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();
-  ov.onclick=e=>{if(e.target===ov)close();const x=e.target.closest(".x");if(x)x.parentNode.remove();
+  // toucher à côté de la fenêtre : on ferme seulement si rien n'a changé (sinon on demande)
+  const snap=()=>[...ov.querySelectorAll("input,textarea,select,.pan")].map(e=>e.classList.contains("pan")?e.classList.contains("on"):e.value).join("\u0001");
+  const start=snap();
+  ov.onclick=e=>{if(e.target===ov){if(snap()===start||confirm("Abandonner les modifications de la recette ?"))close();return}const x=e.target.closest(".x");if(x)x.parentNode.remove();
     const p=e.target.closest(".pan");if(p)p.classList.toggle("on")}; // 🏠 placard : vaut pour toutes les recettes
   $("#no").onclick=close;
   // Texte collé : une ligne d'ingrédient par ligne (puces, titres et étapes ignorés), « pour 6 personnes » règle le nombre.
@@ -1113,7 +1128,7 @@ async function autoUpdate(atStart){
   try{const a=document.activeElement;if(document.hidden||(a&&a.matches("input,textarea,select"))||document.querySelector(".ov"))return;
     const t=await (await fetch("sw.js?v="+Date.now(),{cache:"no-store"})).text(),v=(t.match(/V="([^"]+)"/)||[])[1];
     if(!v||v===VERSION||LS.autoTried===v)return;
-    if(!atStart&&tab!=="menus"&&tab!=="settings")return; // au retour dans l'app sur une liste (en magasin) : pas de rechargement
+    if(!atStart&&S.lists[tab])return; // au retour dans l'app sur une liste (en magasin) : pas de rechargement
     LS.autoTried=v;LS.autoFrom=VERSION;
     const r=await navigator.serviceWorker?.getRegistration();if(r)await r.update();
     location.replace(location.pathname+"?maj="+Date.now());
@@ -1145,7 +1160,7 @@ if(LS.autoFrom){const from=LS.autoFrom;delete LS.autoFrom;if(from!==VERSION)setT
 if(LS.updFrom){const from=LS.updFrom;delete LS.updFrom;tab=LS.tab="settings";stab="foyer";
   setTimeout(()=>toast(from===VERSION?`✓ Déjà à jour : version ${VERSION}`:`✓ Mise à jour installée : version ${VERSION}`),300)}
 function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
-purgeDone();render();sync();
+purgeDone();render();if(tab==="menus")toToday();sync();
 setInterval(purgeDone,5*60*1000);
 // pas encore de code (nouvel appareil) : directement sur l'onglet Foyer, où on le saisit
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>{tab=LS.tab="settings";stab="foyer";render()},300);
