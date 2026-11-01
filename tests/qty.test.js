@@ -86,3 +86,9 @@ test("cook : quantités pour un autre nombre de personnes", () => {
   assert.equal(Qty.cook("1 kg de boeuf", 1.5), "1,5 kg de boeuf");
   assert.equal(Qty.cook("sel", 2), "sel");
 });
+
+test("cook : cuillères en cac / cas, sans pluriel", () => {
+  assert.equal(Qty.cook("1 cuillère à café de cumin", 2), "2 cac de cumin");
+  assert.equal(Qty.cook("2 c. à soupe d'huile", 1.5), "3 cas d'huile");
+  assert.equal(Qty.cook("1 cac de curry", 2), "2 cac de curry");
+});

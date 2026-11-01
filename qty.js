@@ -79,7 +79,8 @@ const single=w=>/^choux-/i.test(w)?w.split("-").map(single).join("-"):/^choux$/i
 const ADJ=/^(grosses?|petites?|moyennes?|grandes?|belles?|beaux?|bel|jeunes?|vieilles?|vieux|gros|petits?|grands?)$/i;
 // adjectif après le nom, accordé aussi (« 3 boudins blancs », « 4 steaks hachés », « 2 cordons bleus »)
 const POST=/^(mignons?|blancs?|blanches?|noirs?|noires?|rouges?|verts?|vertes?|bleus?|jaunes?|frais|fraîches?|entiers?|entières?|mûrs?|mûres?|cuits?|cuites?|crus?|crues?|secs?|sèches?|cerises?|[^\s]{2,}ée?s?)$/i; // …ée?s? : haché, râpée, pané, fumé, émincé…
-const pluralFirst=(name,n)=>{const w=name.split(" "),f=x=>n>1?plural(x,n):single(x);
+const pluralFirst=(name,n)=>{if(/^ca[cs]\b/i.test(name))return name; // cac, cas : invariables
+  const w=name.split(" "),f=x=>n>1?plural(x,n):single(x);
   w[0]=f(w[0]);if(w.length>1&&ADJ.test(w[0]))w[1]=f(w[1]);
   else if(w.length>1&&POST.test(w[1]))w[1]=n>1?plural(w[1],n):/^(frais|gros)$/i.test(w[1])?w[1]:w[1].replace(/s$/i,""); // adjectif : « 1 avocat mûr », « 1 cordon bleu »
   return w.join(" ")};
@@ -138,13 +139,15 @@ function step(text,dir){
 function nice(x,dec){if(x>=100)return String(Math.round(x/10)*10);if(x>=20)return String(Math.round(x/5)*5);if(x>=10)return String(Math.round(x));
   if(dec)return fr(Math.round(x*10)/10);
   const q=Math.max(1,Math.round(x*4)),w=Math.floor(q/4),r=["","¼","½","¾"][q%4];return w?(r?w+" "+r:String(w)):r}
-function cook(text,f){const t=String(text||"").trim();
+// « cuillère(s) à café », « c. à c. », « càc » → « cac » ; à soupe → « cas » (invariables)
+const spoon=t=>t.replace(/\b(?:cuill[eè]res?|cuil\.?|c\.?)\s*(?:à|a)\s*(?:(caf[ée])|(soupe))(?![a-z])\.?|\bc\.?\s*[àa]\.?\s*([cs])\b\.?/gi,(m,c,so,l)=>c||(l&&/c/i.test(l))?"cac":"cas");
+function cook(text,f){const t=spoon(String(text||"").trim());
   const m=t.match(NUM);
   if(!m){const tr=t.match(/^(.*?\D)(\s*[:(,-]?\s*)(\d+(?:[.,]\d+)?)(\s*\S*\)?\s*)$/); // « poulet 1,6 kg »
     if(!tr||!tr[1].trim())return t;const n=parseFloat(tr[3].replace(",","."));
     return tr[1]+tr[2]+nice(n*f,/^\s*(kg|kilos?|l|litres?)\b/i.test(tr[4]))+tr[4]}
   const n=num(m[1]);if(!(n>0))return t;const rest=t.slice(m[0].length),x=n*f;
   if(MASS.test(rest)||VOL.test(rest))return nice(x,/^(kg|kilos?|l|litres?)\b/i.test(rest))+" "+rest;
-  return nice(x)+" "+pluralFirst(rest,x<2?1:x)} // « 1 ½ oignon », « 2 petites boîtes »
+  return nice(x)+" "+(/^ca[cs]\b/i.test(rest)?rest:pluralFirst(rest,x<2?1:x))} // « 1 ½ oignon », « 2 petites boîtes »
 window.Qty={parse,format,key,buy,add,step,boxLines,cook};
 })();
