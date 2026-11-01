@@ -23,6 +23,12 @@ test("import : lignes d'ingrédients de CuisineAZ et Marmiton au format de l'app
   assert.equal(t("1.5 kg de pommes de terre"), "1,5 kg de pommes de terre");
   assert.equal(t("1 avocats"), "1 avocat");
   assert.equal(t("1 ananas"), "1 ananas");
+  // recette CuisineAZ « Sauté de dinde au Cookeo »
+  assert.equal(t("2 Gousse Ail"), "2 gousses d'ail");
+  assert.equal(t("5 Branches Persil"), "5 branches de persil");
+  assert.equal(t("1 Filet(s) Huile"), "1 filet d'huile");
+  assert.equal(t("1 bouquet(s) Garni"), "1 bouquet garni");
+  assert.equal(t("750 g Dinde"), "750 g de dinde");
 });
 
 test("import : recette complète (nom raccourci, personnes, étapes numérotées, lien gardé)", () => {
@@ -98,6 +104,7 @@ test("import : sel et poivre séparés", () => {
   assert.deepEqual(f(["sel et poivre du moulin"]), ["sel", "poivre du moulin"]);
   assert.deepEqual(f(["Huile d'olive, sel, poivre"]), ["huile d'olive", "sel", "poivre"]);
   assert.deepEqual(f(["Sel / Poivre"]), ["sel", "poivre"]);
+  assert.deepEqual(f(["Sel poivre"]), ["sel", "poivre"]);
   assert.deepEqual(f(["200 g de poulet", "sel"]), ["200 g de poulet", "sel"]);
   assert.deepEqual(f(["Pommes de terre et carottes"]), ["Pommes de terre et carottes"]); // pas de sel ni poivre : inchangé
   assert.deepEqual(Data.fromSchema({ name: "X", ingredients: ["400 g Pâtes", "Sel, poivre"] }, "").ingredients, ["400 g de pâtes", "sel", "poivre"]);

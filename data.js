@@ -455,7 +455,10 @@ function tidyIngredient(line){
   t=t.replace(/\((e?s|x)\)/gi,(m,p)=>n>1?p:""); // « gousse(s) » : accordé à la quantité
   if(n<=1)t=t.replace(UNIT_ONE,"$1$2");
   const m=t.match(UNIT_RE);
-  if(m){const unit=m[1];let rest=m[2];
+  if(m){let unit=m[1],rest=m[2];
+    // l'unité en minuscules, accordée (« 2 Gousse » → « 2 gousses ») ; g, ml, cl… inchangés
+    unit=unit.replace(new RegExp("^("+QTY+"\\s*)(.+)$"),(a,q,u)=>{u=u.toLowerCase();return q+(/^(g|kg|mg|cl|ml|dl|l)$/.test(u)||!root.Qty||!root.Qty.agree?u:root.Qty.agree(u,n))});
+    if(/^garni\b/i.test(rest)&&/bouquet/i.test(unit))return (unit+" "+rest.toLowerCase()).slice(0,200); // « 1 bouquet garni »
     // unité répétée : « 2 gousses Gousses d'ail » → « 2 gousses d'ail »
     const u=unit.replace(new RegExp("^"+QTY+"\\s*"),"").toLowerCase().replace(/s$/,""),w=rest.match(/^(\S+?)s?(?=\s|$)/);
     if(w&&u.length>2&&w[1].toLowerCase()===u)rest=rest.slice(w[0].length).trimStart();
@@ -483,7 +486,9 @@ function adaptServes(serves,ingredients,steps){
 // « Sel, poivre », « sel et poivre du moulin » : deux ingrédients (sans quantité, contenant sel ou poivre)
 function splitSeasoning(lines){return lines.flatMap(l=>{const t=String(l).trim();
   if(/\d/.test(t)||!/\b(sel|poivre)\b/i.test(plain(t)))return[t];
-  const p=t.split(/\s*(?:,|;|\/|&|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
+  let p=t.split(/\s*(?:,|;|\/|&|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
+  // « Sel poivre », sans séparateur : coupé avant le 2e mot (sel ou poivre)
+  if(p.length===1){const w=[...plain(t).matchAll(/\b(sel|poivre)\b/g)];if(w.length===2&&w[1].index>0)p=[t.slice(0,w[1].index).trim(),t.slice(w[1].index).trim()]}
   return p.length>1&&p.every(x=>x.split(/\s+/).length<=4)?p.map(x=>x.charAt(0).toLowerCase()+x.slice(1)):[t]})}
 // réponse de la fonction « recette » (données schema.org de la page) → recette prête à vérifier et enregistrer
 function fromSchema(x,url){
