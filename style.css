@@ -379,3 +379,11 @@ nav button i b{left:calc(50% + 16px);top:4px}
 .stores{gap:8px}
 .stores button{flex:1 1 0;min-width:0;height:62px;padding:0 4px;font-size:32px}
 .stores img.logo-auchan{width:100%;max-width:70px}.stores img.logo-lidl{width:42px;height:42px}.stores img.picto{width:40px;height:40px}
+/* magasins dans l'en-tête, sur la ligne de ⚙︎ */
+#title:has(.stores){min-width:0;font-size:inherit;letter-spacing:0}
+#title .stores{margin:0;padding:6px 2px;gap:6px;overflow:visible}
+#title .stores button{height:50px;border-radius:12px;padding:0 2px;font-size:28px}
+#title .stores img.logo-auchan{max-width:62px}#title .stores img.logo-lidl{width:36px;height:36px}#title .stores img.picto{width:34px;height:34px}
+#title .stores button:not(.on){opacity:.75}
+#title .stores button.on{opacity:1;border:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card));box-shadow:0 3px 10px rgba(47,125,79,.3)}
+#title .stores b{top:-5px;right:-5px}

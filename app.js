@@ -94,10 +94,8 @@ function renderList(id){
   LS.store=id; // 🛒 rouvre ce magasin
   const lists=live(S.lists).sort(listSort),pic=l=>LOGO[l.id]?`<img src="${LOGO[l.id]}" alt="${esc(l.name)}" class="logo-${l.id}">`:PICTO[l.id]?`<img src="${PICTO[l.id]}" alt="" class="picto">`:ICON[l.id]||"🛒";
   var storeBar=`<div class="stores">${lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done&&!i.check).length;return `<button data-st2="${l.id}" class="${l.id===id?"on":""}" aria-label="${esc(l.name)}">${pic(l)}${c?`<b>${c}</b>`:""}</button>`}).join("")}</div>`;
-  // titre : le logo du magasin quand il y en a un (il contient déjà le nom)
-  if(LOGO[id])$("#title").innerHTML=`<img src="${LOGO[id]}" alt="${esc(S.lists[id].name)}" class="hlogo hlogo-${id}">`;
-  else if(PICTO[id]||ICON[id])$("#title").innerHTML=`${esc(S.lists[id].name)} <span class="hicon">${PICTO[id]?`<img src="${PICTO[id]}" alt="" class="picto">`:ICON[id]}</span>`;
-  else $("#title").textContent=S.lists[id].name;
+  // en-tête : les magasins (plus de logo en titre), à côté de ⚙︎ ; celui qui est ouvert est encadré
+  $("#title").innerHTML=storeBar;
   live(S.items).filter(i=>i.list===id&&!i.done&&/\s\+\s/.test(i.text)&&Qty.parse(i.text).kind==="box").forEach(i=>{touch("items",{...i,deleted:true});addBoxes(id,Qty.parse(i.text),i.id)});
   const items=live(S.items).filter(i=>i.list===id&&!i.archived).sort((a,b)=>a.done-b.done||(a.c||a.ts)-(b.c||b.ts));
   // 🏠 à vérifier au placard : en gris, « Il en manque » (devient un article à acheter) ou « J'en ai » (retiré)
@@ -118,7 +116,7 @@ function renderList(id){
     return `<div class="row verif"><span class="t" data-e="${i.id}">🏠 ${esc(i.text)}${nd.total?` <b class="tot">${esc(nd.total)}</b>`:""}</span><button class="pill vok" data-vok="${i.id}">Il en manque</button><button class="pill vno" data-d="${i.id}">J'en ai</button><small class="for">${esc(nd.detail||"pour un repas")}</small></div>`};
   const rowItem=i=>
 `<div class="row item ${i.done?"done":""} ${openIt===i.id?"open":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-o="${i.id}">${esc(i.text)}</span><span class="ctl">${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span><button class="pill imv" data-imv="${i.id}" aria-label="Changer de liste">⇄</button><button class="pill ied" data-e="${i.id}" aria-label="Modifier">✏️</button>`:""}<button class="x" data-d="${i.id}" aria-label="Supprimer">×</button></span></div>`;
-  $("#view").innerHTML=storeBar+`<form id="add" class="${addOpen?"":"hid"}"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off" enterkeyhint="done"></form><button class="fab" id="fabl" aria-label="Ajouter un article">+</button>`+
+  $("#view").innerHTML=`<form id="add" class="${addOpen?"":"hid"}"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off" enterkeyhint="done"></form><button class="fab" id="fabl" aria-label="Ajouter un article">+</button>`+
    // 🏠 à vérifier au placard : tous ensemble en haut de la liste
    (items.some(i=>i.check)?`<h3 class="ray">🏠 À vérifier au placard</h3><div class="card">${items.filter(i=>i.check).map(row).join("")}</div>`:"")+
    (items.length?rayonOrder(id).map(r=>{const g=items.filter(i=>!i.done&&!i.check&&rayonOf(i.text)===r.id);
@@ -580,7 +578,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v207";
+const BASE=4,VERSION="v208";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
