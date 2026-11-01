@@ -7,6 +7,8 @@ for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"],["
 let openIt=null; // article de liste dont les boutons sont affichés
 let addOpen=false; // case « Ajouter un article » ouverte (par le + flottant)
 let rview="rec"; // onglet 📖 : « Recettes » à chaque ouverture (sinon « Ingrédients »)
+const openPast=new Set(); // jours passés dépliés à la main (Menus), gardés pendant la session
+const cookGot={}; // vue recette : ingrédients barrés, par recette, pendant la session
 let tab=LS.tab||"auchan", code=LS.code||"", pending=JSON.parse(LS.pending||"{}"); // pending : modifications pas encore envoyées
 
 function save(){LS.s=JSON.stringify(S);LS.pending=JSON.stringify(pending)}
@@ -178,8 +180,11 @@ function renderList(id){
     document.querySelectorAll(".row.item.open").forEach(r=>r.classList.remove("open"));if(openIt)el.parentElement.classList.add("open")});
   document.querySelectorAll("[data-vok]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.vok];touch("items",{...i,check:false,until:null,c:Date.now()});render()});
   document.querySelectorAll("[data-c]").forEach(el=>el.onchange=()=>{const i=S.items[el.dataset.c];touch("items",{...i,done:el.checked});recordPurchase(i.text,i.list,el.checked);render()});
-  document.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.d];touch("items",i.done?{...i,archived:true}:{...i,deleted:true});render()});
-  const c=$("#clr");if(c)c.onclick=()=>{items.filter(i=>i.done).forEach(i=>touch("items",{...i,archived:true}));render()};
+  // retirer : « Annuler » pendant 5 s remet l'article tel qu'il était
+  document.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{const i=S.items[el.dataset.d],was={...i};touch("items",i.done?{...i,archived:true}:{...i,deleted:true});render();
+    toast(`« ${i.text} » retiré`,()=>{touch("items",{...was});render()})});
+  const c=$("#clr");if(c)c.onclick=()=>{const was=items.filter(i=>i.done).map(i=>({...i}));was.forEach(i=>touch("items",{...i,archived:true}));render();
+    toast(`${was.length} article${was.length>1?"s":""} retiré${was.length>1?"s":""}`,()=>{was.forEach(i=>touch("items",{...i}));render()})};
 }
 // Ajoute un article à une liste en cumulant avec un article identique non coché (« 1 oignon » + « 3 oignons » = « 4 oignons »).
 // Ingrédient « placard » d'un repas : une seule ligne 🏠 « à vérifier » (sans quantité), gardée jusqu'au dernier repas qui en a besoin.
@@ -583,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v211";
+const BASE=4,VERSION="v214";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -615,12 +620,12 @@ function slotHtml(key,label,past){
     :b?`<div class="stp"><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers. · acheté</em></div>`
     :`<div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`
   }${!past&&!has2?`<button class="pill add2" data-add2="${key}" aria-label="Ajouter un plat" title="Ajouter un plat">🍽️</button>`:""}<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button>${past?"":b?`<button class="lock" data-del="${key}" data-force="1" title="Ingrédients déjà achetés" aria-label="Supprimer quand même">🔒</button>`:`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`}</div>`;
-  return `<div class="slotw ${past?"past":""}"><div class="slot"><span class="lbl">${label}</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text)}</span>${right}</div>${sub}</div>${extras.map((k2,i)=>secondHtml(k2,S.meals[k2],past,i+2)).join("")}`;
+  return `<div class="slotw ${past?"past":""}"><div class="slot"><span class="lbl">${label}</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text,key)}</span>${right}</div>${sub}</div>${extras.map((k2,i)=>secondHtml(k2,S.meals[k2],past,i+2)).join("")}`;
 }
 // 2e plat d'un repas (pour qui, plat, personnes, ingrédients) ; il se déplace avec le repas principal.
 // Suite d'aliments : étiquettes colorées par-dessus le champ (le texte réapparaît quand on le touche).
-const tagsHtml=text=>{const real=live(S.recipes).some(r=>r.name.toLowerCase()===String(text||"").toLowerCase());
-  if(real)return `<span class="tags"><i class="rcp"><button type="button" class="cookb" data-cook="${esc(text)}" aria-label="Voir la recette">📖</button> <b>${esc(text)}</b></i></span>`; // recette : livre + nom en gras
+const tagsHtml=(text,key)=>{const real=live(S.recipes).some(r=>r.name.toLowerCase()===String(text||"").toLowerCase());
+  if(real)return `<span class="tags"><i class="rcp"><button type="button" class="cookb" data-cook="${esc(text)}" data-k="${key||""}" aria-label="Voir la recette">📖</button> <b>${esc(text)}</b></i></span>`; // recette : livre + nom en gras
   const tags=text?Data.suiteTags(S,text):null;
   return tags?`<span class="tags" aria-hidden="true">${tags.map(x=>`<i class="tag ${x.cat}">${x.cat==="rcp"?"📖 ":""}${esc(x.t.charAt(0).toUpperCase()+x.t.slice(1))}</i>`).join("")}</span>`:""};
 function secondHtml(k2,e,past,pos){ // pos : rang affiché (2ᵉ, 3ᵉ…), sans trou si un plat a été retiré
@@ -632,7 +637,7 @@ function secondHtml(k2,e,past,pos){ // pos : rang affiché (2ᵉ, 3ᵉ…), sans
   const sub=!e.text?"":past?`<div class="sub"><span class="mut sm">${n} pers.</span></div>`
     :`<div class="sub">${b?`<div class="stp"><b>${n}</b><em>pers. · acheté</em></div><button class="lock" data-del="${k2}" data-force="1" title="Ingrédients déjà achetés" aria-label="Supprimer quand même">🔒</button>`
     :`<div class="stp"><button data-sm="${k2}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${k2}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${k2}" aria-label="Ingrédients" title="Ingrédients">🥕</button><button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`}</div>`;
-  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span class="lbl">+ ${pos||2}ᵉ plat</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text)}</span>${right}</div>${sub}</div>`;
+  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span class="lbl">+ ${pos||2}ᵉ plat</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text,k2)}</span>${right}</div>${sub}</div>`;
 }
 function renderMenus(){
   $("#title").innerHTML=`Menus <span class="hicon">${MENU_ICON}</span>`;
@@ -642,12 +647,17 @@ function renderMenus(){
   let h=`<div class="wk"><button class="btn sec" id="pv">‹</button><div>${f(m)} – ${f(end)}</div><button class="btn sec" id="sugg" aria-label="Suggestions de plats">💡</button><button class="btn sec" id="nx">›</button></div>`;
   for(let n=0;n<7;n++){
     const d=new Date(m);d.setDate(m.getDate()+n);const k=d.toISOString().slice(0,10);
-    const wd=d.toLocaleDateString("fr-FR",{weekday:"long"}); // jour en en-tête de la carte : « lundi 5 »
-    h+=`<section class="day ${k===today?"today":""}"><div class="dh"><b>${wd}</b><small>${d.getDate()}</small></div><div class="slots">`+
-      [["m","Midi"],["s","Soir"]].map(([s,l])=>slotHtml(k+"-"+s,l,k<today)).join("")+`</div></section>`;
+    const wd=d.toLocaleDateString("fr-FR",{weekday:"long"}); // jour en en-tête de la carte : « lundi 26 octobre », « dimanche 1er novembre »
+    const dm=(d.getDate()===1?"1er":d.getDate())+" "+d.toLocaleDateString("fr-FR",{month:"long"});
+    const slots=[["m","Midi"],["s","Soir"]].map(([s,l])=>slotHtml(k+"-"+s,l,k<today)).join("");
+    if(k<today){ // jour passé : replié sur sa date, on le déplie en le touchant
+      h+=`<details class="pastd" data-pd="${k}" ${openPast.has(k)?"open":""}><summary><b>${wd}</b><small>${dm}</small></summary><div class="slots">${slots}</div></details>`;
+      continue}
+    h+=`<section class="day ${k===today?"today":""}"><div class="dh"><b>${wd}</b><small>${dm}</small></div><div class="slots">`+slots+`</div></section>`;
   }
   $("#view").innerHTML=h;
-  document.querySelectorAll("[data-cook]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const r=recipeOf(b.dataset.cook);if(r&&!r.virtual)cookView(r)});
+  document.querySelectorAll("[data-pd]").forEach(d=>d.ontoggle=()=>{if(d.open)openPast.add(d.dataset.pd);else openPast.delete(d.dataset.pd)});
+  document.querySelectorAll("[data-cook]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const r=recipeOf(b.dataset.cook),m=S.meals[b.dataset.k];if(r&&!r.virtual)cookView(r,m&&m.servings)});
   const norm=Data.plain;
   const names=()=>{const seen=new Set(),out=[];
     for(const [t,recipe] of [...live(S.recipes).map(r=>[r.name,true]),...live(S.meals).map(m=>[m.text,false]).filter(x=>x[0])]){const k=norm(t);if(!seen.has(k)){seen.add(k);out.push({t,recipe})}}
@@ -921,6 +931,10 @@ function renderSettings(inRecipes){
    ${code?`<div class="row"><span class="t">Copier le code<br><small class="mut">Pour le coller sur un autre appareil</small></span><button class="btn sec" id="cpcode">Copier</button></div>`:""}
    ${status==="ok"?`<div class="row"><span class="t">Changer le code du foyer<br><small class="mut">Les autres appareils devront saisir le nouveau</small></span><button class="btn sec" id="rencode">Changer</button></div>`:""}</div>
    ${status==="unk"?`<p class="warn">Ce code ne correspond à aucun foyer. Vérifiez-le (majuscules, espaces) ou demandez-le à un autre membre du foyer.</p>`:""}
+   <h3 class="ray" style="margin-top:22px">💾 Sauvegarde</h3>
+   <div class="card"><div class="row"><span class="t">Exporter<br><small class="mut">Un fichier avec tout (recettes, ingrédients, habitudes, rayons…), à enregistrer sur Google Drive</small></span><button class="btn sec" id="exp">Exporter</button></div>
+   <div class="row"><span class="t">Importer<br><small class="mut">Remet ce qui manque depuis un fichier de sauvegarde</small></span><button class="btn sec" id="imp">Importer</button></div></div>
+   <input type="file" id="impf" accept=".json,application/json" hidden>
    <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`,
   }[stab];
   $("#view").innerHTML=tabs+body;
@@ -940,6 +954,17 @@ function renderSettings(inRecipes){
     const st=f.kind==="g"?10:cur<1||(cur===1&&+el.dataset.d<0)?0.25:1,q=Math.max(f.kind==="g"?10:0.25,Math.round((cur+st*el.dataset.d)*100)/100);
     touch("foods",{...(S.foods[f.id]||{}),id:f.id,q,deleted:false});render()});
 
+  // Sauvegarde : un fichier JSON (tout le foyer), partagé vers Google Drive (Enregistrer dans Fichiers) ou téléchargé
+  on("#exp","onclick",async()=>{const day=todayKey(),name=`menus-courses-${day}.json`;
+    const file=new File([JSON.stringify({...S,_export:{date:day,version:VERSION}})],name,{type:"application/json"});
+    try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}
+    const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)});
+  on("#imp","onclick",()=>$("#impf").click());
+  on("#impf","onchange",async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+    if(f.size>5e6){alert("Ce fichier est trop gros pour être une sauvegarde de l'app.");return}
+    let raw=null;try{raw=JSON.parse(await f.text())}catch(_){}
+    if(!raw||typeof raw!=="object"){alert("Ce fichier n'est pas une sauvegarde de l'app.");return}
+    importDialog(raw,f.name)});
   // Forcer la mise à jour : vide le cache de l'app ET celui de Safari (qui garde les fichiers jusqu'à 10 min), puis recharge.
   on("#upd","onclick",async e=>{e.preventDefault();LS.updFrom=VERSION;e.target.textContent="Mise à jour…";
     try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k);
@@ -982,6 +1007,40 @@ function renderSettings(inRecipes){
   const moveR=(i,d)=>{const ids=rayonOrder(ol()).map(r=>r.id);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];touch("lists",{...S.lists[ol()],order:ids});render()};
   document.querySelectorAll("[data-up]").forEach(el=>el.onclick=()=>moveR(+el.dataset.up,-1));
   document.querySelectorAll("[data-dn]").forEach(el=>el.onclick=()=>moveR(+el.dataset.dn,1));
+}
+// Import d'une sauvegarde (fichier exporté, ou fichier de la sauvegarde Home Assistant) : données vérifiées comme
+// celles de la synchro (cleanAll). Par défaut, seul ce qui manque (ou a été supprimé) revient ; rien d'actuel n'est remplacé.
+const IMPORT_GROUPS=[["📖 Recettes",["recipes"],true],["🥕 Ingrédients",["foods"],true],["🔁 Habitudes et accompagnements",["habits","combos"],true],
+  ["🏷️ Rayons et magasins",["aisles","stores","lists"],true],["🍽️ Repas",["meals"],false],["🛒 Listes de courses",["items"],false]];
+function importDialog(raw,fname){
+  const data=Data.cleanAll(raw);
+  const has=(k,id)=>{const c=S[k][id];return !!c&&!c.deleted&&(k!=="meals"||!!c.text)}; // repas vide = place libre
+  const same=(k,id,a,b)=>{const x=Data.clean(k,id,a);return !!x&&JSON.stringify({...x,ts:0})===JSON.stringify({...b,ts:0})}; // comparés une fois remis en forme
+
+  const todo=(kinds,force)=>kinds.flatMap(k=>Object.entries(data[k]).filter(([id,x])=>!x.deleted&&(k!=="meals"||x.text)&&(!has(k,id)||(force&&!same(k,id,S[k][id],x)))).map(([id,x])=>[k,id,x]));
+  const inFile=kinds=>kinds.reduce((a,k)=>a+Object.values(data[k]).filter(x=>!x.deleted&&(k!=="meals"||x.text)).length,0);
+  if(!IMPORT_GROUPS.some(g=>inFile(g[1]))){alert("Ce fichier ne contient aucune donnée de l'app.");return}
+  const when=(raw._export&&raw._export.date)||(String(fname).match(/\d{4}-\d{2}-\d{2}/)||[])[0];
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Importer une sauvegarde</h2>
+   <p class="mut">${when&&/^\d{4}-\d{2}-\d{2}$/.test(when)?"Sauvegarde du "+new Date(when+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"}):esc(String(fname).slice(0,60))}</p>
+   <div class="card imp">${IMPORT_GROUPS.map(([l,kinds,on],i)=>inFile(kinds)?`<label class="row"><input type="checkbox" data-ig="${i}" ${on?"checked":""}><span class="t">${l}<br><small class="mut" data-ic="${i}"></small></span></label>`:"").join("")}</div>
+   <label class="row impforce"><input type="checkbox" id="impforce"><span class="t">Remplacer aussi ce qui a changé depuis<br><small class="mut">Sinon, rien de ce que vous avez aujourd'hui n'est remplacé : seul ce qui manque revient.</small></span></label>
+   <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok"></button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  const picked=()=>[...ov.querySelectorAll("[data-ig]:checked")].flatMap(c=>IMPORT_GROUPS[+c.dataset.ig][1]);
+  const paint=()=>{const force=$("#impforce").checked;
+    ov.querySelectorAll("[data-ic]").forEach(el=>{const kinds=IMPORT_GROUPS[+el.dataset.ic][1],n=inFile(kinds),t=todo(kinds,force).length;
+      el.textContent=`${n} dans le fichier · ${t?t+" à remettre":"rien à remettre"}`});
+    const t=todo(picked(),force).length;$("#ok").textContent=t?`Remettre ${t} élément${t>1?"s":""}`:"Rien à remettre";$("#ok").disabled=!t};
+  ov.addEventListener("change",paint);paint();
+  $("#ok").onclick=()=>{const force=$("#impforce").checked,list=todo(picked(),force),now=Date.now(),withItems=picked().includes("items");
+    if(force&&!confirm(`Remplacer par la sauvegarde ce qui a changé depuis (${list.length} élément${list.length>1?"s":""}) ?`))return;
+    // en une fois (pas un enregistrement + envoi par élément) ; les repas sans leurs articles ne gardent pas le lien vers les listes
+    for(const [k,id,x] of list){const rec={...x,ts:now,deleted:false};if(k==="meals"&&!withItems)rec.added=null;
+      (S[k]=S[k]||{})[id]=rec;(pending[k]=pending[k]||{})[id]=1}
+    save();sync();close();render();toast(`✓ ${list.length} élément${list.length>1?"s":""} remis`)};
 }
 // Champ de recherche d'un plat (types et recettes) ; renvoie une fonction qui donne le choix {type, recipe} ou null.
 function dishPicker(ov,initial){
@@ -1054,21 +1113,28 @@ function md(text){const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").repl
     end();out+=`<p>${inl(l)}</p>`}
   end();return `<div class="card steps md">${out}</div>`}
 // Vue cuisine : la recette pour un autre nombre de personnes, à l'écran seulement (la recette enregistrée ne change pas).
-function cookView(r){const B=r.serves||BASE;let n=B;
+function cookView(r,start){const B=r.serves||BASE;let n=start||B;
+  const got=cookGot[r.id]||(cookGot[r.id]=new Set()); // ingrédients déjà sortis / utilisés : barrés
   const ov=document.createElement("div");ov.className="ov";
   const draw=()=>{$("#cn").textContent=n;$("#cb").textContent=n===B?"":`Recette écrite pour ${B} personne${B>1?"s":""}`;
     if($("#cs"))$("#cs").innerHTML=md(Qty.cookSteps(r.steps,n/B,r.ingredients.map(i=>i.t))); // les quantités des étapes suivent aussi
-    $("#cl").innerHTML=r.ingredients.map(i=>`<div class="row"><span class="t">${esc(Qty.cook(i.t,n/B))}</span></div>`).join("")};
+    $("#cl").innerHTML=r.ingredients.map((i,j)=>`<div class="row${got.has(j)?" got":""}" data-gi="${j}"><span class="t">${esc(Qty.cook(i.t,n/B))}</span></div>`).join("")};
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(r.name)}</h2>
    <div class="serv"><span>Pour</span><button class="btn sec" id="cm">−</button><b id="cn"></b><button class="btn sec" id="cp">+</button><span>personnes</span></div>
-   <p class="mut" id="cb"></p>
-   <details class="fold" data-f="ing" ${LS.foldIng?"":"open"}><summary class="steps-h">Ingrédients</summary><div id="cl" class="card cook"></div></details>
+   <p class="mut" id="cb"></p><p class="mut wl" id="wl" hidden>🔆 L'écran reste allumé</p>
+   <details class="fold" data-f="ing" ${LS.foldIng?"":"open"}><summary class="steps-h">Ingrédients <small class="mut">touchez pour barrer</small></summary><div id="cl" class="card cook"></div></details>
    ${(r.steps||"").trim()?`<details class="fold" data-f="stp" ${LS.foldStp?"":"open"}><summary class="steps-h">Étapes</summary><div id="cs"></div></details>`:""}
    <div class="acts"><button class="btn sec" id="ced">✏️ Modifier</button><button class="btn sec" id="cpl">📅 Au menu</button><button class="btn" id="cx">Fermer</button></div></div>`;
   document.body.appendChild(ov);draw();
   // plié / déplié : gardé sur cet appareil
   ov.querySelectorAll(".fold").forEach(d=>d.ontoggle=()=>{const k=d.dataset.f==="ing"?"foldIng":"foldStp";if(d.open)delete LS[k];else LS[k]=1});
-  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};
+  // l'écran reste allumé tant que la recette est ouverte (repris au retour dans l'app)
+  let lock=null;const wake=async()=>{try{if("wakeLock" in navigator&&!lock&&ov.isConnected&&!document.hidden){lock=await navigator.wakeLock.request("screen");
+    lock.addEventListener("release",()=>{lock=null});$("#wl").hidden=false}}catch(_){}};
+  const onVis=()=>{if(!document.hidden)wake()};document.addEventListener("visibilitychange",onVis);wake();
+  const close=()=>{ov.remove();document.removeEventListener("visibilitychange",onVis);if(lock)lock.release().catch(()=>{})};
+  ov.onclick=e=>{if(e.target===ov)close()};
+  $("#cl").onclick=e=>{const row=e.target.closest("[data-gi]");if(!row)return;const j=+row.dataset.gi;if(got.has(j))got.delete(j);else got.add(j);row.classList.toggle("got",got.has(j))};
   $("#cm").onclick=()=>{if(n>1){n--;draw()}};$("#cp").onclick=()=>{if(n<30){n++;draw()}};
   $("#cx").onclick=close;$("#ced").onclick=()=>{close();recipeEditor(r)};$("#cpl").onclick=()=>{close();planRecipe(r)};
 }
@@ -1159,7 +1225,11 @@ if(/[?&]maj=/.test(location.search))history.replaceState(null,"",location.pathna
 if(LS.autoFrom){const from=LS.autoFrom;delete LS.autoFrom;if(from!==VERSION)setTimeout(()=>toast(`✓ Application mise à jour (${VERSION})`),300)}
 if(LS.updFrom){const from=LS.updFrom;delete LS.updFrom;tab=LS.tab="settings";stab="foyer";
   setTimeout(()=>toast(from===VERSION?`✓ Déjà à jour : version ${VERSION}`:`✓ Mise à jour installée : version ${VERSION}`),300)}
-function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
+// message en haut de l'écran ; avec undo : bouton « Annuler » pendant 5 s
+function toast(msg,undo){document.querySelectorAll(".toast").forEach(x=>x.remove());
+  const t=document.createElement("div");t.className="toast"+(undo?" undo":"");const m=document.createElement("span");m.textContent=msg;t.appendChild(m);
+  if(undo){const b=document.createElement("button");b.type="button";b.textContent="Annuler";b.onclick=()=>{t.remove();undo()};t.appendChild(b)}
+  document.body.appendChild(t);setTimeout(()=>t.remove(),undo?5000:3500)}
 purgeDone();render();if(tab==="menus")toToday();sync();
 setInterval(purgeDone,5*60*1000);
 // pas encore de code (nouvel appareil) : directement sur l'onglet Foyer, où on le saisit

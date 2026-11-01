@@ -396,3 +396,30 @@ nav button i b{left:calc(50% + 16px);top:4px}
 #title .stores button.on{flex:1.7 1 0;height:58px;font-size:34px}
 #title .stores button.on img.logo-auchan{max-width:84px}#title .stores button.on img.logo-lidl{width:44px;height:44px}#title .stores button.on img.picto{width:42px;height:42px}
 #title .stores{width:100%;box-sizing:border-box}header:has(.stores){gap:4px}
+/* Menus : jours passés repliés sur une ligne (ce qui a été mangé), dépliés au toucher */
+details.pastd{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin:6px 0;padding:0 12px}
+details.pastd>summary{list-style:none;display:flex;align-items:baseline;gap:6px;padding:10px 2px;cursor:pointer;color:var(--mut)}
+details.pastd>summary::-webkit-details-marker{display:none}
+details.pastd>summary b{font-size:15px;text-transform:capitalize;color:var(--mut)}details.pastd>summary small{font-size:15px;font-weight:700}
+details.pastd>summary .ate{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:14px;margin-left:4px}
+details.pastd>summary::after{content:"›";font-size:22px;line-height:1;margin-left:4px;transition:transform .2s}
+details.pastd[open]>summary::after{transform:rotate(90deg)}
+details.pastd .slots{padding:0 0 10px}
+/* vue recette : écran allumé, ingrédients barrés au toucher */
+.sheet .wl{margin:-4px 0 6px;font-size:13px}
+.fold>summary small{font-weight:400;font-size:12px;margin-left:6px}
+.cook .row{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cook .row.got .t{text-decoration:line-through;color:var(--mut)}
+.cook .row.got .t::before{content:"✓ ";color:var(--accent);font-weight:700}
+/* message avec « Annuler » */
+.toast{top:calc(var(--hh,70px) + 8px);max-width:calc(100vw - 32px);box-sizing:border-box}
+.toast.undo{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px}
+.toast.undo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.toast.undo button{flex:none;border:0;border-radius:10px;background:#fff;color:var(--accent);font-weight:700;padding:9px 14px;font-size:15px}
+/* import d'une sauvegarde */
+.card.imp .row,.impforce{display:flex;align-items:center;gap:12px;cursor:pointer}
+.card.imp input,.impforce input{width:22px;height:22px;flex:none;accent-color:var(--accent)}
+.impforce{margin:12px 2px 0}
+.btn:disabled{opacity:.5}
+details.pastd>summary small{flex:1}
+section.day .dh small{text-transform:none}
