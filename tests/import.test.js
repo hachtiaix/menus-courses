@@ -1,0 +1,59 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { Data } = require("./load");
+
+test("import : lignes d'ingrédients de CuisineAZ et Marmiton au format de l'app", () => {
+  const t = Data.tidyIngredient;
+  assert.equal(t("250 g Farine de blé"), "250 g de farine de blé");
+  assert.equal(t("1 sachet(s) Levure chimique"), "1 sachet de levure chimique");
+  assert.equal(t("1 pot(s) Yaourt(s) nature(s)"), "1 pot de yaourt nature");
+  assert.equal(t("3 gousse(s) d&#39;ail"), "3 gousses d'ail");
+  assert.equal(t("2 Oeuf(s)"), "2 oeufs");
+  assert.equal(t("125 g Beurre doux"), "125 g de beurre doux");
+  assert.equal(t("200 g Haricots verts"), "200 g de haricots verts");
+  assert.equal(t("20 cl d&#39;huile d&#39;olive"), "20 cl d'huile d'olive");
+  assert.equal(t("sel"), "sel");
+  // lignes réelles relevées sur les deux sites
+  assert.equal(t("2 gousse(s) Gousse(s) d&#39;ail"), "2 gousses d'ail");
+  assert.equal(t("2 c. à soupe Huile végétale"), "2 c. à soupe d'huile végétale");
+  assert.equal(t("4 pièces de tortillas grand format"), "4 tortillas grand format");
+  assert.equal(t("0.5 pièces d&#39;oignons rouges"), "½ oignon rouge");
+  assert.equal(t("1 paquets de jeunes pousses"), "1 paquet de jeunes pousses");
+  assert.equal(t("1 cuillères à café de moutarde de Dijon"), "1 cuillère à café de moutarde de Dijon");
+  assert.equal(t("1.5 kg de pommes de terre"), "1,5 kg de pommes de terre");
+  assert.equal(t("1 avocats"), "1 avocat");
+  assert.equal(t("1 ananas"), "1 ananas");
+});
+
+test("import : recette complète (nom raccourci, personnes, étapes numérotées, lien gardé)", () => {
+  const url = "https://www.cuisineaz.com/recettes/poulet-roti-au-paprika-126100.aspx";
+  const r = Data.fromSchema({
+    name: "Poulet rôti au paprika et purée maison : le plat réconfortant", yield: ["4", "4 personnes"], prep: "PT20M",
+    ingredients: ["1 Poulet", "1 kg Pommes de terre", "2 c. à s. Paprika"],
+    steps: [{ s: "Le poulet", t: "Badigeonner le poulet." }, { s: "Le poulet", t: "Cuire 1 h &agrave; 200 °C." }, { s: "La purée", t: "Écraser les pommes de terre." }],
+  }, url);
+  assert.equal(r.name, "Poulet rôti au paprika et purée maison");
+  assert.equal(r.serves, 4);
+  assert.equal(r.prep, 20);
+  assert.deepEqual(r.ingredients, ["1 poulet", "1 kg de pommes de terre", "2 c. à s. de paprika"]);
+  assert.equal(r.steps, "# Le poulet\n1. Badigeonner le poulet.\n2. Cuire 1 h à 200 °C.\n# La purée\n1. Écraser les pommes de terre.");
+  assert.equal(r.source, url);
+  assert.equal(Data.fromSchema({ name: "Dip de thon : la meilleure recette", yield: "4 0" }, "https://evil.example/x").name, "Dip de thon");
+  assert.equal(Data.fromSchema({ name: "x" }, "https://evil.example/recettes/a.aspx").source, null);
+});
+
+test("import : lien et temps gardés au nettoyage, liens d'autres sites refusés", () => {
+  const ok = Data.clean("recipes", "r1", { name: "A", source: "https://www.marmiton.org/recettes/recette_dip-de-thon_540044.aspx", prep: 10, ingredients: [] });
+  assert.equal(ok.source, "https://www.marmiton.org/recettes/recette_dip-de-thon_540044.aspx");
+  assert.equal(ok.prep, 10);
+  const bad = Data.clean("recipes", "r1", { name: "A", source: "javascript:alert(1)", prep: -3, ingredients: [] });
+  assert.equal(bad.source, null);
+  assert.equal(bad.prep, null);
+});
+
+test("propositions : période du samedi au vendredi (7 soirs + midis du week-end)", () => {
+  assert.deepEqual(Data.planSlots("2026-11-04"), ["2026-11-07-m", "2026-11-07-s", "2026-11-08-m", "2026-11-08-s",
+    "2026-11-09-s", "2026-11-10-s", "2026-11-11-s", "2026-11-12-s", "2026-11-13-s"]);
+  assert.equal(Data.planSlots("2026-11-06")[0], "2026-11-07-m"); // vendredi → le lendemain
+  assert.equal(Data.isoMinutes("PT1H30M"), 90);
+});

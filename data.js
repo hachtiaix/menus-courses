@@ -400,6 +400,55 @@ function suggest(S,today,n,exclude,rnd,slotKey){
 }
 
 // On ne garde que des champs attendus, aux types attendus.
+// Recettes importées de Marmiton ou CuisineAZ (lien d'origine gardé)
+const SOURCE=/^https:\/\/(www\.)?(marmiton\.org|cuisineaz\.com)\/recettes\/[\w\-.%]+\.aspx$/i;
+const ENT={amp:"&",quot:'"',apos:"'",lt:"<",gt:">",nbsp:" ",eacute:"é",egrave:"è",ecirc:"ê",agrave:"à",acirc:"â",ccedil:"ç",ocirc:"ô",ucirc:"û",icirc:"î",ugrave:"ù",oelig:"œ",rsquo:"’",lsquo:"‘",laquo:"«",raquo:"»",deg:"°",frac12:"½",frac14:"¼",frac34:"¾"};
+const unent=t=>String(t||"").replace(/&(#x[0-9a-f]+|#\d+|[a-z]+\d*);/gi,(m,e)=>e[0]==="#"?String.fromCodePoint(e[1].toLowerCase()==="x"?parseInt(e.slice(2),16):+e.slice(1)):ENT[e.toLowerCase()]??m)
+  .replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();
+// « PT1H30M » → 90
+const isoMinutes=d=>{const m=String(d||"").match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/i);return m?(+m[1]||0)*1440+(+m[2]||0)*60+(+m[3]||0):0};
+// ligne d'ingrédient d'un site → format de l'app : « 1 sachet(s) Levure chimique » → « 1 sachet de levure chimique »
+const UNIT="g|kg|mg|cl|ml|dl|l|sachets?|pots?|bo[iî]tes?|tranches?|cuill[eè]res? [àa] (?:soupe|caf[ée])|c\\. [àa] (?:soupe|caf[ée])|c\\. [àa] [sc]\\.|pinc[ée]es?|verres?|gousses?|brins?|feuilles?|bottes?|bouquets?|tablettes?|paquets?|morceaux?|filets?|bols?|tasses?|zestes?|barquettes?|bocaux|bocal|briques?|rouleaux?|rouleau|poign[ée]es?|cubes?|noix|noisettes?|carr[ée]s?|branches?|tiges?|pieds?";
+const QTY="(?:\\d+(?:[.,]\\d+)?(?: [½¼¾])?|\\d+\\/\\d+|[½¼¾])";
+const UNIT_RE=new RegExp("^("+QTY+"\\s*(?:"+UNIT+"))\\s+(\\S.*)$","i");
+// après une quantité de 1 ou moins, l'unité au singulier (« 1 paquets » → « 1 paquet »)
+const UNIT_ONE=new RegExp("^("+QTY+"\\s+)(cuill[eè]re|paquet|sachet|pot|bo[iî]te|tranche|pinc[ée]e|verre|gousse|brin|feuille|botte|bouquet|tablette|filet|bol|tasse|zeste|barquette|brique|poign[ée]e|cube|carr[ée]|branche|tige|pied)s\\b","i");
+function tidyIngredient(line){
+  let t=unent(line).replace(/\s*,\s*$/,"");
+  // « 0.5 » → « ½ », « 1.5 » → « 1 ½ », « 1.2 » → « 1,2 »
+  const metric=/^\d+\.\d+\s+(?:kg|g|mg|l|cl|ml|dl)\b/i.test(t); // poids et volumes : « 1,5 kg »
+  t=t.replace(/^(\d+)\.(\d+)(?=\s)/,(m,a,b)=>{const f=!metric&&{"5":"½","25":"¼","75":"¾"}[b];return f?(a==="0"?f:a+" "+f):a+","+b});
+  t=t.replace(new RegExp("^("+QTY+"\\s+)pi[eè]ces?\\s+(?:de\\s+|d['’]\\s*)","i"),"$1"); // « 4 pièces de tortillas » → « 4 tortillas »
+  const q=t.match(/^(\d+(?:[.,]\d+)?)?\s?([½¼¾])?(?=\s)/),n=q?(q[1]?parseFloat(q[1].replace(",",".")):0)+(q[2]?0.5:0):1;
+  t=t.replace(/\((e?s|x)\)/gi,(m,p)=>n>1?p:""); // « gousse(s) » : accordé à la quantité
+  if(n<=1)t=t.replace(UNIT_ONE,"$1$2");
+  const m=t.match(UNIT_RE);
+  if(m){const unit=m[1];let rest=m[2];
+    // unité répétée : « 2 gousses Gousses d'ail » → « 2 gousses d'ail »
+    const u=unit.replace(new RegExp("^"+QTY+"\\s*"),"").toLowerCase().replace(/s$/,""),w=rest.match(/^(\S+?)s?(?=\s|$)/);
+    if(w&&u.length>2&&w[1].toLowerCase()===u)rest=rest.slice(w[0].length).trimStart();
+    if(!rest)return unit;
+    if(/^(de\s|d['’]|du\s|des\s|à\s|au\s|aux\s)/i.test(rest))return (unit+" "+rest).slice(0,200);
+    const low=rest.charAt(0).toLowerCase()+rest.slice(1);
+    return (unit+(/^[aeiouhâàéèêëîïôûœ]/i.test(low)&&!/^h(aricot|achis|omard)/i.test(low)?" d'":" de ")+low).slice(0,200)}
+  // sans unité : « 3 Oeufs » → « 3 oeufs », « ½ oignons rouges » → « ½ oignon rouge »
+  const p=t.match(new RegExp("^("+QTY+")\\s+(\\S.*)$"));
+  if(p){const rest=p[2].replace(/^\p{Lu}(?=\p{Ll})/u,c=>c.toLowerCase());t=p[1]+" "+(root.Qty&&root.Qty.agree?root.Qty.agree(rest,n):rest)}
+  return t.slice(0,200);
+}
+// réponse de la fonction « recette » (données schema.org de la page) → recette prête à vérifier et enregistrer
+function fromSchema(x,url){
+  const name=unent(x&&x.name).replace(/\s*[:\-–|]\s*(la meilleure recette|recette).*$/i,"").replace(/^(.{6,}?)\s+:\s+.*$/,"$1").replace(/^recette\s+(?:de\s+|d['’]\s*)?/i,"").replace(/^./,c=>c.toUpperCase()).slice(0,80);
+  const y=[].concat(x&&x.yield||[]).map(String).join(" "),serves=Math.min(30,Math.max(1,parseInt((y.match(/\d+/)||[])[0],10)||4));
+  const ingredients=[].concat(x&&x.ingredients||[]).map(tidyIngredient).filter(Boolean).slice(0,80);
+  const st=[].concat(x&&x.steps||[]).slice(0,80),lines=[];let k=0;
+  for(const p of st){const sec=unent(p&&p.s),t=unent(p&&p.t);if(sec&&sec!==lines.__sec){lines.push("# "+sec);lines.__sec=sec;k=0}if(t)lines.push(`${++k}. ${t}`)}
+  const prep=isoMinutes(x&&x.prep);
+  return{name,serves,ingredients,steps:lines.join("\n").slice(0,4000),source:SOURCE.test(url||"")?url:null,prep:prep||null};
+}
+// Période planifiée (du samedi au vendredi) : les 7 soirs et les midis du samedi et du dimanche
+function planSlots(ymd){const d=new Date(ymd+"T12:00"),toSat=(6-d.getDay()+7)%7||7,sat=addDays(ymd,toSat),out=[];
+  for(let i=0;i<7;i++){const k=addDays(sat,i);if(i<2)out.push(k+"-m");out.push(k+"-s")}return out}
 function clean(k,id,r){
   if(!okId(id)||!r||typeof r!=="object")return null;
   const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;
@@ -435,6 +484,7 @@ function clean(k,id,r){
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
     dessert:r.dessert===true?true:r.dessert===false?false:null,steps:str(r.steps,4000)||null, // étapes (markdown simple)
+    source:SOURCE.test(str(r.source,300))?str(r.source,300):null,prep:Number.isInteger(r.prep)&&r.prep>0&&r.prep<=600?r.prep:null, // importée : lien d'origine, préparation (min)
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
   return null;
 }
@@ -464,6 +514,6 @@ function prune(S,now){
   for(const id of Object.keys(S.meals||{})){const d=Date.parse(id.slice(0,10));if(d&&now-d>MEAL_TTL){delete S.meals[id];n++}}
   return n;
 }
-root.Data={KINDS,okId,str,clean,cleanAll,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
+root.Data={KINDS,okId,str,clean,cleanAll,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
   TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

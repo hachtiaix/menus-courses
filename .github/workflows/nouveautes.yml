@@ -1,0 +1,24 @@
+# Chaque mardi soir : nouveautés de Marmiton et CuisineAZ (plats de 30 min de préparation au plus) → nouveautes.json,
+# que l'app propose du mercredi au vendredi quand la semaine suivante est peu remplie.
+name: Nouveautés recettes
+on:
+  schedule:
+    - cron: "0 19 * * 2" # mardi 19 h UTC (20 h ou 21 h à Paris)
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency: nouveautes
+jobs:
+  nouveautes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lire les nouveautés
+        run: python3 tools/nouveautes.py
+      - name: Publier si la liste a changé
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add nouveautes.json
+          git diff --cached --quiet || { git commit -m "Nouveautés recettes (automatique)"; git push; }

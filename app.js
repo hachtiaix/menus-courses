@@ -379,10 +379,10 @@ function nextFreeSlot(){const t=new Date();t.setHours(12);
     for(const s of ["m","s"]){const o=S.meals[k+"-"+s];if(!o||!o.text)return k+"-"+s}}
   return t.toISOString().slice(0,10)+"-s"}
 // « + » sur une recette : on choisit le jour, le repas est créé puis la fenêtre des ingrédients s'ouvre.
-function planRecipe(r){
+function planRecipe(r,sel){
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Ajouter « ${esc(r.name)} » aux menus</h2>
-   <select id="plto" style="width:100%">${slotOptions(null,nextFreeSlot()," (remplace)")}</select>
+   <select id="plto" style="width:100%">${slotOptions(null,sel||nextFreeSlot()," (remplace)")}</select>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
@@ -588,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v216";
+const BASE=4,VERSION="v217";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -877,7 +877,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-st2]");if(b){tab=LS.tab=b.dataset.st2;render();scrollTo(0,0)}});
 $("#tabs").onclick=e=>{let t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t==="recettes")rview="rec";if(t==="courses")t=S.lists[LS.store]&&!S.lists[LS.store].deleted?LS.store:"auchan";if(t){tab=LS.tab=t;render();scrollTo(0,0);
-  if(t==="menus")toToday();
+  if(t==="menus"){toToday();setTimeout(()=>maybePropose(),600)}
   if(window.syncSoon)syncSoon()}};
 // Menus : aujourd'hui en haut de l'écran (ouverture de l'app ou de l'onglet)
 const toToday=()=>{const d=document.querySelector(".day.today");if(d)scrollTo(0,Math.max(0,d.getBoundingClientRect().top+scrollY-(document.querySelector("header").offsetHeight+8)))};
@@ -1069,6 +1069,48 @@ function useCode(c){
   if(code&&status==="ok"&&!confirm("Ce téléphone utilise déjà un autre code qui fonctionne. Le remplacer par celui du QR code ?"))return;
   code=LS.code=c;LS.since="";LS.deltaInit="";save();sync();render();toast("✓ Code du foyer enregistré");
 }
+// Recette d'un lien Marmiton ou CuisineAZ, lue par la fonction Supabase « recette »
+// (l'iPhone ne peut pas lire ces sites directement : voir supabase/functions/recette)
+async function fetchRecipe(url){
+  if(!canSync())throw new Error("Il faut d'abord le code du foyer (⚙︎ → Synchro).");
+  const r=await fetch(`${cfg.SUPABASE_URL}/functions/v1/recette`,{method:"POST",headers:H(),body:JSON.stringify({url,code})}).catch(()=>null);
+  if(!r)throw new Error("Lecture impossible : pas de connexion, ou import pas encore activé.");
+  if(r.status===404)throw new Error("Import pas encore activé (fonction « recette » à installer dans Supabase).");
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Lecture impossible.");
+  return Data.fromSchema(j,j.url||url);
+}
+// Mercredi, jeudi, vendredi : si la période suivante (samedi → vendredi) est remplie à moitié ou moins, 5 nouveautés au plus,
+// rapides (30 min de préparation au plus) de Marmiton et CuisineAZ (nouveautes.json, mis à jour chaque mardi soir).
+// Une fois par jour au plus ; « Non merci » : plus rien jusqu'à la période suivante.
+async function maybePropose(force){
+  const t=todayKey(),wd=new Date(t+"T12:00").getDay(),slots=Data.planSlots(t),period=slots[0].slice(0,10);
+  const filled=slots.filter(k=>S.meals[k]&&!S.meals[k].deleted&&S.meals[k].text).length;
+  if(!force&&(wd<3||wd>5||LS.nvDay===t||LS.nvNo===period||filled>slots.length/2))return;
+  if(!canSync()||document.querySelector(".ov"))return;
+  let list=[];try{const r=await fetch("nouveautes.json",{cache:"no-cache"});list=((await r.json())||{}).recettes||[]}catch(_){return}
+  const mine=new Set(live(S.recipes).map(x=>x.source).filter(Boolean)),names=new Set(live(S.recipes).map(x=>Data.plain(x.name).trim()));
+  const ok=list.filter(x=>x&&Data.SOURCE.test(x.url)&&!mine.has(x.url)&&!names.has(Data.plain(x.titre||"").trim())&&x.prep>0&&x.prep<=30);
+  const mix=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]),a=mix(ok.filter(x=>x.site==="marmiton")),b=mix(ok.filter(x=>x.site!=="marmiton")),pick=[];
+  while(pick.length<5&&(a.length||b.length)){if(a.length)pick.push(a.shift());if(pick.length<5&&b.length)pick.push(b.shift())} // les deux sites, à tour de rôle
+  if(!pick.length||tab!=="menus"||document.querySelector(".ov"))return;
+  LS.nvDay=t;
+  const day=new Date(period+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>🆕 Nouvelles recettes rapides</h2>
+   <p class="mut">Pour la semaine du samedi ${esc(day)}, ${filled?`${filled} repas sur ${slots.length} ${filled>1?"sont prévus":"est prévu"}`:"aucun repas n'est encore prévu"}. Une idée nouvelle ? Moins de 30 min de préparation.</p>
+   <div class="card nv">${pick.map((x,i)=>`<div class="nvrow"><span class="t"><b>${esc(String(x.titre||""))}</b><br><small class="mut">⏱ ${+x.prep} min · ${x.site==="marmiton"?"Marmiton":"CuisineAZ"}</small><small class="nverr" id="nve${i}"></small></span>
+     <span class="nvb"><a class="btn sec" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Voir</a><button class="btn" data-nv="${i}">Ajouter</button></span></div>`).join("")}</div>
+   <div class="acts"><button class="btn sec" id="nvno">Non merci<br><small>jusqu'à samedi</small></button><button class="btn sec" id="nvlater">Plus tard</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#nvlater").onclick=close;
+  $("#nvno").onclick=()=>{LS.nvNo=period;close()};
+  // Ajouter : la recette est lue, montrée pour vérification, puis placée dans les menus (premier repas libre de la période)
+  ov.querySelectorAll("[data-nv]").forEach(b=>b.onclick=async()=>{const x=pick[+b.dataset.nv];b.disabled=true;b.textContent="Lecture…";
+    try{const rec=await fetchRecipe(x.url);close();
+      recipeEditor(null,rec,saved=>{const sl=Data.planSlots(todayKey()),libre=k=>!(S.meals[k]&&S.meals[k].text); // le premier soir libre, sinon un midi
+        planRecipe(saved,sl.find(k=>k.endsWith("-s")&&libre(k))||sl.find(libre))})}
+    catch(e){b.disabled=false;b.textContent="Réessayer";const m=ov.querySelector("#nve"+b.dataset.nv);if(m)m.textContent="⚠ "+e.message}});
+}
 // Import d'une sauvegarde (fichier exporté, ou fichier de la sauvegarde Home Assistant) : données vérifiées comme
 // celles de la synchro (cleanAll). Par défaut, seul ce qui manque (ou a été supprimé) revient ; rien d'actuel n'est remplacé.
 const IMPORT_GROUPS=[["📖 Recettes",["recipes"],true],["🥕 Ingrédients",["foods"],true],["🔁 Habitudes et accompagnements",["habits","combos"],true],
@@ -1202,7 +1244,9 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
   const draw=()=>{$("#cn").textContent=n;$("#cb").textContent=n===B?"":`Recette écrite pour ${B} personne${B>1?"s":""}`;
     if($("#cs"))$("#cs").innerHTML=md(Qty.cookSteps(r.steps,n/B,r.ingredients.map(i=>i.t))); // les quantités des étapes suivent aussi
     $("#cl").innerHTML=r.ingredients.map((i,j)=>`<div class="row${got.has(j)?" got":""}" data-gi="${j}"><span class="t">${esc(Qty.cook(i.t,n/B))}</span></div>`).join("")};
+  const site=r.source&&Data.SOURCE.test(r.source)?(/marmiton/.test(r.source)?"Marmiton":"CuisineAZ"):null;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(r.name)}</h2>
+   ${site||r.prep?`<p class="mut srcl">${r.prep?`⏱ ${r.prep} min de préparation`:""}${site&&r.prep?" · ":""}${site?`<a href="${esc(r.source)}" target="_blank" rel="noopener noreferrer">Voir sur ${site} ↗</a>`:""}</p>`:""}
    <div class="serv"><span>Pour</span><button class="btn sec" id="cm">−</button><b id="cn"></b><button class="btn sec" id="cp">+</button><span>personnes</span></div>
    <p class="mut" id="cb"></p><p class="mut wl" id="wl" hidden>🔆 L'écran reste allumé</p>
    <details class="fold" data-f="ing" ${LS.foldIng?"":"open"}><summary class="steps-h">Ingrédients <small class="mut">touchez pour barrer</small></summary><div id="cl" class="card cook"></div></details>
@@ -1221,12 +1265,14 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
   $("#cm").onclick=()=>{if(n>1){n--;draw()}};$("#cp").onclick=()=>{if(n<30){n++;draw()}};
   $("#cx").onclick=close;$("#ced").onclick=()=>{close();recipeEditor(r)};$("#cpl").onclick=()=>{close();planRecipe(r)};
 }
-function recipeEditor(r){
+// pre : recette importée (pré-remplie, à vérifier) ; after(recette) : appelé une fois enregistrée
+function recipeEditor(r,pre,after){
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(SHORT[l.id]||l.name)}</option>`).join("");
   const rowH=i=>`<div class="ed-row"><input type="text" class="ing" value="${esc(i.t)}" placeholder="400 g de pâtes"><select>${opts(i.store||"auchan")}</select><button type="button" class="pill pan ${i.t&&pantryOf(i.t)?"on":""}" aria-label="Toujours à la maison (placard)" title="Placard : toujours à la maison">🏠</button><button class="x">×</button></div>`;
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${r?"Modifier la recette":"Nouvelle recette"}</h2>
+   ${r?"":`<input type="url" id="rlink" class="rlink" placeholder="🔗 Coller le lien Marmiton ou CuisineAZ" inputmode="url" autocomplete="off" autocapitalize="off"><p class="mut rlinkm" id="rlinkm"></p>`}
    <input type="text" id="rn" placeholder="Nom du plat" value="${esc(r?r.name:"")}" style="width:100%;margin-bottom:10px">
    <div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${r?r.serves||BASE:BASE}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div>
    <div class="serv"><span>Type</span><select id="sdes"><option value="p">Plat</option><option value="d" ${Data.recipeDessert(r||{name:""})?"selected":""}>Dessert (jamais proposé dans les menus)</option></select></div>
@@ -1241,10 +1287,23 @@ function recipeEditor(r){
    <div class="acts">${r?`<button class="btn sec danger" id="del">Supprimer</button>`:""}<button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();
+  // recette d'un site : tous les champs remplis, le lien d'origine gardé ; on vérifie puis « Enregistrer »
+  let src=r&&r.source||null,prep=r&&r.prep||null;
+  const fill=p=>{$("#rn").value=p.name||"";$("#sv").value=p.serves||BASE;$("#stp").value=p.steps||"";src=p.source||null;prep=p.prep||null;
+    $("#sdes").value=Data.guessDessert(p.name||"")?"d":"p";$("#ssn").value=Data.recipeSeason({name:p.name||""});
+    [...ov.querySelectorAll(".ed-row")].forEach(el=>el.remove());
+    $("#eds").insertAdjacentHTML("beforeend",(p.ingredients||[]).map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})).join("")||rowH({t:""}))};
+  const lk=$("#rlink");
+  if(lk)lk.oninput=async()=>{const u=lk.value.trim().replace(/[?#].*$/,""),m=$("#rlinkm");if(!u)return m.textContent="";
+    if(!Data.SOURCE.test(u)){m.textContent="Collez le lien d'une recette Marmiton ou CuisineAZ.";return}
+    m.textContent="Lecture de la recette…";lk.disabled=true;
+    try{fill(await fetchRecipe(u));m.textContent="✓ Recette lue : vérifiez, puis « Enregistrer »."}catch(e){m.textContent="⚠ "+e.message}
+    lk.disabled=false};
+  if(pre){fill(pre);if(lk){lk.value=pre.source||"";$("#rlinkm").textContent="✓ Recette lue : vérifiez, puis « Enregistrer »."}}
   // toucher à côté de la fenêtre : on ferme seulement si rien n'a changé (sinon on demande)
   const snap=()=>[...ov.querySelectorAll("input,textarea,select,.pan")].map(e=>e.classList.contains("pan")?e.classList.contains("on"):e.value).join("\u0001");
-  const start=snap();
-  ov.onclick=e=>{if(e.target===ov){if(snap()===start||confirm("Abandonner les modifications de la recette ?"))close();return}const x=e.target.closest(".x");if(x)x.parentNode.remove();
+  const start=pre?null:snap(); // recette importée : pas encore enregistrée, on demande toujours
+  ov.onclick=e=>{if(e.target===ov){if(snap()===start||confirm(pre?"Abandonner cette recette importée ?":"Abandonner les modifications de la recette ?"))close();return}const x=e.target.closest(".x");if(x)x.parentNode.remove();
     const p=e.target.closest(".pan");if(p)p.classList.toggle("on")}; // 🏠 placard : vaut pour toutes les recettes
   $("#no").onclick=close;
   // Texte collé : une ligne d'ingrédient par ligne (puces, titres et étapes ignorés), « pour 6 personnes » règle le nombre.
@@ -1257,7 +1316,7 @@ function recipeEditor(r){
       if(!l||/^ingr[ée]dients?\s*:?$/i.test(l)||l.length>80)continue;lines.push(l)}
     if(!lines.length)return;
     [...ov.querySelectorAll(".ed-row")].filter(el=>!el.querySelector(".ing").value.trim()).forEach(el=>el.remove());
-    $("#eds").insertAdjacentHTML("beforeend",lines.map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(Qty.parse(t).name||t)||{}).store)})).join(""));
+    $("#eds").insertAdjacentHTML("beforeend",lines.map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})).join(""));
     $("#paste").value="";toast(`✓ ${lines.length} ingrédient${lines.length>1?"s":""} ajouté${lines.length>1?"s":""}`)};
   $("#more").onclick=()=>{$("#eds").insertAdjacentHTML("beforeend",rowH({t:""}));$("#eds").lastChild.querySelector(".ing").focus()};
   if(r)$("#del").onclick=()=>{if(confirm("Supprimer cette recette ?")){touch("recipes",{...r,deleted:true});close();render()}};
@@ -1268,7 +1327,8 @@ function recipeEditor(r){
       touch("stores",{...(S.stores[k]||{id:k,last:[],def:null,n:0}),id:k,name:(S.stores[k]&&S.stores[k].name)||nm,pantry:g.pan})}
     ings.forEach(g=>delete g.pan);
     if(!name){$("#rn").focus();return}
-    touch("recipes",{id:r?r.id:uid(),name,steps:$("#stp").value.trim(),season:$("#ssn").value,dessert:$("#sdes").value==="d",serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings});close();render();
+    const saved={id:r?r.id:uid(),name,steps:$("#stp").value.trim(),season:$("#ssn").value,dessert:$("#sdes").value==="d",serves:Math.max(1,Math.min(30,parseInt($("#sv").value,10)||4)),ingredients:ings,source:src,prep};
+    touch("recipes",saved);close();if(after){render();after(S.recipes[saved.id]);return}render();
   };
 }
 // Mise à jour automatique : à l'ouverture et au retour dans l'app, si une nouvelle version est en ligne, on recharge
@@ -1313,7 +1373,7 @@ function toast(msg,undo){document.querySelectorAll(".toast").forEach(x=>x.remove
   const t=document.createElement("div");t.className="toast"+(undo?" undo":"");const m=document.createElement("span");m.textContent=msg;t.appendChild(m);
   if(undo){const b=document.createElement("button");b.type="button";b.textContent="Annuler";b.onclick=()=>{t.remove();undo()};t.appendChild(b)}
   document.body.appendChild(t);setTimeout(()=>t.remove(),undo?5000:3500)}
-purgeDone();render();if(tab==="menus")toToday();sync();
+purgeDone();render();if(tab==="menus"){toToday();setTimeout(()=>maybePropose(),1500)}sync();
 setInterval(purgeDone,5*60*1000);
 // pas encore de code (nouvel appareil) : directement sur l'onglet Foyer, où on le saisit
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>{tab=LS.tab="settings";stab="foyer";render()},300);

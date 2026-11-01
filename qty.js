@@ -172,5 +172,5 @@ function cookSteps(text,f,ings){const t=String(text||"");if(f===1)return t;
     const unit=MASS.test(rest)||VOL.test(rest)||/^(ca[cs]|pinc[ée]es?|sachets?|verres?|tranches?|bols?|tasses?|noix|noisettes?|gouttes?|brins?|feuilles?|morceaux?)\b/i.test(rest);
     const ing=w.slice(0,4).some(x=>heads.has(pl(x.replace(/^[dl]['’]/i,"")).replace(/[^a-z-]/g,"")));
     return unit||ing?pre+cook(q,f):m})}
-window.Qty={parse,format,key,buy,add,step,boxLines,cook,cookSteps};
+window.Qty={parse,format,key,buy,add,step,boxLines,cook,cookSteps,agree:pluralFirst}; // agree : « ½ oignons rouges » → « oignon rouge »
 })();

@@ -438,3 +438,16 @@ section.day .dh small{text-transform:none}
 .scanbox{position:relative;margin:12px auto 6px;width:min(100%,360px);aspect-ratio:1;border-radius:18px;overflow:hidden;background:#000}
 .scanbox video{width:100%;height:100%;object-fit:cover;display:block}
 .scanbox::after{content:"";position:absolute;inset:16%;border:3px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+/* import d'une recette Marmiton / CuisineAZ */
+.rlink{width:100%;box-sizing:border-box;margin:2px 0 4px;font:inherit;font-size:16px;padding:11px 14px;border:1px dashed var(--accent);border-radius:12px;background:transparent;color:inherit}
+.rlinkm{margin:0 2px 8px;font-size:13px;min-height:0}.rlinkm:empty{display:none}
+.sheet .srcl{margin:-4px 0 8px;font-size:14px}.sheet .srcl a{color:var(--accent);font-weight:600;text-decoration:none}
+/* propositions de nouvelles recettes */
+.card.nv{padding:4px 14px}
+.nvrow{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.nvrow:last-child{border:0}
+.nvrow .t{flex:1;min-width:0;line-height:1.35}.nvrow .t b{font-weight:600}
+.nvb{display:flex;flex-direction:column;gap:6px;flex:none}
+.nvb .btn{height:auto;min-height:36px;padding:6px 14px;font-size:14px;text-align:center;text-decoration:none;box-sizing:border-box}
+.nverr{display:block;color:#c0392b;font-size:12px;margin-top:4px}.nverr:empty{display:none}
+.nvb .btn{min-width:96px}
+.serv select{flex:1 1 auto;min-width:0;max-width:100%;text-overflow:ellipsis} /* « Dessert (jamais proposé…) » ne dépasse plus de l’écran */
