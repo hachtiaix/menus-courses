@@ -100,3 +100,11 @@ test("cook : plusieurs quantités sur une ligne", () => {
   assert.equal(Qty.cook("2 cac de sel", 1.5), "1 cas de sel");
   assert.equal(Qty.cook("1 cuillère à soupe et 1 cuillère à café de sel", 2), "2 cas + 2 cac de sel");
 });
+
+test("cookSteps : quantités des étapes (unités et ingrédients), pas les durées", () => {
+  const ings = ["250 g de farine", "2 oeufs", "1 gousse de vanille"];
+  assert.equal(Qty.cookSteps("Mélanger 250 g de farine, 2 œufs et 1 gousse de vanille.", 2, ings),
+    "Mélanger 500 g de farine, 4 œufs et 2 gousses de vanille.");
+  assert.equal(Qty.cookSteps("Cuire 12 min à 180°, découper 30 sablés.", 2, ings), "Cuire 12 min à 180°, découper 30 sablés.");
+  assert.equal(Qty.cookSteps("1. Ajouter 2 œufs", 1.5, ings), "1. Ajouter 3 œufs");
+});

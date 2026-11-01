@@ -157,5 +157,15 @@ function cook(text,f){const t=spoon(String(text||"").trim());
   const n=num(m[1]);if(!(n>0))return t;const rest=t.slice(m[0].length),x=n*f;
   if(MASS.test(rest)||VOL.test(rest))return nice(x,/^(kg|kilos?|l|litres?)\b/i.test(rest))+" "+rest;
   return nice(x)+" "+(/^ca[cs]\b/i.test(rest)?rest:pluralFirst(rest,x<2?1:x))} // « 1 ½ oignon », « 2 petites boîtes »
-window.Qty={parse,format,key,buy,add,step,boxLines,cook};
+// Étapes : on adapte les quantités avec une unité (g, cl, cac…) et celles d'un ingrédient de la recette
+// (« 2 œufs », « 1 gousse de vanille ») ; durées, températures et autres nombres ne bougent pas.
+const pl=w=>single(String(w||"").toLowerCase().replace(/œ/g,"oe").normalize("NFD").replace(/[\u0300-\u036f]/g,""));
+function cookSteps(text,f,ings){const t=String(text||"");if(f===1)return t;
+  const heads=new Set((ings||[]).map(i=>{const w=String(parse(i).name||"").split(/\s+/);return pl(ADJ.test(w[0])&&w[1]?w[1]:w[0])}).filter(x=>x.length>1));
+  return spoon(t).replace(/(^|[\s(«"'’])((?:\d+(?:[.,]\d+)?(?:\s*[½¼¾⅓⅔])?|[½¼¾⅓⅔])\s*[^\s\d,.;:!?()\n][^,.;:!?()\n]*?)(?=\s+(?:et|puis|ou|pendant|dans|sur|avec)\s|[,.;:!?()\n]|$)/gi,(m,pre,q)=>{
+    const n=q.match(NUM);if(!n)return m;const rest=q.slice(n[0].length),w=rest.split(/\s+/);
+    const unit=MASS.test(rest)||VOL.test(rest)||/^ca[cs]\b/i.test(rest);
+    const ing=heads.has(pl(ADJ.test(w[0])&&w[1]?w[1]:w[0]).replace(/[^a-z-]/g,""));
+    return unit||ing?pre+cook(q,f):m})}
+window.Qty={parse,format,key,buy,add,step,boxLines,cook,cookSteps};
 })();
