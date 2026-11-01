@@ -391,3 +391,8 @@ nav button i b{left:calc(50% + 16px);top:4px}
 #cfg{position:relative}
 #cfg #status{position:absolute;top:6px;right:6px;width:12px;height:12px;border:2px solid var(--bg);box-sizing:content-box;margin:0}
 #cfg.on{color:var(--accent)}
+/* magasin ouvert plus grand (la place du point de synchro est libérée) */
+#title .stores{align-items:center}
+#title .stores button.on{flex:1.7 1 0;height:58px;font-size:34px}
+#title .stores button.on img.logo-auchan{max-width:84px}#title .stores button.on img.logo-lidl{width:44px;height:44px}#title .stores button.on img.picto{width:42px;height:42px}
+#title .stores{width:100%;box-sizing:border-box}header:has(.stores){gap:4px}
