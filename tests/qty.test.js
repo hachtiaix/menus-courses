@@ -78,3 +78,11 @@ test("bouillon : synonymes cumulés", () => {
   assert.equal(Qty.parse("2 cubes de bouillon de volaille").name, "bouillon de volailles");
   assert.equal(Qty.add("1 cube de bouillon de légumes", "2 bouillons de légumes"), "3 bouillons de légumes");
 });
+
+test("cook : quantités pour un autre nombre de personnes", () => {
+  assert.equal(Qty.cook("400 g de pâtes", 1.5), "600 g de pâtes");
+  assert.equal(Qty.cook("1 oignon", 1.5), "1 ½ oignon");
+  assert.equal(Qty.cook("3 oeufs", 2), "6 oeufs");
+  assert.equal(Qty.cook("1 kg de boeuf", 1.5), "1,5 kg de boeuf");
+  assert.equal(Qty.cook("sel", 2), "sel");
+});

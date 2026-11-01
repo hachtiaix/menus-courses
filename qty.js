@@ -134,5 +134,17 @@ function step(text,dir){
   const n=Math.ceil(p.n)+dir*s;
   return n>=s||dir>0?format({...p,n:Math.max(n,s)}):null;
 }
-window.Qty={parse,format,key,buy,add,step,boxLines};
+// Cuisine : la recette pour f fois plus de monde, sans arrondir à ce qui s'achète ; le reste du texte est gardé.
+function nice(x,dec){if(x>=100)return String(Math.round(x/10)*10);if(x>=20)return String(Math.round(x/5)*5);if(x>=10)return String(Math.round(x));
+  if(dec)return fr(Math.round(x*10)/10);
+  const q=Math.max(1,Math.round(x*4)),w=Math.floor(q/4),r=["","¼","½","¾"][q%4];return w?(r?w+" "+r:String(w)):r}
+function cook(text,f){const t=String(text||"").trim();
+  const m=t.match(NUM);
+  if(!m){const tr=t.match(/^(.*?\D)(\s*[:(,-]?\s*)(\d+(?:[.,]\d+)?)(\s*\S*\)?\s*)$/); // « poulet 1,6 kg »
+    if(!tr||!tr[1].trim())return t;const n=parseFloat(tr[3].replace(",","."));
+    return tr[1]+tr[2]+nice(n*f,/^\s*(kg|kilos?|l|litres?)\b/i.test(tr[4]))+tr[4]}
+  const n=num(m[1]);if(!(n>0))return t;const rest=t.slice(m[0].length),x=n*f;
+  if(MASS.test(rest)||VOL.test(rest))return nice(x,/^(kg|kilos?|l|litres?)\b/i.test(rest))+" "+rest;
+  return nice(x)+" "+pluralFirst(rest,x<2?1:x)} // « 1 ½ oignon », « 2 petites boîtes »
+window.Qty={parse,format,key,buy,add,step,boxLines,cook};
 })();
