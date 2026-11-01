@@ -196,7 +196,7 @@ const allFoods=()=>[...FOODS,...CUSTOM];
 // Repas pris dehors (restaurant, chez des amis…) : rien à acheter, jamais proposé comme plat
 const OUT="Repas à l'extérieur";
 // (restaurant, invitation, « chez Paul »… : tout est rangé sous « Repas à l'extérieur »)
-const isOut=t=>/^(repas (a )?l ?exterieur|(a )?l ?exterieur|exterieur|restaurant|au restaurant|resto|au resto|dehors|invitation|invitee?s?|chez .+|(a )?sailly)$/.test(plain(t).replace(/['’]/g," ").replace(/\s+/g," ").trim());
+const isOut=t=>/^(repas (a )?l ?exterieur|(a )?l ?exterieur|exterieur|restaurant|au restaurant|resto|au resto|dehors|invitation|invitee?s?|chez .+|(a )?(sailly|trith|stella))$/.test(plain(t).replace(/['’]/g," ").replace(/\s+/g," ").trim());
 function unknownFoods(S,text){
   if(isOut(text))return[];
   const parts=String(text||"").split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
