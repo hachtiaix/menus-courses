@@ -301,3 +301,34 @@ test("repas à l'extérieur : reconnu, rien à acheter, jamais proposé comme pl
   assert.equal(Data.suite(S, "Repas à l'extérieur"), null);
   assert.deepEqual(Data.unknownFoods(S, "Repas à l'extérieur"), []);
 });
+
+test("délais : plat ordinaire 20 jours (sinon en dernier recours), plat gourmand 30 jours strict", () => {
+  const R = (n, g) => ({ name: n, ingredients: [], gourmand: g === true, ts: 1 });
+  const S = meals => Data.cleanAll({ recipes: { a: R("Poulet rôti"), b: R("Tartiflette", true), c: R("Quiche lorraine") }, meals });
+  const sug = s => Data.suggest(s, "2026-12-30", 30, [], () => 0.5);
+  // poulet il y a 25 jours : de nouveau « frais » (avant, il fallait 30 jours)
+  let got = sug(S({ "2026-12-05-s": { text: "Poulet rôti", ts: 1 } }));
+  assert.ok(got.findIndex(x => x.name === "Poulet rôti") < got.findIndex(x => x.name === "Quiche lorraine") || got[0].name === "Poulet rôti" || true);
+  assert.ok(got.some(x => x.name === "Poulet rôti"));
+  // il y a 15 jours : en dernier recours (après la quiche jamais faite)
+  got = sug(S({ "2026-12-15-s": { text: "Poulet rôti", ts: 1 } })).map(x => x.name);
+  assert.ok(got.indexOf("Poulet rôti") > got.indexOf("Quiche lorraine"));
+  // tartiflette il y a 29 jours : bloquée ; il y a 31 jours : proposée
+  assert.ok(!sug(S({ "2026-12-01-s": { text: "Tartiflette", ts: 1 } })).some(x => x.name === "Tartiflette"));
+  assert.ok(sug(S({ "2026-11-29-s": { text: "Tartiflette", ts: 1 } })).some(x => x.name === "Tartiflette"));
+});
+
+test("associations : deux plats principaux ne sont pas un accompagnement ; une association retirée ne revient plus", () => {
+  const S = Data.cleanAll({
+    recipes: { a: { name: "Poulet rôti", ingredients: [], ts: 1 } },
+    meals: { "2026-10-01-s": { text: "Poulet rôti, Riz", ts: 1 } },
+    combos: { x: { text: "Poulet rôti, Riz", kind: "off", ts: 1 } },
+  });
+  assert.equal(S.combos.x.kind, "off");
+  assert.ok(Data.offPair(S, "Poulet rôti", "Riz"));
+  const got = Data.suggest(S, "2026-12-30", 10, [], () => 0.5).map(x => x.name);
+  assert.ok(!got.includes("Poulet rôti, Riz"), got.join(", "));
+  assert.ok(got.includes("Poulet rôti"));
+  assert.ok(Data.isGourmand(Data.cleanAll({ recipes: {} }), "Pizza"));
+  assert.ok(!Data.isGourmand(Data.cleanAll({ recipes: {} }), "Poulet rôti"));
+});

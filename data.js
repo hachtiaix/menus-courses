@@ -340,6 +340,12 @@ function seeded(str){let h=2166136261;for(const c of String(str))h=Math.imul(h^c
 // - exclus : les plats déjà prévus la même semaine, hors saison ;
 // - l'écart en jours avec le repas le plus proche (passé ou prévu) du même plat décide :
 //   d'abord le type d'habitude du créneau, puis les plats pas mangés à moins d'un mois, puis les plus anciens.
+// Association retirée à la main (« Base, accompagnement » en combo « off ») ?
+function offPair(S,base,side){const k=t=>plain(t).trim(),want=k(base)+"|"+k(side);
+  return Object.values(S.combos||{}).some(c=>c&&!c.deleted&&c.kind==="off"&&(([b,...r])=>k(b)+"|"+k(r.join(", ")))(String(c.text).split(/\s*,\s*/))===want)}
+// Plat gourmand : recette cochée (le plat ou un de ses éléments), ou junk food (reconnue par son nom)
+function isGourmand(S,t){const k=x=>plain(x).trim(),g=new Set(Object.values(S.recipes||{}).filter(r=>r&&!r.deleted&&r.name&&r.gourmand===true).map(r=>k(r.name)));
+  return !!t&&(g.has(k(t))||String(t).split(/\s*(?:,|\+|\bet\b)\s*/i).some(p=>g.has(k(p)))||typeOf(t)==="burger")}
 function suggest(S,today,n,exclude,rnd,slotKey){
   setPlaisir(S);
   const ref=slotKey?slotKey.slice(0,10):today,mon=mondayOf(ref),sun=addDays(mon,6),month=+ref.slice(5,7);
@@ -362,10 +368,10 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // deux plats principaux le même jour (« Hachis parmentier, Chili con carne ») : ce n'est pas un plat + accompagnement
   const twoMains=t=>split(t).filter(isMain).length>=2;
   const withs={};
-  for(const m of [...Object.values(S.meals||{}),...Object.values(S.combos||{})]){if(!m||m.deleted||!m.text||twoMains(m.text)||isOut(m.text))continue;const p=split(m.text);if(p.length<2)continue;
+  for(const m of [...Object.values(S.meals||{}),...Object.values(S.combos||{})]){if(!m||m.deleted||!m.text||m.kind==="off"||twoMains(m.text)||isOut(m.text))continue;const p=split(m.text);if(p.length<2)continue;
     for(const x of p){const s=withs[key(x)]=withs[key(x)]||new Map();s.set(key(m.text),m.text)}}
   for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name&&!recipeDessert(r)){
-    const opts=new Map(withs[key(r.name)]||[]);
+    const opts=new Map([...(withs[key(r.name)]||[])].filter(([,t])=>!offPair(S,r.name,split(t).filter(y=>key(y)!==key(r.name)).join(", "))));
     const list=[...opts.values()].sort(),full=list.length?list[Math.floor(rnd()*list.length)%list.length]:r.name;
     names.set(key(full),{name:full,season:recipeSeason(r),dk:key(r.name)}); // dk : dates de la recette elle-même
   }
@@ -379,7 +385,7 @@ function suggest(S,today,n,exclude,rnd,slotKey){
     for(const t of twoMains(m.text)?split(m.text).filter(x=>isMain(x)&&!recKeys.has(key(x))):[m.text])
       if(!names.has(key(t))&&!onlyOther(t)&&!withRecipe(t)&&!isOut(t))names.set(key(t),{name:t,season:guessSeason(t)})}
   // associations ajoutées à la main sans recette (« Pâtes, Œufs ») : candidates comme un plat déjà fait
-  for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.kind!=="plaisir"&&c.text&&!twoMains(c.text)&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
+  for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.kind!=="plaisir"&&c.kind!=="off"&&c.text&&!twoMains(c.text)&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
   // junk food : une fois toutes les 2 semaines au plus (pas proposée s'il y en a une prévue ou mangée à moins de 14 jours du créneau)
   const near={};
@@ -387,7 +393,7 @@ function suggest(S,today,n,exclude,rnd,slotKey){
     if(!RARE_TYPES[t])continue;const gap=Math.abs(Date.parse(k.slice(0,10))-t0)/DAY;if(gap<RARE_TYPES[t])near[t]=true}
   const capped=x=>{const t=typeOf(x);return !!(RARE_TYPES[t]&&near[t])};
   // Plats gourmands (case « Plat gourmand » de la recette) : 4 au plus dans la semaine du créneau ; un même plat pas deux fois
-  // en 4 semaines ; gratins de pâtes et pâtes riches (gourmands de type pâtes) : une seule famille, après l'un d'eux aucun
+  // en 30 jours ; gratins de pâtes et pâtes riches (gourmands de type pâtes) : une seule famille, après l'un d'eux aucun
   // pendant 4 semaines, ensuite un seul, tiré au hasard
   const gKeys=new Set(Object.values(S.recipes||{}).filter(r=>r&&!r.deleted&&r.name&&r.gourmand===true).map(r=>key(r.name)));
   // la junk food (burger, pizza…, reconnue par son nom) compte aussi comme plat gourmand, sans case à cocher
@@ -395,9 +401,9 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   let gWeek=0,famNear=false;
   for(const [k,m] of Object.entries(S.meals||{})){if(m.deleted||!m.text||k===slotKey||!isG(m.text))continue;const d=k.slice(0,10);
     if(d>=mon&&d<=sun)gWeek++;
-    if(isFam(m.text)&&Math.abs(Date.parse(d)-t0)/DAY<28)famNear=true}
+    if(isFam(m.text)&&Math.abs(Date.parse(d)-t0)/DAY<30)famNear=true}
   const gBlocked=x=>{if(!isG(x.name))return false;if(gWeek>=4||(famNear&&isFam(x.name)))return true;
-    return [...(dates[key(x.name)]||[]),...(x.dk?dates[x.dk]||[]:[])].some(d=>Math.abs(Date.parse(d)-t0)/DAY<28)};
+    return [...(dates[key(x.name)]||[]),...(x.dk?dates[x.dk]||[]:[])].some(d=>Math.abs(Date.parse(d)-t0)/DAY<30)};
   const rows=[];
   for(const [k,x] of names){
     if(ex.has(k)||!inSeason(x.season,month)||capped(x.name)||gBlocked(x))continue;
@@ -420,8 +426,8 @@ function suggest(S,today,n,exclude,rnd,slotKey){
     if(dish&&!ex.has(dk)&&!capped(dish)&&!gBlocked({name:dish})&&!(dates[dk]||[]).some(d=>d>=mon&&d<=sun))habit.push({name:dish,days:null,habit:t});
   }
   const rest=rows.filter(x=>!tag(x));
-  const fresh=rest.filter(x=>x.gap==null||x.gap>30).sort((a,b)=>b.score-a.score);
-  const recent=rest.filter(x=>x.gap!=null&&x.gap<=30).sort((a,b)=>b.score-a.score);
+  const fresh=rest.filter(x=>x.gap==null||x.gap>20).sort((a,b)=>b.score-a.score); // plat ordinaire : pas fait depuis plus de 20 jours
+  const recent=rest.filter(x=>x.gap!=null&&x.gap<=20).sort((a,b)=>b.score-a.score); // sinon, en dernier recours
   return [...habit,...fresh,...recent].slice(0,n).map(({name,days,habit})=>({name,days,habit:habit||null}));
 }
 
@@ -518,6 +524,7 @@ function clean(k,id,r){
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,ts,deleted}}
   if(k==="combos"){const text=str(r.text,120);
     if(r.kind==="plaisir")return text?{id,text:text.slice(0,40),kind:"plaisir",off:r.off===true,ts,deleted}:null; // mot de la liste des plats plaisir
+    if(r.kind==="off")return text&&/[,+]/.test(text)?{id,text,kind:"off",ts,deleted}:null; // association retirée à la main
     return text&&/[,+]/.test(text)?{id,text,ts,deleted}:null}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
@@ -553,6 +560,6 @@ function prune(S,now){
   for(const id of Object.keys(S.meals||{})){const d=Date.parse(id.slice(0,10));if(d&&now-d>MEAL_TTL){delete S.meals[id];n++}}
   return n;
 }
-root.Data={KINDS,okId,str,clean,cleanAll,OUT,isOut,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
+root.Data={KINDS,okId,str,clean,cleanAll,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
   TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

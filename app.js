@@ -394,7 +394,7 @@ function planRecipe(r,sel){
       if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)));
     }
     const n=+LS.defN||r.serves||BASE;
-    touch("meals",{key,text:r.name,servings:n});applyCompanion(key);close();
+    touch("meals",{key,text:r.name,servings:n});gourmandWarn(key);applyCompanion(key);close();
     tab=LS.tab="menus";const d=new Date(key.slice(0,10)+"T12:00"),m=monday();setWk(wkOff()+Math.floor((d-m)/(7*864e5)+1e-9));
     render();ingredientsDialog(r.name,key);
   };
@@ -489,7 +489,7 @@ function suggestDialog(){
   const paint=()=>{ov.querySelector("#sugs").innerHTML=rows.map(rowH).join("")||`<div class="empty">Plus aucune suggestion</div>`;
     ov.querySelector("#ok").textContent=`Placer ${live_().length} plat${live_().length>1?"s":""}`};
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>💡 Suggestions</h2>
-   <p class="mut">De saison, pas cuisinés depuis plus d'un mois. Ensuite, les ingrédients s'affichent repas par repas : vous cochez ce qu'il faut acheter.</p>
+   <p class="mut">De saison, pas cuisinés depuis plus de 20 jours. Ensuite, les ingrédients s'affichent repas par repas : vous cochez ce qu'il faut acheter.</p>
    <div class="card" id="sugs"></div>
    ${rows.some(r=>!r.sug)?`<p class="mut">${rows.filter(r=>!r.sug).length} créneau${rows.filter(r=>!r.sug).length>1?"x":""} sans suggestion : plus de recettes donneront plus de choix.</p>`:""}
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok"></button></div></div>`;
@@ -523,8 +523,10 @@ function suggestDialog(){
 function sidesLearned(){
   const rec=live(S.recipes).filter(r=>!Data.recipeDessert(r)),key=s=>Data.plain(s).trim(),out=new Map();
   const isRec=x=>rec.find(r=>key(r.name)===key(x)),starch=x=>{const f=Data.foodFor(x,true);return!!(f&&f.cat==="fec")};
-  const texts=[...live(S.meals).map(m=>({t:m.text})),...live(S.combos||{}).filter(c=>c.kind!=="plaisir").map(c=>({t:c.text,id:c.id}))].filter(x=>x.t);
-  for(const {t,id} of texts){const p=t.split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);if(p.length<2)continue;
+  const texts=[...live(S.meals).map(m=>({t:m.text})),...live(S.combos||{}).filter(c=>c.kind!=="plaisir"&&c.kind!=="off").map(c=>({t:c.text,id:c.id}))].filter(x=>x.t);
+  const isMain=x=>{if(isRec(x))return true;const f=Data.foodFor(x,true);return!!f&&(f.cat==="prot"||f.cat==="pois")};
+  for(const {t,id} of texts){const p=t.split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);if(p.length<2||Data.isOut(t))continue;
+    if(p.filter(isMain).length>=2)continue; // « Hachis parmentier, Chili con carne » : deux repas distincts, pas un accompagnement
     // le plat principal : la recette ; sinon un type de plat (« Pâtes » avec œufs…) ; sinon ce qui n'est pas un féculent
     // (« Poulet rôti » avec pommes de terre : les pommes de terre sont l'accompagnement)
     let bases=p.filter(isRec);
@@ -532,7 +534,8 @@ function sidesLearned(){
     if(!bases.length)bases=[...p.filter(x=>Data.typeOf(x)&&!starch(x)),...p.filter(x=>Data.typeOf(x))].slice(0,1); // « Poulet curry » avant « Riz »
     if(!bases.length)bases=p.filter(x=>!starch(x));
     for(const x of bases){const r=isRec(x),b=r?r.name:(Data.foodFor(x,true)||{}).label||x.charAt(0).toUpperCase()+x.slice(1);
-      const o=out.get(b)||new Map(),side=p.filter(y=>y!==x).join(", "),k=key(side);o.set(k,{side,id:id||(o.get(k)||{}).id});out.set(b,o)}}
+      const o=out.get(b)||new Map(),side=p.filter(y=>y!==x).join(", "),k=key(side);if(Data.offPair(S,b,side))continue;
+      o.set(k,{side,id:id||(o.get(k)||{}).id});out.set(b,o)}}
   return [...out].map(([recipe,s])=>({recipe,sides:[...s.values()]})).sort((a,b)=>a.recipe.localeCompare(b.recipe,"fr"));
 }
 // Habitudes apprises : ajoutées en silence (une fois par jour), oubliées après 24 mois sans être suivies ; l'admin les voit dans Réglages → Habitudes.
@@ -588,7 +591,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v234";
+const BASE=4,VERSION="v235";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -690,6 +693,7 @@ function renderMenus(){
     t=t.replace(/[\s,+]+$/,"");if(Data.isOut(t))t=Data.OUT; // restaurant, invitation… : « Repas à l'extérieur »
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
     touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.defN||BASE)});
+    gourmandWarn(key);
     if(Data.isOut(t)){render();return} // repas dehors : rien à acheter, pas de fenêtre des ingrédients
     applyCompanion(key);render();if(quiet)return;
     // Entrée pour finir : chaque aliment inconnu de ce repas est décrit tout de suite (famille, quantité, unité, magasin ;
@@ -959,10 +963,10 @@ function renderSettings(inRecipes){
    <button class="addrow" id="newh"><i>+</i>Ajouter une habitude</button>
    ${(()=>{const acc=sidesLearned();return `<h3 class="ray" style="margin-top:22px">🍽️ Accompagnements</h3>
      <p class="mut">Ce qui va avec une recette ou un féculent (pâtes, riz…) : appris de vos repas, ou ajouté ici. 💡 en propose un, au hasard.</p>
-     ${acc.length?`<div class="card">${acc.map(x=>`<div class="row"><span class="t">${esc(x.recipe)}<br><small class="mut">avec ${x.sides.map(s=>esc(s.side)+(s.id?` <button class="cdel" data-cdel="${s.id}" aria-label="Retirer">×</button>`:"")).join(" · ")}</small></span></div>`).join("")}</div>`:""}
+     ${acc.length?`<div class="card">${acc.map(x=>`<div class="row"><span class="t">${esc(x.recipe)}<br><small class="mut">avec ${x.sides.map(s=>esc(s.side)+(s.id?` <button class="cdel" data-cdel="${s.id}" aria-label="Retirer">×</button>`:` <button class="cdel" data-coff="${esc(x.recipe+", "+s.side)}" aria-label="Retirer">×</button>`)).join(" · ")}</small></span></div>`).join("")}</div>`:""}
      <button class="addrow" id="newc"><i>+</i>Ajouter un accompagnement</button>
      <h3 class="ray" style="margin-top:22px">😋 Plats gourmands</h3>
-     <p class="mut">Plats riches (gratins, tartiflette…) : cochez « Plat gourmand » dans la recette. Dans 💡 : 4 au plus par semaine, un même plat pas deux fois en 4 semaines ; les gratins de pâtes et pâtes riches forment une seule famille (après l'un d'eux, aucun pendant 4 semaines, puis un seul, au hasard). La junk food compte aussi, sans case à cocher.</p>
+     <p class="mut">Plats riches (gratins, tartiflette…) : cochez « Plat gourmand » dans la recette. Dans 💡 : 4 au plus par semaine, un même plat pas deux fois en 30 jours ; les gratins de pâtes et pâtes riches forment une seule famille (après l'un d'eux, aucun pendant 30 jours, puis un seul, au hasard). La junk food compte aussi, sans case à cocher.</p>
      <div class="card" style="padding:12px 14px;line-height:2.1">${live(S.recipes).filter(r=>r.gourmand).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<span class="chipw">${esc(r.name)}</span>`).join(" ")||`<span class="mut">Aucune recette cochée pour l'instant</span>`}</div>
      <h3 class="ray" style="margin-top:22px">🍔 Junk food</h3>
      <p class="mut">Une seule toutes les 2 semaines dans 💡, et elle compte dans les 4 plats gourmands de la semaine. Un plat dont le nom contient l'un de ces mots en fait partie.</p>
@@ -1055,6 +1059,9 @@ function renderSettings(inRecipes){
     if(off)touch("combos",{...off,deleted:true});else touch("combos",{id:"p-"+uid(),text:t,kind:"plaisir"});render()});
   document.querySelectorAll("[data-pw]").forEach(el=>el.onclick=()=>{const id=el.dataset.pdel,w=el.dataset.pw;if(!confirm(`Retirer « ${w} » de la junk food ?`))return;
     if(id&&S.combos[id])touch("combos",{...S.combos[id],deleted:true});else touch("combos",{id:"o-"+uid(),text:w,kind:"plaisir",off:true});render()});
+  // accompagnement appris des repas : retiré = plus jamais proposé ni affiché
+  document.querySelectorAll("[data-coff]").forEach(el=>el.onclick=()=>{const t=el.dataset.coff;if(!confirm(`Retirer l'association « ${t} » ?`))return;
+    touch("combos",{id:"x-"+uid(),text:t,kind:"off"});render()});
   document.querySelectorAll("[data-cdel]").forEach(el=>el.onclick=()=>{const c=S.combos[el.dataset.cdel];if(c&&confirm(`Retirer l'association « ${c.text} » ?`)){touch("combos",{...c,deleted:true});render()}});
   const ol=()=>LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan";
   on("#ordl","onchange",e=>{LS.ordl=e.target.value;render()});
@@ -1418,6 +1425,11 @@ if(/[?&]maj=/.test(location.search))history.replaceState(null,"",location.pathna
 if(LS.autoFrom){const from=LS.autoFrom;delete LS.autoFrom;if(from!==VERSION)setTimeout(()=>toast(`✓ Application mise à jour (${VERSION})`),300)}
 if(LS.updFrom){const from=LS.updFrom;delete LS.updFrom;tab=LS.tab="settings";stab="foyer";
   setTimeout(()=>toast(from===VERSION?`✓ Déjà à jour : version ${VERSION}`:`✓ Mise à jour installée : version ${VERSION}`),300)}
+// 5ᵉ plat gourmand (junk food comprise) dans la semaine du repas : on prévient, sans bloquer
+function gourmandWarn(key){const m=S.meals[key];if(!m||!Data.isGourmand(S,m.text))return;
+  const mon=Data.mondayOf(key.slice(0,10)),sun=Data.addDays(mon,6);
+  const n=live(S.meals).filter(x=>x.text&&x.key&&x.key.slice(0,10)>=mon&&x.key.slice(0,10)<=sun&&Data.isGourmand(S,x.text)).length;
+  if(n>=5)toast(`⚠ ${n}ᵉ plat gourmand cette semaine (4 conseillés)`)}
 // Fenêtres : tirées vers le bas (depuis la poignée, ou quand leur contenu est tout en haut), elles se ferment comme sur
 // iPhone. Même effet que toucher à côté : chaque fenêtre garde sa règle (confirmation, « Ne pas ajouter aux listes »…) ;
 // si elle reste ouverte (choix obligatoire, confirmation refusée), elle revient en place.
