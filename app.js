@@ -80,7 +80,7 @@ const ico=i=>/^svg:[a-z-]+$/.test(i||"")?`<img class="ico" src="icons/${i.slice(
 function render(){
   Data.setCustom(S);
   const hd=document.querySelector("header");if(hd)document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");
-  $("#cfg").style.display=tab==="settings"?"none":""; // inutile dans les réglages : le point de synchro prend sa place
+  $("#cfg").classList.toggle("on",tab==="settings"); // l'engrenage reste : il porte le point de synchro
   const lists=live(S.lists).sort(listSort);
   // barre du bas : 3 onglets ; 🛒 ouvre le dernier magasin (on n'est jamais dans deux magasins à la fois)
   const isList=!!S.lists[tab],nItems=live(S.items).filter(i=>!i.done&&!i.check&&S.lists[i.list]&&!S.lists[i.list].deleted).length;
@@ -578,7 +578,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v208";
+const BASE=4,VERSION="v209";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
