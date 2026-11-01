@@ -588,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v223";
+const BASE=4,VERSION="v224";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -887,15 +887,32 @@ const STABS=[["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
 // Liste des recettes (onglet Menus → Recettes) : recherche, A-Z, toucher = vue cuisine
 function recipesHtml(){const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
   return `${rs.length>3?`<input type="search" id="rq" class="rsearch" placeholder="🔍 Chercher une recette ou un ingrédient" autocomplete="off">`:""}${rs.length?`<p class="mut count">${rs.length} recette${rs.length>1?"s":""}</p>`:""}${rs.length?(()=>{const g={};for(const r of rs){const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();(g[/[A-Z]/.test(L)?L:"#"]=g[/[A-Z]/.test(L)?L:"#"]||[]).push(r)}
-     return Object.keys(g).sort().map(L=>`<h3 class="ray letter" data-l="${L}">${L}</h3><div class="card" data-lc="${L}">${g[L].map(r=>`<div class="row link" data-r="${r.id}" data-q="${esc(Data.plain(r.name+" "+r.ingredients.map(i=>i.t).join(" ")))}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`+`<button class="fab" id="fabr" aria-label="Nouvelle recette" title="Nouvelle recette">+</button>`}
+     return Object.keys(g).sort().map(L=>`<h3 class="ray letter" data-l="${L}">${L}</h3><div class="card" data-lc="${L}">${g[L].map(r=>`<div class="row link" data-r="${r.id}" data-q="${esc(Data.plain(r.name+" "+r.ingredients.map(i=>i.t).join(" ")))}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`+azHtml(rs)+`<button class="fab" id="fabr" aria-label="Nouvelle recette" title="Nouvelle recette">+</button>`}
+// Index A-Z sur le bord droit (comme les Contacts) : toucher une lettre, ou glisser le doigt dessus, saute à ses recettes
+const lettre=r=>{const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();return /[A-Z]/.test(L)?L:"#"};
+function azHtml(rs){const ls=[...new Set(rs.map(lettre))].sort();
+  return rs.length>=12&&ls.length>=3?`<div class="az" aria-label="Aller à la lettre">${ls.map(L=>`<b data-jl="${L}">${L}</b>`).join("")}</div><div class="azb" hidden></div>`:""}
+function wireAz(){const az=$(".az"),bub=$(".azb");if(!az)return;document.body.classList.add("withaz");let last=null,t=0;
+  // taille des lettres : la plus grande qui tient dans la hauteur disponible (de 11 à 18 points)
+  az.style.setProperty("--azf",Math.max(11,Math.min(18,Math.floor(az.clientHeight/az.children.length/1.3)))+"px");
+  const go=L=>{const h=document.querySelector(`[data-l="${L}"]`);if(!h||h.hidden)return;
+    scrollTo(0,h.getBoundingClientRect().top+scrollY-document.querySelector("header").offsetHeight-6);
+    bub.textContent=L;bub.hidden=false;clearTimeout(t);t=setTimeout(()=>bub.hidden=true,700)};
+  const at=y=>{const r=az.getBoundingClientRect(),el=document.elementFromPoint(r.left+r.width/2,Math.max(r.top+1,Math.min(r.bottom-1,y)));return el&&el.dataset&&el.dataset.jl};
+  const move=e=>{e.preventDefault();const L=at(e.touches[0].clientY);if(L&&L!==last){last=L;go(L)}};
+  az.addEventListener("touchstart",move,{passive:false});az.addEventListener("touchmove",move,{passive:false});
+  az.addEventListener("touchend",()=>{last=null});
+  az.onclick=e=>{const L=e.target.dataset&&e.target.dataset.jl;if(L)go(L)}}
 function wireRecipes(){const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
+  document.body.classList.remove("withaz");wireAz();
   on("#fabr","onclick",()=>recipeEditor(null));
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>cookView(S.recipes[el.dataset.r])); // toucher = voir la recette
   // recherche : nom ou ingrédient, sans accents ; les lettres sans résultat disparaissent
   on("#rq","oninput",e=>{const q=Data.plain(e.target.value).trim();let n=0;
     document.querySelectorAll("[data-q]").forEach(el=>{const ok=!q||el.dataset.q.includes(q);el.hidden=!ok;n+=ok});
     document.querySelectorAll("[data-lc]").forEach(c=>{const any=[...c.children].some(x=>!x.hidden);c.hidden=!any;document.querySelector(`[data-l="${c.dataset.lc}"]`).hidden=!any});
-    const ct=document.querySelector(".count");if(ct)ct.textContent=q?`${n} résultat${n>1?"s":""}`:`${live(S.recipes).length} recettes`})}
+    const ct=document.querySelector(".count");if(ct)ct.textContent=q?`${n} résultat${n>1?"s":""}`:`${live(S.recipes).length} recettes`;
+    const az=$(".az");if(az)az.hidden=!!q})}
 // Onglet 📖 : « Recettes | Ingrédients » (les ingrédients utilisent l'écran des réglages, avec ce sélecteur à la place)
 const rseg=v=>`<div class="seg"><button data-rv="rec" class="${v==="rec"?"on":""}">Recettes</button><button data-rv="ing" class="${v==="ing"?"on":""}">Ingrédients</button></div>`;
 function renderRecipes(){

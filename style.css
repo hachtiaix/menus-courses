@@ -451,3 +451,17 @@ section.day .dh small{text-transform:none}
 .nverr{display:block;color:#c0392b;font-size:12px;margin-top:4px}.nverr:empty{display:none}
 .nvb .btn{min-width:96px}
 .serv select{flex:1 1 auto;min-width:0;max-width:100%;text-overflow:ellipsis} /* « Dessert (jamais proposé…) » ne dépasse plus de l’écran */
+/* index A-Z des recettes, sur le bord droit (comme les Contacts) */
+.az{position:fixed;right:1px;top:calc(var(--hh,70px) + 64px);bottom:calc(150px + env(safe-area-inset-bottom));z-index:5;width:24px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;touch-action:none;user-select:none;-webkit-user-select:none}
+.az b{font-size:12px;line-height:1.3;font-weight:700;color:var(--accent);padding:0 6px;cursor:pointer}
+.az[hidden]{display:none}
+body.withaz #view .card[data-lc],body.withaz #view h3.letter{margin-right:18px}
+.azb{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:40;width:76px;height:76px;border-radius:20px;background:rgba(0,0,0,.6);color:#fff;font-size:40px;font-weight:700;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.azb[hidden]{display:none}
+/* lettres plus grandes, selon la hauteur de l'écran ; zone à toucher plus large */
+.az{width:32px;right:0}
+.az b{font-size:clamp(14px,2.3vh,18px);line-height:1.3;padding:0 9px}
+body.withaz #view .card[data-lc],body.withaz #view h3.letter{margin-right:24px}
+.az b{font-size:var(--azf,14px)}
+body.withaz #view .count{margin-right:28px}
+.az{top:calc(var(--hh,70px) + 128px)} /* sous la case de recherche */
