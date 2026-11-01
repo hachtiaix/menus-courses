@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { Data } = require("./load");
 
 const types = {
-  "Spaghetti bolognaise": "pates", "Lasagnes": "pates", "Salade de pâtes": "salade", "Gratin de pâtes": "gratin",
+  "Spaghetti bolognaise": "pates", "Lasagnes": "pates", "Salade de pâtes": "salade", "Gratin de pâtes": "pates", "Coquillettes jambon": "pates",
   "Velouté de potiron": "soupe", "Hot dogs": "burger", "Burgers maison": "burger", "Soupe de poisson": "soupe",
   "Tartiflette": "raclette", "Pommes de terres vache qui rit": null,
 };

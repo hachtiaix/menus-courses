@@ -236,3 +236,13 @@ test("recette : les étapes sont gardées au nettoyage", () => {
   const out = Data.cleanAll({ recipes: { r1: { id: "r1", name: "X", serves: 4, steps: "# A\n- b", ingredients: [] } } });
   assert.equal(out.recipes.r1.steps, "# A\n- b");
 });
+
+test("type de plat : gratins de pâtes et pâtes au poisson sont des pâtes (habitude du lundi soir)", () => {
+  for (const n of ["Gratin de penne", "Gratin de macaronis", "Gratin de pâtes au jambon", "Gratin de coquillettes", "Saumon aux pâtes", "One pot pasta", "Lasagnes", "Macaronis au fromage"])
+    assert.equal(Data.typeOf(n), "pates", n);
+  assert.equal(Data.typeOf("Gratin dauphinois"), "gratin");
+  assert.equal(Data.typeOf("Gratin de courgettes"), "gratin");
+  assert.equal(Data.typeOf("Pavé de saumon"), "poisson");
+  const S = { recipes: {} }, h = { type: "pates", slot: "s", days: [1] };
+  assert.ok(Data.habitMatches(S, h, "Gratin de penne"));
+});

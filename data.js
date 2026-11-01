@@ -70,7 +70,7 @@ const inSeason=(season,month)=>season==="ete"?!(month>=11||month<=3):season==="h
 const RARE_TYPES={burger:14}; // types espacés d'au moins N jours (junk food : une fois toutes les 2 semaines)
 const TYPES=[
   {id:"pates",dish:"Pâtes",label:"Pâtes",icon:"🍝",words:["pate","spaghetti","tagliatelle","penne","fusilli","macaroni","coquillette","carbonara","bolognaise",
-    "lasagne","ravioli","gnocchi","linguine","farfalle","tortellini","cannelloni","pesto"]},
+    "lasagne","ravioli","gnocchi","linguine","farfalle","tortellini","cannelloni","pesto","pasta","rigatoni","orecchiette","conchiglie","pappardelle"]},
   {id:"soupe",dish:"Soupe",label:"Soupe",icon:"🍲",words:["soupe","veloute","potage","minestrone","gaspacho","gazpacho","bouillon","garbure"]},
   // « Plat plaisir » (ex-junk food) regroupe burgers, hot-dogs, pizzas, croques, fajitas, friterie… (id gardé « burger » pour les habitudes existantes)
   {id:"burger",dish:"Plat gourmand",label:"Plat gourmand",icon:"😋",words:["plat gourmand","plat plaisir","burger","hamburger","cheeseburger","hot dog","hotdog","pizza","croque monsieur","croque madame","croque","fajita","friterie","fast food","kebab","tacos","quesadilla","junk food","raclette","fondue savoyarde","fondue bourguignonne","burrito","nachos","nugget","tapas","chicken wing","wing","chili cheese","mcdo","mc do","mcdonald"]},
@@ -93,6 +93,8 @@ function plaisirList(S){setPlaisir(S);const T=TYPES.find(t=>t.id==="burger"),cs=
 function typeOf(name){
   const n=words(name);let best=null,at=Infinity;
   for(const t of TYPES)for(const w of wordsOfType(t)){const m=n.match(new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? "));if(m&&m.index<at){at=m.index;best=t.id}}
+  // gratin de penne, de macaronis, saumon aux pâtes… : ce sont des pâtes (habitude « pâtes », variété des menus)
+  if((best==="gratin"||best==="poisson")&&TYPES.find(t=>t.id==="pates").words.some(w=>new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? ").test(n)))return "pates";
   return best;
 }
 // 2e plat appris : parmi les 3 dernières fois où ce plat (ou ce type de plat) a été mangé, au moins 2 avaient
