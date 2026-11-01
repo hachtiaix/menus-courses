@@ -142,6 +142,12 @@ function nice(x,dec){if(x>=100)return String(Math.round(x/10)*10);if(x>=20)retur
 // « cuillère(s) à café », « c. à c. », « càc » → « cac » ; à soupe → « cas » (invariables)
 const spoon=t=>t.replace(/\b(?:cuill[eè]res?|cuil\.?|c\.?)\s*(?:à|a)\s*(?:(caf[ée])|(soupe))(?![a-z])\.?|\bc\.?\s*[àa]\.?\s*([cs])\b\.?/gi,(m,c,so,l)=>c||(l&&/c/i.test(l))?"cac":"cas");
 function cook(text,f){const t=spoon(String(text||"").trim());
+  // cuillères seules : on compte tout en cac (1 cas = 3 cac) puis on regroupe → « 5 cas + 1 cac de sucre », « 1 ½ cac »
+  {const ps=t.split(/\s*\+\s*|\s+et\s+(?=[\d½¼¾⅓⅔])/);let T=0,tail="",ok=true;
+    for(const p of ps){const m=p.match(NUM),r=m&&p.slice(m[0].length).match(/^(ca[cs])\b(.*)$/i);
+      if(!r||!(num(m[1])>0)){ok=false;break}T+=num(m[1])*(/s/i.test(r[1])?3:1);if(r[2].trim())tail=r[2]}
+    if(ok){T=Math.round(T*f*4)/4||.25;const cas=Math.floor(T/3+1e-9),c=T-cas*3;
+      return [cas?nice(cas)+" cas":"",c?nice(c)+" cac":""].filter(Boolean).join(" + ")+tail}}
   // plusieurs quantités sur une ligne : « 1 cas + 1 cac de sucre », « 1 cas et 2 cac »
   const parts=t.split(/(\s*\+\s*|\s+et\s+(?=[\d½¼¾⅓⅔]))/);if(parts.length>1)return parts.map((x,i)=>i%2?x:cook(x,f)).join("");
   const m=t.match(NUM);
