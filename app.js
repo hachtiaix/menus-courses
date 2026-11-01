@@ -591,7 +591,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v235";
+const BASE=4,VERSION="v236";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1369,6 +1369,7 @@ function recipeEditor(r,pre,after){
       const p=l.match(/pour\s+(\d+)\s*(?:pers|parts?|couverts?)/i);if(p){pour=+p[1];continue}
       if(!l||/^ingr[ée]dients?\s*:?$/i.test(l)||l.length>80)continue;lines.push(l)}
     if(!lines.length)return;
+    lines=Data.splitSeasoning(lines); // « Sel, poivre » : deux ingrédients
     // prévue pour 1 ou 2 : adaptée pour 3 ou 4 (le nombre qui tombe le plus juste), étapes comprises
     const a=pour?Data.adaptServes(pour,lines,st):{serves:0,ingredients:lines,steps:st,from:null};lines=a.ingredients;
     if(pour)$("#sv").value=a.serves;if(a.steps&&!$("#stp").value.trim())$("#stp").value=a.steps;

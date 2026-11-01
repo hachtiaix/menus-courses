@@ -480,11 +480,16 @@ function adaptServes(serves,ingredients,steps){
   const p3=pen(3),p4=pen(4),T=p3!==p4?(p3<p4?3:4):exact(3)!==exact(4)?(exact(3)?3:4):4,f=T/serves;
   return{serves:T,ingredients:ingredients.map(t=>Q.cook(t,f,true)),steps:steps?Q.cookSteps(steps,f,ingredients,true):steps,from:serves};
 }
+// « Sel, poivre », « sel et poivre du moulin » : deux ingrédients (sans quantité, contenant sel ou poivre)
+function splitSeasoning(lines){return lines.flatMap(l=>{const t=String(l).trim();
+  if(/\d/.test(t)||!/\b(sel|poivre)\b/i.test(plain(t)))return[t];
+  const p=t.split(/\s*(?:,|;|\/|&|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
+  return p.length>1&&p.every(x=>x.split(/\s+/).length<=4)?p.map(x=>x.charAt(0).toLowerCase()+x.slice(1)):[t]})}
 // réponse de la fonction « recette » (données schema.org de la page) → recette prête à vérifier et enregistrer
 function fromSchema(x,url){
   const name=unent(x&&x.name).replace(/\s*[:\-–|]\s*(la meilleure recette|recette).*$/i,"").replace(/^(.{6,}?)\s+:\s+.*$/,"$1").replace(/^recette\s+(?:de\s+|d['’]\s*)?/i,"").replace(/^./,c=>c.toUpperCase()).slice(0,80);
   const y=[].concat(x&&x.yield||[]).map(String).join(" "),serves=Math.min(30,Math.max(1,parseInt((y.match(/\d+/)||[])[0],10)||4));
-  const ingredients=[].concat(x&&x.ingredients||[]).map(tidyIngredient).filter(Boolean).slice(0,80);
+  const ingredients=splitSeasoning([].concat(x&&x.ingredients||[]).map(tidyIngredient).filter(Boolean)).slice(0,80);
   const st=[].concat(x&&x.steps||[]).slice(0,80),lines=[];let k=0;
   for(const p of st){const sec=unent(p&&p.s),t=unent(p&&p.t);if(sec&&sec!==lines.__sec){lines.push("# "+sec);lines.__sec=sec;k=0}if(t)lines.push(`${++k}. ${t}`)}
   const prep=isoMinutes(x&&x.prep),a=adaptServes(serves,ingredients,lines.join("\n"));
@@ -560,6 +565,6 @@ function prune(S,now){
   for(const id of Object.keys(S.meals||{})){const d=Date.parse(id.slice(0,10));if(d&&now-d>MEAL_TTL){delete S.meals[id];n++}}
   return n;
 }
-root.Data={KINDS,okId,str,clean,cleanAll,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
+root.Data={KINDS,okId,str,clean,cleanAll,splitSeasoning,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
   TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
