@@ -423,3 +423,12 @@ details.pastd .slots{padding:0 0 10px}
 .btn:disabled{opacity:.5}
 details.pastd>summary small{flex:1}
 section.day .dh small{text-transform:none}
+/* import : un groupe (tout cocher) ou « Choisir » élément par élément */
+.card.imp .ig>.row{gap:10px}
+.card.imp .igh{display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer}
+.card.imp .igc{flex:none;height:auto;min-height:38px;padding:6px 12px;font-size:14px}
+.card.imp .ig+.ig>.row{border-top:1px solid var(--line)}
+.card.imp .ig>.row{border-bottom:0}
+.card.imp .igl{margin:0 0 8px 38px;padding-left:10px;border-left:2px solid var(--line)}
+.card.imp .igl .row{min-height:40px;padding:6px 0;font-size:15px;cursor:pointer}
+.card.imp .igl input{width:20px;height:20px}

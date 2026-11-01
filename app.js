@@ -588,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v214";
+const BASE=4,VERSION="v215";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -975,9 +975,12 @@ function renderSettings(inRecipes){
     while(c!==null&&c.trim().length<min)c=prompt(`Trop court : au moins ${min} caractères. Par exemple trois mots et un nombre.`,c.trim());
     return c===null?null:c.trim();
   };
-  // code solide tiré au hasard (sans 0/O ni 1/l/I pour éviter les confusions) : xxxx-xxxx-xxxx-xxxx
-  const strongCode=()=>{const A="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",v=crypto.getRandomValues(new Uint32Array(16));
-    return [...v].map(x=>A[x%A.length]).join("").match(/.{4}/g).join("-")};
+  // code solide tiré au hasard : 30 caractères, tous les symboles (on le copie-colle, jamais tapé).
+  // Pas d'espace : l'app et la sauvegarde Home Assistant retirent les espaces au début et à la fin.
+  const strongCode=()=>{const L="abcdefghijklmnopqrstuvwxyz",U=L.toUpperCase(),D="0123456789",Y="!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",A=L+U+D+Y;
+    const rnd=n=>{const v=new Uint32Array(1),lim=Math.floor(2**32/n)*n;do crypto.getRandomValues(v);while(v[0]>=lim);return v[0]%n}; // sans biais
+    const c=[Y,Y,Y,Y,D,D,U,U,L,L].map(set=>set[rnd(set.length)]);while(c.length<30)c.push(A[rnd(A.length)]);
+    for(let i=c.length-1;i>0;i--){const j=rnd(i+1);[c[i],c[j]]=[c[j],c[i]]}return c.join("")};
   // Rejoindre un foyer existant : ne change que cet appareil.
   const cp=$("#cpcode");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(code);cp.textContent="Copié ✓"}catch(_){alert("Copie impossible sur cet appareil.")}};
   on("#setcode","onclick",()=>{
@@ -986,10 +989,14 @@ function renderSettings(inRecipes){
   });
   // Renommer le foyer côté serveur : il faut que le code actuel soit valide.
   const ren=$("#rencode");if(ren)ren.onclick=async()=>{
-    const n=askCode("Nouveau code du foyer (16 caractères au moins). Celui proposé est tiré au hasard : gardez-le, puis « Copier » pour le coller sur l'autre téléphone.",strongCode(),16);
+    const n=askCode("Nouveau code du foyer. Celui proposé (30 caractères, avec symboles) est tiré au hasard : validez, il sera copié tout seul.",strongCode(),16);
     if(!n||n===code)return;
-    const r=await rpc("change_household_code",{p_old:code,p_new:n}).catch(()=>null);
-    if(r&&r.ok){code=LS.code=n;sync();render();alert("Code changé. Sur les autres appareils : ⚙︎ → Synchro → Saisir, puis le nouveau code.");return}
+    const req=rpc("change_household_code",{p_old:code,p_new:n}).catch(()=>null);
+    // copie automatique du nouveau code, une fois accepté par la base ; demandée tout de suite (l'iPhone ne copie que pendant le toucher)
+    let copied;try{copied=navigator.clipboard.write([new ClipboardItem({"text/plain":req.then(r=>{if(!r||!r.ok)throw 0;return new Blob([n],{type:"text/plain"})})})]).then(()=>true,()=>false)}catch(_){copied=Promise.resolve(false)}
+    const r=await req;
+    if(r&&r.ok){code=LS.code=n;sync();render();const c=await copied;
+      alert(`Code changé${c?" et copié":""}. ${c?"Collez-le":"Touchez « Copier », puis collez-le"} sur l'autre téléphone (⚙︎ → Synchro → Saisir) et dans Home Assistant (saisir-code.sh).`);return}
     const e=r?await r.json().catch(()=>({})):{};
     alert(e.message==="code deja utilise"?"Ce code est déjà pris, choisissez-en un autre.":"Impossible de changer le code pour l'instant (hors ligne ?).");
   };
@@ -1016,29 +1023,51 @@ function importDialog(raw,fname){
   const data=Data.cleanAll(raw);
   const has=(k,id)=>{const c=S[k][id];return !!c&&!c.deleted&&(k!=="meals"||!!c.text)}; // repas vide = place libre
   const same=(k,id,a,b)=>{const x=Data.clean(k,id,a);return !!x&&JSON.stringify({...x,ts:0})===JSON.stringify({...b,ts:0})}; // comparés une fois remis en forme
-
-  const todo=(kinds,force)=>kinds.flatMap(k=>Object.entries(data[k]).filter(([id,x])=>!x.deleted&&(k!=="meals"||x.text)&&(!has(k,id)||(force&&!same(k,id,S[k][id],x)))).map(([id,x])=>[k,id,x]));
-  const inFile=kinds=>kinds.reduce((a,k)=>a+Object.values(data[k]).filter(x=>!x.deleted&&(k!=="meals"||x.text)).length,0);
+  const fileRecs=k=>Object.entries(data[k]).filter(([id,x])=>!x.deleted&&(k!=="meals"||x.text));
+  const inFile=kinds=>kinds.reduce((a,k)=>a+fileRecs(k).length,0);
   if(!IMPORT_GROUPS.some(g=>inFile(g[1]))){alert("Ce fichier ne contient aucune donnée de l'app.");return}
   const when=(raw._export&&raw._export.date)||(String(fname).match(/\d{4}-\d{2}-\d{2}/)||[])[0];
+  // nom lisible de chaque élément, pour le choisir
+  const dayLbl=k=>new Date(k.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})+(/-m\d*$/.test(k)?" midi":" soir");
+  const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
+  const LAB={recipes:x=>x.name,foods:x=>x.label,habits:x=>habitWhat(x).label+" · "+habitWhen(x),combos:x=>x.text,lists:x=>x.name,stores:(x,id)=>x.name||id,
+    aisles:(x,id)=>cap(id.replace(/-/g," "))+" → "+((Rayons.byId[x.rayon]||{}).label||x.rayon),meals:(x,id)=>dayLbl(id)+" : "+x.text,items:x=>x.text};
+  const lab=(k,id,x)=>{try{return LAB[k](x,id)||id}catch(_){return id}}; // seulement le libellé de sa sorte
+  // à remettre : ce qui manque (ou a été supprimé) ; avec « remplacer », aussi ce qui a changé depuis
+  let force=false;const pick=new Map(),opened=new Set(); // pick : choix fait à la main (sinon : le groupe coché par défaut ou non)
+  const todo=g=>IMPORT_GROUPS[g][1].flatMap(k=>fileRecs(k).filter(([id,x])=>!has(k,id)||(force&&!same(k,id,S[k][id],x)))
+    .map(([id,x])=>({k,id,x,key:k+"|"+id,repl:has(k,id),label:String(lab(k,id,x)||id)}))).sort((a,b)=>a.label.localeCompare(b.label,"fr"));
+  const isOn=(g,t)=>pick.has(t.key)?pick.get(t.key):IMPORT_GROUPS[g][2];
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Importer une sauvegarde</h2>
-   <p class="mut">${when&&/^\d{4}-\d{2}-\d{2}$/.test(when)?"Sauvegarde du "+new Date(when+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"}):esc(String(fname).slice(0,60))}</p>
-   <div class="card imp">${IMPORT_GROUPS.map(([l,kinds,on],i)=>inFile(kinds)?`<label class="row"><input type="checkbox" data-ig="${i}" ${on?"checked":""}><span class="t">${l}<br><small class="mut" data-ic="${i}"></small></span></label>`:"").join("")}</div>
+   <p class="mut">${when&&/^\d{4}-\d{2}-\d{2}$/.test(when)?"Sauvegarde du "+new Date(when+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"}):esc(String(fname).slice(0,60))}.
+   Cochez un groupe pour tout reprendre, ou « Choisir » pour sélectionner.</p>
+   <div class="card imp" id="igs"></div>
    <label class="row impforce"><input type="checkbox" id="impforce"><span class="t">Remplacer aussi ce qui a changé depuis<br><small class="mut">Sinon, rien de ce que vous avez aujourd'hui n'est remplacé : seul ce qui manque revient.</small></span></label>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok"></button></div></div>`;
   document.body.appendChild(ov);
-  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
-  const picked=()=>[...ov.querySelectorAll("[data-ig]:checked")].flatMap(c=>IMPORT_GROUPS[+c.dataset.ig][1]);
-  const paint=()=>{const force=$("#impforce").checked;
-    ov.querySelectorAll("[data-ic]").forEach(el=>{const kinds=IMPORT_GROUPS[+el.dataset.ic][1],n=inFile(kinds),t=todo(kinds,force).length;
-      el.textContent=`${n} dans le fichier · ${t?t+" à remettre":"rien à remettre"}`});
-    const t=todo(picked(),force).length;$("#ok").textContent=t?`Remettre ${t} élément${t>1?"s":""}`:"Rien à remettre";$("#ok").disabled=!t};
-  ov.addEventListener("change",paint);paint();
-  $("#ok").onclick=()=>{const force=$("#impforce").checked,list=todo(picked(),force),now=Date.now(),withItems=picked().includes("items");
-    if(force&&!confirm(`Remplacer par la sauvegarde ce qui a changé depuis (${list.length} élément${list.length>1?"s":""}) ?`))return;
+  const close=()=>ov.remove();
+  const chosen=()=>IMPORT_GROUPS.flatMap((_,g)=>todo(g).filter(t=>isOn(g,t)));
+  const paint=()=>{
+    $("#igs").innerHTML=IMPORT_GROUPS.map(([l,kinds],g)=>{const n=inFile(kinds);if(!n)return "";const t=todo(g),on=t.filter(x=>isOn(g,x)).length;
+      return `<div class="ig"><div class="row"><label class="igh"><input type="checkbox" data-ga="${g}" ${t.length&&on===t.length?"checked":""} ${t.length?"":"disabled"}><span class="t">${l}<br><small class="mut">${n} dans le fichier · ${!t.length?"rien à remettre":on===t.length?t.length+" à remettre":on+" sur "+t.length+" à remettre"}</small></span></label>${t.length?`<button type="button" class="btn sec igc" data-gc="${g}">${opened.has(g)?"Fermer":"Choisir"}</button>`:""}</div>
+       ${opened.has(g)&&t.length?`<div class="igl">${t.map(x=>`<label class="row"><input type="checkbox" data-it="${esc(x.key)}" data-g="${g}" ${isOn(g,x)?"checked":""}><span class="t">${esc(x.label)}${x.repl?` <small class="mut">· remplace l'actuel</small>`:""}</span></label>`).join("")}</div>`:""}</div>`}).join("");
+    // groupe en partie choisi : case à moitié cochée
+    ov.querySelectorAll("[data-ga]").forEach(c=>{const g=+c.dataset.ga,t=todo(g),on=t.filter(x=>isOn(g,x)).length;c.indeterminate=on>0&&on<t.length});
+    const n=chosen().length;$("#ok").textContent=n?`Remettre ${n} élément${n>1?"s":""}`:"Rien à remettre";$("#ok").disabled=!n};
+  ov.addEventListener("change",e=>{const c=e.target;
+    if(c.id==="impforce")force=c.checked;
+    else if(c.dataset.ga!=null){const g=+c.dataset.ga;todo(g).forEach(t=>pick.set(t.key,c.checked))} // tout le groupe
+    else if(c.dataset.it!=null)pick.set(c.dataset.it,c.checked); // un élément
+    else return;
+    paint()});
+  ov.addEventListener("click",e=>{if(e.target===ov){close();return}const b=e.target.closest("[data-gc]");if(!b)return;
+    const g=+b.dataset.gc;if(opened.has(g))opened.delete(g);else opened.add(g);paint()});
+  $("#no").onclick=close;paint();
+  $("#ok").onclick=()=>{const list=chosen(),repl=list.filter(t=>t.repl).length,now=Date.now(),withItems=list.some(t=>t.k==="items");
+    if(repl&&!confirm(`${repl} élément${repl>1?"s":""} actuel${repl>1?"s":""} ser${repl>1?"ont":"a"} remplacé${repl>1?"s":""} par la sauvegarde. Continuer ?`))return;
     // en une fois (pas un enregistrement + envoi par élément) ; les repas sans leurs articles ne gardent pas le lien vers les listes
-    for(const [k,id,x] of list){const rec={...x,ts:now,deleted:false};if(k==="meals"&&!withItems)rec.added=null;
+    for(const {k,id,x} of list){const rec={...x,ts:now,deleted:false};if(k==="meals"&&!withItems)rec.added=null;
       (S[k]=S[k]||{})[id]=rec;(pending[k]=pending[k]||{})[id]=1}
     save();sync();close();render();toast(`✓ ${list.length} élément${list.length>1?"s":""} remis`)};
 }
