@@ -21,21 +21,48 @@
   },
   {
    "site": "marmiton",
-   "titre": "Tartine chaude",
-   "url": "https://www.marmiton.org/recettes/recette_tartine-chaude_540076.aspx",
-   "prep": 15,
-   "total": 25,
-   "pour": 4,
-   "publie": "2026-06-30"
-  },
-  {
-   "site": "marmiton",
    "titre": "Hamburger maison",
    "url": "https://www.marmiton.org/recettes/recette_hamburger-maison_32672.aspx",
    "prep": 5,
    "total": 10,
    "pour": 4,
    "publie": "2006-10-23"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Brochette de magret de canard marinées",
+   "url": "https://www.marmiton.org/recettes/recette_brochette-de-magret-de-canard-marinees_539944.aspx",
+   "prep": 20,
+   "total": 270,
+   "pour": 4,
+   "publie": "2026-05-26"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Brochette poulet au four",
+   "url": "https://www.marmiton.org/recettes/recette_brochette-poulet-au-four_539931.aspx",
+   "prep": 20,
+   "total": 40,
+   "pour": 4,
+   "publie": "2026-05-27"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Chips de lard",
+   "url": "https://www.marmiton.org/recettes/recette_chips-de-lard_539928.aspx",
+   "prep": 5,
+   "total": 13,
+   "pour": 4,
+   "publie": "2026-05-27"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Wrap kebab",
+   "url": "https://www.marmiton.org/recettes/recette_wrap-kebab_539927.aspx",
+   "prep": 10,
+   "total": 15,
+   "pour": 4,
+   "publie": "2026-05-27"
   },
   {
    "site": "cuisineaz",
