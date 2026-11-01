@@ -27,7 +27,10 @@ const stripDe=s=>s.trim().replace(/^(de\s+|des\s+|d['’]\s*)/i,"").trim();
 // Synonymes : « cube de bouillon », « bouillon de légume », « cubes de bouillon volaille »…
 // → un seul nom, pour cumuler les lignes (« bouillon de légumes » / « bouillon de volailles » / « bouillon de bœuf »).
 const BOUILLON_SKIP=new Set(["cube","cubes","tablette","tablettes","de","d","en","au","aux","du","bouillon","bouillons"]);
+const EGG_PREP=/^(cuits?|durs?|crus?|battus?|mollets?|poches?|entiers?|frais|extra|bio|plein|air|de|a|la|en|coque|brouilles?|au|plat|ecrases?|moyens?|gros|petits?|temperature|ambiante)$/;
 function canon(name){const w=String(name||"").toLowerCase().replace(/œ/g,"oe").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z ]+/g," ").split(/\s+/).filter(Boolean);
+  // Œufs : la préparation (cuits durs, cru, battus…) ne compte pas pour les courses → « œufs »
+  if(/^oeufs?$/.test(w[0]||"")&&w.length>1&&w.slice(1).every(x=>EGG_PREP.test(x)))return /œ/i.test(name)?"œufs":"oeufs";
   if(!w.some(x=>/^bouillons?$/.test(x)))return name;
   const rest=w.filter(x=>!BOUILLON_SKIP.has(x));
   if(!rest.length)return name; // « cube de bouillon » seul : on laisse choisir (légumes, volailles, bœuf)
@@ -107,7 +110,7 @@ function boxLines(p){let s=Math.ceil(p.n-1e-9);const out=[];
   for(const [size,k] of [["grosse",4],["moyenne",2],["petite",1]]){const c=Math.floor(s/k);s-=c*k;if(c)out.push({size,text:format({kind:"box",size,n:c*k,name:p.name})})}
   return out}
 // Clé de cumul : même nature de quantité + même nom, sans casse, accents ni pluriel.
-const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]+/g," ")
+const norm=s=>s.toLowerCase().replace(/œ/g,"oe").replace(/æ/g,"ae").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]+/g," ")
   .split(/\s+/).filter(Boolean).map(w=>w.length>3?w.replace(/[sx]$/,""):w).join(" ");
 const key=p=>(p.kind==="none"?"count":p.kind)+"|"+norm(p.name);
 

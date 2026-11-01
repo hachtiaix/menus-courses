@@ -117,3 +117,9 @@ test("cookSteps : un/une, pincées, jaune d'œuf, « de » pour les fractions, f
   assert.equal(Qty.cookSteps("Ajouter une grosse cuillère à soupe de curcuma.", 2, ings), "Ajouter 2 grosses cas de curcuma.");
   assert.equal(Qty.cook("une petite boite de concentré", 2), "2 petites boites de concentré");
 });
+
+test("œufs : la préparation ne compte pas pour les courses", () => {
+  assert.equal(Qty.add("4 oeufs cuits durs", "1 oeuf cru"), "5 oeufs");
+  assert.equal(Qty.add("2 œufs", "1 oeuf"), "3 œufs");
+  assert.equal(Qty.cook("4 oeufs cuits durs", 0.5), "2 oeufs cuits durs");
+});
