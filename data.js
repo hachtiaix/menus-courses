@@ -193,7 +193,12 @@ function setCustom(S){setPlaisir(S);CUSTOM=Object.values(S.foods||{}).filter(r=>
   .map(r=>({id:r.id,icon:emojiFor(r.label)||CAT_ICON[r.cat],cat:r.cat,label:r.label,words:[words(r.label).trim().replace(/s$/,"")],kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
 const allFoods=()=>[...FOODS,...CUSTOM];
 // Aliments inconnus d'une suite (« Saucisses, Asperges » → ["Asperges"]) : ni ingrédient, ni recette, ni déjà à classer ou écarté.
+// Repas pris dehors (restaurant, chez des amis…) : rien à acheter, jamais proposé comme plat
+const OUT="Repas à l'extérieur";
+// (restaurant, invitation, « chez Paul »… : tout est rangé sous « Repas à l'extérieur »)
+const isOut=t=>/^(repas (a )?l ?exterieur|(a )?l ?exterieur|exterieur|restaurant|au restaurant|resto|au resto|dehors|invitation|invitee?s?|chez .+|(a )?sailly)$/.test(plain(t).replace(/['’]/g," ").replace(/\s+/g," ").trim());
 function unknownFoods(S,text){
+  if(isOut(text))return[];
   const parts=String(text||"").split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
   const seen=new Set(Object.values(S.foods||{}).filter(r=>r&&r.label).map(r=>plain(r.label)));
   return parts.filter(p=>!foodFor(p)&&!recipeNamed(S,p)&&!seen.has(plain(p))&&(seen.add(plain(p)),true));
@@ -216,6 +221,7 @@ function foodLine(S,f,name){
 }
 // Morceaux d'une suite d'aliments avec leur famille (affichage en étiquettes), ou null si ce n'est pas une suite.
 function suiteTags(S,text){
+  if(isOut(text))return null;
   if(!suite(S,text))return null;
   return String(text).split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean).map(p=>{const f=foodFor(p);return{t:p,cat:recipeNamed(S,p)?"rcp":f?f.cat:"autre"}});
 }
@@ -227,6 +233,7 @@ const GENERIC=["viande","poisson","porc"];
 // et la suite est comptée pour le nombre de personnes de la recette (les aliments sont multipliés d'autant).
 const recipeNamed=(S,p)=>Object.values(S.recipes||{}).find(r=>r&&!r.deleted&&r.name&&plain(r.name)===plain(p));
 function suite(S,text){
+  if(isOut(text))return null;
   const parts=String(text||"").split(/\s*(?:,|\+|\bet\b)\s*/i).map(x=>x.trim()).filter(Boolean);
   if(!parts.length||(parts.length===1&&!foodFor(parts[0],true)))return null;
   const recs=parts.map(p=>recipeNamed(S,p)),B=(recs.find(Boolean)||{}).serves||1,ings=[];
@@ -355,7 +362,7 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   // deux plats principaux le même jour (« Hachis parmentier, Chili con carne ») : ce n'est pas un plat + accompagnement
   const twoMains=t=>split(t).filter(isMain).length>=2;
   const withs={};
-  for(const m of [...Object.values(S.meals||{}),...Object.values(S.combos||{})]){if(!m||m.deleted||!m.text||twoMains(m.text))continue;const p=split(m.text);if(p.length<2)continue;
+  for(const m of [...Object.values(S.meals||{}),...Object.values(S.combos||{})]){if(!m||m.deleted||!m.text||twoMains(m.text)||isOut(m.text))continue;const p=split(m.text);if(p.length<2)continue;
     for(const x of p){const s=withs[key(x)]=withs[key(x)]||new Map();s.set(key(m.text),m.text)}}
   for(const r of Object.values(S.recipes||{}))if(!r.deleted&&r.name&&!recipeDessert(r)){
     const opts=new Map(withs[key(r.name)]||[]);
@@ -370,7 +377,7 @@ function suggest(S,today,n,exclude,rnd,slotKey){
   for(const [k,m] of Object.entries(S.meals||{})){if(m.deleted||!m.text)continue;
     // deux plats principaux : chacun est proposé seul
     for(const t of twoMains(m.text)?split(m.text).filter(x=>isMain(x)&&!recKeys.has(key(x))):[m.text])
-      if(!names.has(key(t))&&!onlyOther(t)&&!withRecipe(t))names.set(key(t),{name:t,season:guessSeason(t)})}
+      if(!names.has(key(t))&&!onlyOther(t)&&!withRecipe(t)&&!isOut(t))names.set(key(t),{name:t,season:guessSeason(t)})}
   // associations ajoutées à la main sans recette (« Pâtes, Œufs ») : candidates comme un plat déjà fait
   for(const c of Object.values(S.combos||{}))if(c&&!c.deleted&&c.kind!=="plaisir"&&c.text&&!twoMains(c.text)&&!names.has(key(c.text))&&!onlyOther(c.text)&&!withRecipe(c.text))names.set(key(c.text),{name:c.text,season:guessSeason(c.text)});
   const ex=new Set((exclude||[]).map(key)),t0=Date.parse(ref),todayT=Date.parse(today);
@@ -546,6 +553,6 @@ function prune(S,now){
   for(const id of Object.keys(S.meals||{})){const d=Date.parse(id.slice(0,10));if(d&&now-d>MEAL_TTL){delete S.meals[id];n++}}
   return n;
 }
-root.Data={KINDS,okId,str,clean,cleanAll,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
+root.Data={KINDS,okId,str,clean,cleanAll,OUT,isOut,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
   TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

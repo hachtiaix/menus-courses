@@ -290,3 +290,14 @@ test("junk food : compte comme plat gourmand sans case (4 par semaine, même pla
   got = Data.suggest(S2, "2026-12-30", 30, [], () => 0.5, "2027-01-01-s").map(x => x.name);
   assert.ok(!got.includes("Croziflette"), got.join(", ")); assert.ok(got.includes("Poulet rôti"));
 });
+
+test("repas à l'extérieur : reconnu, rien à acheter, jamais proposé comme plat", () => {
+  for (const t of ["Repas à l'extérieur", "repas a l'exterieur", "Restaurant", "resto", "À l'extérieur", "Dehors", "Invitation", "Invités", "Chez Paul", "chez les parents", "À Sailly", "Sailly"]) assert.ok(Data.isOut(t), t);
+  assert.ok(!Data.isOut("Salade extérieure de poulet"));
+  const S = Data.cleanAll({ recipes: { a: { name: "Poulet rôti", ingredients: [], ts: 1 } },
+    meals: { "2026-10-01-s": { text: "Repas à l'extérieur", ts: 1 }, "2026-10-02-s": { text: "Restaurant", ts: 1 } } });
+  const got = Data.suggest(S, "2026-12-30", 30, [], () => 0.5).map(x => x.name);
+  assert.ok(!got.some(n => Data.isOut(n)), got.join(", "));
+  assert.equal(Data.suite(S, "Repas à l'extérieur"), null);
+  assert.deepEqual(Data.unknownFoods(S, "Repas à l'extérieur"), []);
+});

@@ -470,3 +470,8 @@ body.withaz #view .count{margin-right:28px}
 .serv.chk{gap:10px;align-items:flex-start;cursor:pointer}
 .serv.chk input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--accent)}
 .serv.chk small{display:block}
+.slotw.hist .slot input{color:var(--fg)} /* 7 derniers jours : modifiables */
+/* repas à l'extérieur */
+.tag.out{background:#e8eef7;border-color:#b7c6dd;color:#2c4a73}
+@media(prefers-color-scheme:dark){.tag.out{background:#1f2a3a;border-color:#3b4d68;color:#b9cbe6}}
+.slots{text-transform:none} /* « 4 pers. », « Rien à acheter » : sans majuscules ajoutées */

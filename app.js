@@ -581,14 +581,14 @@ function applyCompanion(key){
   const c=Data.companionFor(S,m.text,todayKey());if(c)addSecond(key,c.n);
 }
 // Recette d'un plat : une recette enregistrée, sinon une suite d'aliments (« viande rouge, haricots verts »).
-const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
+const recipeOf=name=>name&&!Data.isOut(name)&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 // semaine affichée : décalage par rapport à la semaine en cours, oublié après 6 h sans y toucher
 // (sinon, l'app rouverte des jours plus tard restait sur une autre semaine)
 const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v230";
+const BASE=4,VERSION="v233";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -610,34 +610,40 @@ function placeBox(box,host,slot){
   if(below>=Math.min(want,180)||below>=above){box.style.maxHeight=Math.max(110,Math.min(340,below))+"px";return}
   box.style.top="auto";box.style.bottom=(host.offsetHeight-slot.offsetTop+4)+"px";box.style.maxHeight=Math.max(110,Math.min(340,above))+"px";
 }
+// Historique : les 7 derniers jours restent modifiables (ce qui a vraiment été mangé), sans toucher aux listes
+const histOk=k=>{const d=k.slice(0,10),t=todayKey();return d<t&&d>=Data.addDays(t,-7)};
 function slotHtml(key,label,past){
   const e=S.meals[key]||{},n=e.servings||BASE,b=bought(e),extras=extrasOf(key),has2=extras.length>=MAX_DISHES-1; // has2 : plus de place pour un plat de plus
-  const lock=past?(e.text?'readonly title="Jour passé"':"disabled"):b?'readonly title="Ingrédients déjà achetés : déplacez le repas avec ⇄"':"";
+  const h=past&&histOk(key);
+  const lock=past?(h?"":e.text?'readonly title="Jour passé"':"disabled"):b?'readonly title="Ingrédients déjà achetés : déplacez le repas avec ⇄"':"";
   // la case prend toute la largeur : × (ou 🔒) passe dans la rangée de boutons du dessous ; seul 💡 reste à droite d'une case vide
   const right=!past&&!e.text?`<button class="pill bulb" data-bulb="${key}" aria-label="Suggestions">💡</button>`:"";
+  const out=Data.isOut(e.text||"");
   const sub=!e.text?"":`<div class="sub">${
-    past?`<span class="mut sm">${n} pers.${b?" · acheté":""}</span>`
+    out?`<span class="mut sm">Rien à acheter</span>`
+    :past?`<span class="mut sm">${n} pers.${b?" · acheté":""}</span>`
     :b?`<div class="stp"><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers. · acheté</em></div>`
     :`<div class="stp"><button data-sm="${key}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${key}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${key}" aria-label="Ingrédients" title="Ingrédients">🥕</button>`
-  }${!past&&!has2?`<button class="pill add2" data-add2="${key}" aria-label="Ajouter un plat" title="Ajouter un plat">🍽️</button>`:""}<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button>${past?"":b?`<button class="lock" data-del="${key}" data-force="1" title="Ingrédients déjà achetés" aria-label="Supprimer quand même">🔒</button>`:`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`}</div>`;
-  return `<div class="slotw ${past?"past":""}"><div class="slot"><span class="lbl">${label}</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${key}" placeholder="${past?"—":"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text,key)}</span>${right}</div>${sub}</div>${extras.map((k2,i)=>secondHtml(k2,S.meals[k2],past,i+2)).join("")}`;
+  }${!past&&!has2&&!out?`<button class="pill add2" data-add2="${key}" aria-label="Ajouter un plat" title="Ajouter un plat">🍽️</button>`:""}<button class="pill" data-mv="${key}" aria-label="Déplacer">⇄</button>${past?(h?`<button class="x" data-del="${key}" aria-label="Effacer de l'historique">×</button>`:""):b?`<button class="lock" data-del="${key}" data-force="1" title="Ingrédients déjà achetés" aria-label="Supprimer quand même">🔒</button>`:`<button class="x" data-del="${key}" aria-label="Supprimer le repas">×</button>`}</div>`;
+  return `<div class="slotw ${past?"past":""} ${h?"hist":""}"><div class="slot"><span class="lbl">${label}</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${key}" placeholder="${past?(h?"Qu'avez-vous mangé ?":"—"):"Choisir un plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text,key)}</span>${right}</div>${sub}</div>${extras.map((k2,i)=>secondHtml(k2,S.meals[k2],past,i+2)).join("")}`;
 }
 // 2e plat d'un repas (pour qui, plat, personnes, ingrédients) ; il se déplace avec le repas principal.
 // Suite d'aliments : étiquettes colorées par-dessus le champ (le texte réapparaît quand on le touche).
 const tagsHtml=(text,key)=>{const real=live(S.recipes).some(r=>r.name.toLowerCase()===String(text||"").toLowerCase());
   if(real)return `<span class="tags"><i class="rcp"><button type="button" class="cookb" data-cook="${esc(text)}" data-k="${key||""}" aria-label="Voir la recette">📖</button> <b>${esc(text)}</b></i></span>`; // recette : livre + nom en gras
+  if(text&&Data.isOut(text))return `<span class="tags" aria-hidden="true"><i class="tag out">🍽️ ${esc(text)}</i></span>`;
   const tags=text?Data.suiteTags(S,text):null;
   return tags?`<span class="tags" aria-hidden="true">${tags.map(x=>`<i class="tag ${x.cat}">${x.cat==="rcp"?"📖 ":""}${esc(x.t.charAt(0).toUpperCase()+x.t.slice(1))}</i>`).join("")}</span>`:""};
 function secondHtml(k2,e,past,pos){ // pos : rang affiché (2ᵉ, 3ᵉ…), sans trou si un plat a été retiré
   // comme un repas : case pleine largeur, puis personnes, 🥕 et × sur la rangée du dessous
-  const n=e.servings||1,b=bought(e);
-  const lock=past||b?"readonly":"";
+  const n=e.servings||1,b=bought(e),h=past&&histOk(k2);
+  const lock=past?(h?"":"readonly"):b?"readonly":"";
   // vide : 💡 et × à droite de la case (pas de rangée du dessous)
   const right=!past&&!b&&!e.text?`<button class="pill bulb" data-bulb="${k2}" aria-label="Suggestions">💡</button><button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`:"";
-  const sub=!e.text?"":past?`<div class="sub"><span class="mut sm">${n} pers.</span></div>`
+  const sub=!e.text?"":past?`<div class="sub"><span class="mut sm">${n} pers.</span>${h?`<button class="x" data-del="${k2}" aria-label="Effacer de l'historique">×</button>`:""}</div>`
     :`<div class="sub">${b?`<div class="stp"><b>${n}</b><em>pers. · acheté</em></div><button class="lock" data-del="${k2}" data-force="1" title="Ingrédients déjà achetés" aria-label="Supprimer quand même">🔒</button>`
     :`<div class="stp"><button data-sm="${k2}" aria-label="Moins">−</button><b>${n}</b><button data-sp="${k2}" aria-label="Plus">+</button><em>pers.</em></div><button class="pill" data-i="${k2}" aria-label="Ingrédients" title="Ingrédients">🥕</button><button class="x" data-del="${k2}" aria-label="Retirer ce plat">×</button>`}</div>`;
-  return `<div class="slotw second ${past?"past":""}"><div class="slot"><span class="lbl">+ ${pos||2}ᵉ plat</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${k2}" placeholder="${past?"—":"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text,k2)}</span>${right}</div>${sub}</div>`;
+  return `<div class="slotw second ${past?"past":""} ${h?"hist":""}"><div class="slot"><span class="lbl">+ ${pos||2}ᵉ plat</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${k2}" placeholder="${past?(h?"Qu'avez-vous mangé ?":"—"):"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text,k2)}</span>${right}</div>${sub}</div>`;
 }
 function renderMenus(){
   $("#title").innerHTML=`Menus <span class="hicon">${MENU_ICON}</span>`;
@@ -665,7 +671,12 @@ function renderMenus(){
     return out.filter(x=>x.recipe||!out.some(y=>y!==x&&norm(y.t).length>norm(x.t).length&&norm(y.t).startsWith(norm(x.t))))};
   const commit=(el,t,quiet,after)=>{ // after : une fois la fenêtre des ingrédients fermée // quiet : enregistre le repas sans ouvrir la fenêtre des ingrédients
     const key=el.dataset.m,o=S.meals[key]||{};
-    if(key.slice(0,10)<todayKey()){el.value=o.text||"";return}
+    if(key.slice(0,10)<todayKey()){
+      if(!histOk(key)){el.value=o.text||"";return}
+      // historique : on note ce qui a été mangé ; les listes de courses ne bougent pas (le lien avec elles est retiré)
+      t=String(t||"").replace(/[\s,+]+$/,"");if(Data.isOut(t))t=Data.OUT;const kn=t&&live(S.recipes).find(r=>norm(r.name)===norm(t));
+      if(norm(t)!==norm(o.text||""))touch("meals",{...o,key,text:t?(kn?kn.name:t):"",servings:o.servings||(Data.isSecond(key)?1:BASE),added:null});
+      render();return}
     // plat remplacé ou effacé : on retire des listes ce que l'ancien plat y avait ajouté
     if(bought(o)&&norm(o.text||"")!==norm(t)){
       el.value=o.text;
@@ -676,9 +687,10 @@ function renderMenus(){
       if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)))};
     dropOld();
     if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});if(!Data.isSecond(key))removeSecond(key);render();return}
-    t=t.replace(/[\s,+]+$/,"");
+    t=t.replace(/[\s,+]+$/,"");if(Data.isOut(t))t=Data.OUT; // restaurant, invitation… : « Repas à l'extérieur »
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
     touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.defN||BASE)});
+    if(Data.isOut(t)){render();return} // repas dehors : rien à acheter, pas de fenêtre des ingrédients
     applyCompanion(key);render();if(quiet)return;
     // Entrée pour finir : chaque aliment inconnu de ce repas est décrit tout de suite (famille, quantité, unité, magasin ;
     // « Plus tard » : il reste une simple ligne et sera redemandé), puis la fenêtre des ingrédients s'ouvre avec les quantités.
@@ -697,7 +709,7 @@ function renderMenus(){
       const choose=b=>{el._pick=Date.now();
         if(b.dataset.food){addChip(b.dataset.t.split(/[,+]/).pop().trim());clearSug();el.focus();return} // pastille, puis l'aliment suivant
         // plat déjà fait qui est une suite d'aliments (« Steak haché », « Poulet, riz ») : en pastilles, on continue la saisie
-        const t=b.dataset.t,tags=live(S.recipes).some(r=>norm(r.name)===norm(t))?null:Data.suiteTags(S,t);
+        const t=b.dataset.t,tags=live(S.recipes).some(r=>norm(r.name)===norm(t))||Data.isOut(t)?null:Data.suiteTags(S,t);
         if(tags)tags.forEach(x=>addChip(x.t));else addChip(t);clearSug();el.focus()};
       box.onmousedown=e=>e.preventDefault();
       box.onpointerdown=e=>{if(e.pointerType==="touch")return;const b=e.target.closest("button");if(!b)return;e.preventDefault();choose(b)};
@@ -710,7 +722,7 @@ function renderMenus(){
     // créneau vide touché sans rien taper : les meilleures suggestions (saison, pas faites depuis un mois)
     el.tips=()=>{if(el.readOnly||el.disabled||el.value.trim())return;
       // 10 idées tirées au hasard parmi les 30 meilleures (saison, pas faites récemment) : une liste différente à chaque ouverture
-      showBox(Data.suggest(S,todayKey(),30,[],Math.random,el.dataset.m).map(v=>[Math.random(),v]).sort((p,q)=>p[0]-q[0]).slice(0,10).map(p=>p[1]).map(x=>({t:x.name,icon:x.habit?typeById(x.habit).icon:"💡",note:x.days==null?"jamais fait":`il y a ${x.days} j`})))};
+      showBox([{t:Data.OUT,icon:"🍽️",note:"rien à acheter"},...Data.suggest(S,todayKey(),30,[],Math.random,el.dataset.m).map(v=>[Math.random(),v]).sort((p,q)=>p[0]-q[0]).slice(0,10).map(p=>p[1]).map(x=>({t:x.name,icon:x.habit?typeById(x.habit).icon:"💡",note:x.days==null?"jamais fait":`il y a ${x.days} j`}))])};
     // Suite d'aliments en cours de saisie : pastilles devant le champ, Entrée valide l'aliment et passe au suivant.
     el._items=[];
     const drawChips=()=>{const w=el.parentElement;let c=w.querySelector(".chips");
@@ -727,7 +739,7 @@ function renderMenus(){
       setTimeout(()=>{if(!el._finish&&document.activeElement!==el)el.focus()},60)}; // l'iPhone peut avoir quitté le champ : on y revient
     el.dataset.ph=el.placeholder;
     el.onfocus=()=>{clearTimeout(el._done);if(el._items.length){drawChips();return} // retour dans le champ : on continue la saisie
-      el._orig=el.value;const v=el.value.trim(),tags=live(S.recipes).some(r=>norm(r.name)===norm(v))?[{t:v}]:Data.suiteTags(S,el.value);
+      el._orig=el.value;const v=el.value.trim(),tags=live(S.recipes).some(r=>norm(r.name)===norm(v))||Data.isOut(v)?[{t:v}]:Data.suiteTags(S,el.value);
       if(tags&&!el.readOnly&&!el.disabled){el._items=tags.map(x=>x.t);el.value="";drawChips()}};
     el.onkeydown=e=>{
       if(e.key==="Backspace"&&!el.value&&el._items.length){el._items.pop();drawChips();e.preventDefault();return}
@@ -743,7 +755,8 @@ function renderMenus(){
         .map(({f})=>({t:head+f.label,icon:f.icon,food:true})):[];
       if(el._items.length){showBox([...foods.slice(0,3),...live(S.recipes).filter(r=>norm(r.name).includes(seg)).slice(0,3).map(r=>({t:r.name,icon:"📖"}))]);return}
       if(cut>=0){showBox(foods);return}
-      showBox([...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,40)
+      const outHit=/^(rep|ext|l'?ex|res|deh|au r|inv|chez)/.test(q)?[{t:Data.OUT,icon:"🍽️",note:"rien à acheter"}]:[];
+      showBox([...outHit,...foods.slice(0,3),...names().filter(x=>norm(x.t).includes(q)&&norm(x.t)!==q&&!Data.isOut(x.t)).sort((a,b)=>b.recipe-a.recipe||(norm(b.t).startsWith(q)-norm(a.t).startsWith(q))).slice(0,40)
         .filter(x=>!foods.some(f=>norm(f.t)===norm(x.t))).map(x=>({t:x.t,icon:x.recipe?"📖":"🕘"}))]);
     };
     // Fin de saisie en pastilles : seulement si le champ reste vraiment quitté (l'iPhone le quitte un instant quand on
@@ -758,10 +771,11 @@ function renderMenus(){
         // 2e plat principal sur la même ligne : nouveau plat du même repas, même nombre de personnes ;
         // avec Entrée, sa fenêtre des ingrédients s'ouvre après celle du premier
         const key=el.dataset.m,base=key.replace(/\d+$/,""),k2s=[];
-        if(extra.length&&key.slice(0,10)>=todayKey()){const n=(S.meals[key]&&S.meals[key].servings)||(S.meals[base]&&S.meals[base].servings)||+LS.defN||BASE;
+        if(extra.length&&(key.slice(0,10)>=todayKey()||histOk(key))){const n=(S.meals[key]&&S.meals[key].servings)||(S.meals[base]&&S.meals[base].servings)||+LS.defN||BASE;
           for(const t of extra){const r=live(S.recipes).find(x=>norm(x.name)===norm(t)),k2=addSecond(base,n,r?r.name:t.charAt(0).toUpperCase()+t.slice(1),true);if(!k2)break;k2s.push(k2)}}
         const more=i=>{if(i<k2s.length)ingredientsDialog(S.meals[k2s[i]].text,k2s[i],undefined,()=>more(i+1))};
-        if(norm(full)!==norm(el._orig||""))commit(el,full,!fin,()=>{if(fin)more(0)});else{render();if(fin)more(0)}},Date.now()-(el._pick||0)<800?900:400)};
+        const fut=key.slice(0,10)>=todayKey(); // pas de fenêtre des ingrédients pour un jour passé
+        if(norm(full)!==norm(el._orig||""))commit(el,full,!fin,()=>{if(fin&&fut)more(0)});else{render();if(fin&&fut)more(0)}},Date.now()-(el._pick||0)<800?900:400)};
     el.onchange=null; // tout passe par Entrée et la sortie de la case (onblur)
   });
   document.querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>ingredientsDialog(S.meals[el.dataset.i].text,el.dataset.i));
@@ -773,6 +787,9 @@ function renderMenus(){
   document.querySelectorAll("[data-add2]").forEach(el=>el.onclick=()=>{const k2=addSecond(el.dataset.add2,1);render();const i=k2&&$(`[data-m="${k2}"]`);if(i)i.focus()});
   document.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>{
     const key=el.dataset.del,m=S.meals[key];
+    if(key.slice(0,10)<todayKey()){if(!histOk(key))return;
+      if(m.text&&!confirm(`Effacer « ${m.text} » de l'historique ?`))return;
+      touch("meals",Data.isSecond(key)?{key,text:"",deleted:true}:{...m,key,text:"",added:null});render();return}
     if(bought(m)){
       if(!el.dataset.force){alert(`Les ingrédients de « ${m.text} » ont déjà été achetés : ce repas ne peut pas être supprimé. Utilisez ⇄ pour le déplacer.`);return}
       // 🔒 touché : on peut quand même supprimer (essai, erreur) ; les articles déjà achetés restent dans l'historique
@@ -785,7 +802,13 @@ function renderMenus(){
     render();
   });
   // − / + sur un repas : ouvre la fenêtre des ingrédients au nouveau nombre de personnes (rien n'est appliqué sans valider).
-  const step=(key,d)=>{const m=S.meals[key],n=Math.max(1,Math.min(30,(m.servings||BASE)+d));if(!Data.isSecond(key))LS.defN=n;
+  const step=(key,d)=>{const m=S.meals[key];
+    // − à 1 personne : 0 personne = repas à l'extérieur (ses ingrédients sont retirés des listes, sauf déjà achetés)
+    if(d<0&&(m.servings||BASE)<=1&&!Data.isSecond(key)&&!bought(m)){
+      if(!confirm(`0 personne : « ${m.text} » devient « ${Data.OUT} »${m.added?" et ses ingrédients sont retirés des listes":""} ?`))return;
+      dropChecks(key);if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/(m.added.b||BASE),m.added.b||BASE)));
+      removeSecond(key);touch("meals",{key,text:Data.OUT,servings:1,added:null});render();return}
+    const n=Math.max(1,Math.min(30,(m.servings||BASE)+d));if(!Data.isSecond(key))LS.defN=n;
     if(bought(m)&&d>0)extraDialog(key,n);
     else if(recipeOf(m.text))ingredientsDialog(m.text,key,n);
     else{touch("meals",{...m,servings:n});render()}};
