@@ -142,6 +142,8 @@ function nice(x,dec){if(x>=100)return String(Math.round(x/10)*10);if(x>=20)retur
 // « cuillère(s) à café », « c. à c. », « càc » → « cac » ; à soupe → « cas » (invariables)
 const spoon=t=>t.replace(/\b(?:cuill[eè]res?|cuil\.?|c\.?)\s*(?:à|a)\s*(?:(caf[ée])|(soupe))(?![a-z])\.?|\bc\.?\s*[àa]\.?\s*([cs])\b\.?/gi,(m,c,so,l)=>c||(l&&/c/i.test(l))?"cac":"cas");
 function cook(text,f){const t=spoon(String(text||"").trim());
+  // plusieurs quantités sur une ligne : « 1 cas + 1 cac de sucre », « 1 cas et 2 cac »
+  const parts=t.split(/(\s*\+\s*|\s+et\s+(?=[\d½¼¾⅓⅔]))/);if(parts.length>1)return parts.map((x,i)=>i%2?x:cook(x,f)).join("");
   const m=t.match(NUM);
   if(!m){const tr=t.match(/^(.*?\D)(\s*[:(,-]?\s*)(\d+(?:[.,]\d+)?)(\s*\S*\)?\s*)$/); // « poulet 1,6 kg »
     if(!tr||!tr[1].trim())return t;const n=parseFloat(tr[3].replace(",","."));

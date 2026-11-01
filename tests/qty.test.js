@@ -92,3 +92,8 @@ test("cook : cuillères en cac / cas, sans pluriel", () => {
   assert.equal(Qty.cook("2 c. à soupe d'huile", 1.5), "3 cas d'huile");
   assert.equal(Qty.cook("1 cac de curry", 2), "2 cac de curry");
 });
+
+test("cook : plusieurs quantités sur une ligne", () => {
+  assert.equal(Qty.cook("1 cas + 1 cac de sucre", 2), "2 cas + 2 cac de sucre");
+  assert.equal(Qty.cook("1 cuillère à soupe et 1 cuillère à café de sel", 2), "2 cas et 2 cac de sel");
+});
