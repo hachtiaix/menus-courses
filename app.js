@@ -6,6 +6,7 @@ const ORDER=["auchan","lidl","drive","boucherie","fermiers"];
 for(const [id,name] of [["auchan","Auchan"],["lidl","Lidl"],["drive","Drive"],["boucherie","Boucherie"],["fermiers","Au pré des fermiers"]]) S.lists[id]=S.lists[id]||{id,name,ts:0};
 let openIt=null; // article de liste dont les boutons sont affichés
 let addOpen=false; // case « Ajouter un article » ouverte (par le + flottant)
+let rview="rec"; // onglet 📖 : « Recettes » à chaque ouverture (sinon « Ingrédients »)
 let tab=LS.tab||"auchan", code=LS.code||"", pending=JSON.parse(LS.pending||"{}"); // pending : modifications pas encore envoyées
 
 function save(){LS.s=JSON.stringify(S);LS.pending=JSON.stringify(pending)}
@@ -67,7 +68,7 @@ document.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!docu
 function setStatus(c){
   const changed=c!==status;status=c;
   $("#status").className=c;$("#status").title=STATE[c];
-  if(changed&&tab==="settings")safeRender();
+  if(changed&&(tab==="settings"||tab==="recettes"))safeRender();
 }
 
 const listSort=(a,b)=>{const i=ORDER.indexOf(a.id),j=ORDER.indexOf(b.id);return (i<0?99:i)-(j<0?99:j)||a.name.localeCompare(b.name)};
@@ -81,11 +82,18 @@ function render(){
   const hd=document.querySelector("header");if(hd)document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");
   $("#cfg").style.display=tab==="settings"?"none":""; // inutile dans les réglages : le point de synchro prend sa place
   const lists=live(S.lists).sort(listSort);
-  $("#tabs").innerHTML=lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done&&!i.check).length;return `<button data-t="${l.id}" class="${tab===l.id?"on":""}" aria-label="${esc(l.name)}"><i>${LOGO[l.id]?`<img src="${LOGO[l.id]}" alt="" class="logo-${l.id}">`:PICTO[l.id]?`<img src="${PICTO[l.id]}" alt="" class="picto">`:ICON[l.id]||"🛒"}${c?`<b>${c}</b>`:""}</i></button>`}).join("")+`<button data-t="menus" class="${tab==="menus"?"on":""}" aria-label="Menus"><i>${MENU_ICON}</i></button>`;
-  if(tab==="settings")renderSettings();else if(tab==="menus")renderMenus();else renderList(S.lists[tab]?tab:"auchan");
+  // barre du bas : 3 onglets ; 🛒 ouvre le dernier magasin (on n'est jamais dans deux magasins à la fois)
+  const isList=!!S.lists[tab],nItems=live(S.items).filter(i=>!i.done&&!i.check&&S.lists[i.list]&&!S.lists[i.list].deleted).length;
+  $("#tabs").innerHTML=`<button data-t="courses" class="${isList?"on":""}" aria-label="Courses"><i>🛒${nItems?`<b>${nItems}</b>`:""}</i><span>Courses</span></button>`
+    +`<button data-t="menus" class="${tab==="menus"?"on":""}" aria-label="Menus"><i>${MENU_ICON}</i><span>Menus</span></button>`
+    +`<button data-t="recettes" class="${tab==="recettes"?"on":""}" aria-label="Recettes"><i>📖</i><span>Recettes</span></button>`;
+  if(tab==="settings")renderSettings();else if(tab==="menus")renderMenus();else if(tab==="recettes")renderRecipes();else renderList(S.lists[tab]?tab:"auchan");
 }
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function renderList(id){
+  LS.store=id; // 🛒 rouvre ce magasin
+  const lists=live(S.lists).sort(listSort),pic=l=>LOGO[l.id]?`<img src="${LOGO[l.id]}" alt="${esc(l.name)}" class="logo-${l.id}">`:PICTO[l.id]?`<img src="${PICTO[l.id]}" alt="" class="picto">`:ICON[l.id]||"🛒";
+  var storeBar=`<div class="stores">${lists.map(l=>{const c=live(S.items).filter(i=>i.list===l.id&&!i.done&&!i.check).length;return `<button data-st2="${l.id}" class="${l.id===id?"on":""}" aria-label="${esc(l.name)}">${pic(l)}${c?`<b>${c}</b>`:""}</button>`}).join("")}</div>`;
   // titre : le logo du magasin quand il y en a un (il contient déjà le nom)
   if(LOGO[id])$("#title").innerHTML=`<img src="${LOGO[id]}" alt="${esc(S.lists[id].name)}" class="hlogo hlogo-${id}">`;
   else if(PICTO[id]||ICON[id])$("#title").innerHTML=`${esc(S.lists[id].name)} <span class="hicon">${PICTO[id]?`<img src="${PICTO[id]}" alt="" class="picto">`:ICON[id]}</span>`;
@@ -110,7 +118,7 @@ function renderList(id){
     return `<div class="row verif"><span class="t" data-e="${i.id}">🏠 ${esc(i.text)}${nd.total?` <b class="tot">${esc(nd.total)}</b>`:""}</span><button class="pill vok" data-vok="${i.id}">Il en manque</button><button class="pill vno" data-d="${i.id}">J'en ai</button><small class="for">${esc(nd.detail||"pour un repas")}</small></div>`};
   const rowItem=i=>
 `<div class="row item ${i.done?"done":""} ${openIt===i.id?"open":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""}><span class="t" data-o="${i.id}">${esc(i.text)}</span><span class="ctl">${!i.done?`<span class="stp sm"><button data-q="${i.id}" data-dir="-1" aria-label="Moins">−</button><button data-q="${i.id}" data-dir="1" aria-label="Plus">+</button></span><button class="pill imv" data-imv="${i.id}" aria-label="Changer de liste">⇄</button><button class="pill ied" data-e="${i.id}" aria-label="Modifier">✏️</button>`:""}<button class="x" data-d="${i.id}" aria-label="Supprimer">×</button></span></div>`;
-  $("#view").innerHTML=`<form id="add" class="${addOpen?"":"hid"}"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off" enterkeyhint="done"></form><button class="fab" id="fabl" aria-label="Ajouter un article">+</button>`+
+  $("#view").innerHTML=storeBar+`<form id="add" class="${addOpen?"":"hid"}"><input type="text" id="new" placeholder="Ajouter un article…" autocomplete="off" enterkeyhint="done"></form><button class="fab" id="fabl" aria-label="Ajouter un article">+</button>`+
    // 🏠 à vérifier au placard : tous ensemble en haut de la liste
    (items.some(i=>i.check)?`<h3 class="ray">🏠 À vérifier au placard</h3><div class="card">${items.filter(i=>i.check).map(row).join("")}</div>`:"")+
    (items.length?rayonOrder(id).map(r=>{const g=items.filter(i=>!i.done&&!i.check&&rayonOf(i.text)===r.id);
@@ -572,7 +580,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v205";
+const BASE=4,VERSION="v206";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -609,7 +617,7 @@ function slotHtml(key,label,past){
 // 2e plat d'un repas (pour qui, plat, personnes, ingrédients) ; il se déplace avec le repas principal.
 // Suite d'aliments : étiquettes colorées par-dessus le champ (le texte réapparaît quand on le touche).
 const tagsHtml=text=>{const real=live(S.recipes).some(r=>r.name.toLowerCase()===String(text||"").toLowerCase());
-  if(real)return `<span class="tags" aria-hidden="true"><i class="rcp">📖 <b>${esc(text)}</b></i></span>`; // recette : livre + nom en gras
+  if(real)return `<span class="tags"><i class="rcp"><button type="button" class="cookb" data-cook="${esc(text)}" aria-label="Voir la recette">📖</button> <b>${esc(text)}</b></i></span>`; // recette : livre + nom en gras
   const tags=text?Data.suiteTags(S,text):null;
   return tags?`<span class="tags" aria-hidden="true">${tags.map(x=>`<i class="tag ${x.cat}">${x.cat==="rcp"?"📖 ":""}${esc(x.t.charAt(0).toUpperCase()+x.t.slice(1))}</i>`).join("")}</span>`:""};
 function secondHtml(k2,e,past,pos){ // pos : rang affiché (2ᵉ, 3ᵉ…), sans trou si un plat a été retiré
@@ -636,6 +644,7 @@ function renderMenus(){
       [["m","Midi"],["s","Soir"]].map(([s,l])=>slotHtml(k+"-"+s,l,k<today)).join("")+`</div></section>`;
   }
   $("#view").innerHTML=h;
+  document.querySelectorAll("[data-cook]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const r=recipeOf(b.dataset.cook);if(r&&!r.virtual)cookView(r)});
   const norm=Data.plain;
   const names=()=>{const seen=new Set(),out=[];
     for(const [t,recipe] of [...live(S.recipes).map(r=>[r.name,true]),...live(S.meals).map(m=>[m.text,false]).filter(x=>x[0])]){const k=norm(t);if(!seen.has(k)){seen.add(k);out.push({t,recipe})}}
@@ -853,18 +862,36 @@ function ingredientsDialog(name,mealKey,startN,after,step){
     close();render();if(after)after();
   };
 }
-$("#tabs").onclick=e=>{const t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t){tab=LS.tab=t;render();scrollTo(0,0);if(window.syncSoon)syncSoon()}};
-$("#cfg").onclick=()=>{stab="recettes";tab=LS.tab="settings";render();scrollTo(0,0)};
-let stab="recettes"; // onglet des réglages ; « Recettes » à chaque ouverture
-const STABS=[["recettes","Recettes"],["aliments","Ingrédients"],["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
-function renderSettings(){
-  $("#title").textContent="Réglages";
+document.addEventListener("click",e=>{const b=e.target.closest("[data-st2]");if(b){tab=LS.tab=b.dataset.st2;render();scrollTo(0,0)}});
+$("#tabs").onclick=e=>{let t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t==="recettes")rview="rec";if(t==="courses")t=S.lists[LS.store]&&!S.lists[LS.store].deleted?LS.store:"auchan";if(t){tab=LS.tab=t;render();scrollTo(0,0);if(window.syncSoon)syncSoon()}};
+$("#cfg").onclick=()=>{stab="habitudes";tab=LS.tab="settings";render();scrollTo(0,0)};
+let stab="habitudes"; // onglet des réglages ; « Habitudes » à chaque ouverture
+const STABS=[["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
+// Liste des recettes (onglet Menus → Recettes) : recherche, A-Z, toucher = vue cuisine
+function recipesHtml(){const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
+  return `${rs.length>3?`<input type="search" id="rq" class="rsearch" placeholder="🔍 Chercher une recette ou un ingrédient" autocomplete="off">`:""}${rs.length?`<p class="mut count">${rs.length} recette${rs.length>1?"s":""}</p>`:""}${rs.length?(()=>{const g={};for(const r of rs){const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();(g[/[A-Z]/.test(L)?L:"#"]=g[/[A-Z]/.test(L)?L:"#"]||[]).push(r)}
+     return Object.keys(g).sort().map(L=>`<h3 class="ray letter" data-l="${L}">${L}</h3><div class="card" data-lc="${L}">${g[L].map(r=>`<div class="row link" data-r="${r.id}" data-q="${esc(Data.plain(r.name+" "+r.ingredients.map(i=>i.t).join(" ")))}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`+`<button class="fab" id="fabr" aria-label="Nouvelle recette" title="Nouvelle recette">+</button>`}
+function wireRecipes(){const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
+  on("#fabr","onclick",()=>recipeEditor(null));
+  document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>cookView(S.recipes[el.dataset.r])); // toucher = voir la recette
+  // recherche : nom ou ingrédient, sans accents ; les lettres sans résultat disparaissent
+  on("#rq","oninput",e=>{const q=Data.plain(e.target.value).trim();let n=0;
+    document.querySelectorAll("[data-q]").forEach(el=>{const ok=!q||el.dataset.q.includes(q);el.hidden=!ok;n+=ok});
+    document.querySelectorAll("[data-lc]").forEach(c=>{const any=[...c.children].some(x=>!x.hidden);c.hidden=!any;document.querySelector(`[data-l="${c.dataset.lc}"]`).hidden=!any});
+    const ct=document.querySelector(".count");if(ct)ct.textContent=q?`${n} résultat${n>1?"s":""}`:`${live(S.recipes).length} recettes`})}
+// Onglet 📖 : « Recettes | Ingrédients » (les ingrédients utilisent l'écran des réglages, avec ce sélecteur à la place)
+const rseg=v=>`<div class="seg"><button data-rv="rec" class="${v==="rec"?"on":""}">Recettes</button><button data-rv="ing" class="${v==="ing"?"on":""}">Ingrédients</button></div>`;
+function renderRecipes(){
+  if(rview==="ing"){stab="aliments";renderSettings(true)}
+  else{$("#title").innerHTML=`Recettes <span class="hicon">📖</span>`;$("#view").innerHTML=rseg("rec")+recipesHtml();wireRecipes()}
+  document.querySelectorAll("[data-rv]").forEach(b=>b.onclick=()=>{rview=b.dataset.rv;render();scrollTo(0,0)})}
+function renderSettings(inRecipes){
+  if(!inRecipes&&stab==="aliments")stab="habitudes";
+  if(inRecipes)$("#title").innerHTML=`Recettes <span class="hicon">📖</span>`;else $("#title").textContent="Réglages";
   const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
   const hs=live(S.habits).filter(h=>h.state==="on").sort((a,b)=>a.days[0]-b.days[0]||b.slot.localeCompare(a.slot));
-  const tabs=`<div class="seg">${STABS.map(([id,l])=>`<button data-stab="${id}" class="${stab===id?"on":""}">${l}</button>`).join("")}</div>`;
+  const tabs=inRecipes?rseg("ing"):`<div class="seg">${STABS.map(([id,l])=>`<button data-stab="${id}" class="${stab===id?"on":""}">${l}</button>`).join("")}</div>`;
   const body={
-   recettes:`${rs.length>3?`<input type="search" id="rq" class="rsearch" placeholder="🔍 Chercher une recette ou un ingrédient" autocomplete="off">`:""}${rs.length?`<p class="mut count">${rs.length} recette${rs.length>1?"s":""}</p>`:""}${rs.length?(()=>{const g={};for(const r of rs){const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();(g[/[A-Z]/.test(L)?L:"#"]=g[/[A-Z]/.test(L)?L:"#"]||[]).push(r)}
-     return Object.keys(g).sort().map(L=>`<h3 class="ray letter" data-l="${L}">${L}</h3><div class="card" data-lc="${L}">${g[L].map(r=>`<div class="row link" data-r="${r.id}" data-q="${esc(Data.plain(r.name+" "+r.ingredients.map(i=>i.t).join(" ")))}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`,
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
    <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
    ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"],["autre","🍽️ Autres"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
@@ -889,8 +916,7 @@ function renderSettings(){
    ${status==="unk"?`<p class="warn">Ce code ne correspond à aucun foyer. Vérifiez-le (majuscules, espaces) ou demandez-le à un autre membre du foyer.</p>`:""}
    <p class="mut" style="text-align:center;margin-top:24px">Version ${VERSION} <a href="#" id="upd">Forcer la mise à jour</a></p>`,
   }[stab];
-  // ➕ flottant : nouvelle recette sans descendre en bas de la liste
-  $("#view").innerHTML=tabs+body+(stab==="recettes"?`<button class="fab" id="fabr" aria-label="Nouvelle recette" title="Nouvelle recette">+</button>`:"");
+  $("#view").innerHTML=tabs+body;
   document.querySelectorAll("[data-stab]").forEach(b=>b.onclick=()=>{stab=b.dataset.stab;render();scrollTo(0,0)});
   const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
   document.querySelectorAll("[data-hdel]").forEach(el=>el.onclick=e=>{e.stopPropagation();touch("habits",{...S.habits[el.dataset.hdel],state:"off"});render()});
@@ -932,7 +958,6 @@ function renderSettings(){
     const e=r?await r.json().catch(()=>({})):{};
     alert(e.message==="code deja utilise"?"Ce code est déjà pris, choisissez-en un autre.":"Impossible de changer le code pour l'instant (hors ligne ?).");
   };
-  on("#fabr","onclick",()=>recipeEditor(null));
   on("#newc","onclick",()=>{const t=(prompt("Association, séparée par une virgule (ex. « Pâtes, Œufs »)")||"").trim();
     if(!t)return;if(!/[,+]/.test(t)){alert("Séparez les deux par une virgule, par exemple « Pâtes, Œufs ».");return}
     touch("combos",{id:"c-"+uid(),text:t.split(/\s*[,+]\s*/).filter(Boolean).map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(", ")});render()});
@@ -947,12 +972,6 @@ function renderSettings(){
   const moveR=(i,d)=>{const ids=rayonOrder(ol()).map(r=>r.id);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];touch("lists",{...S.lists[ol()],order:ids});render()};
   document.querySelectorAll("[data-up]").forEach(el=>el.onclick=()=>moveR(+el.dataset.up,-1));
   document.querySelectorAll("[data-dn]").forEach(el=>el.onclick=()=>moveR(+el.dataset.dn,1));
-  document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>cookView(S.recipes[el.dataset.r])); // toucher = voir la recette
-  // recherche : nom ou ingrédient, sans accents ; les lettres sans résultat disparaissent
-  on("#rq","oninput",e=>{const q=Data.plain(e.target.value).trim();let n=0;
-    document.querySelectorAll("[data-q]").forEach(el=>{const ok=!q||el.dataset.q.includes(q);el.hidden=!ok;n+=ok});
-    document.querySelectorAll("[data-lc]").forEach(c=>{const any=[...c.children].some(x=>!x.hidden);c.hidden=!any;document.querySelector(`[data-l="${c.dataset.lc}"]`).hidden=!any});
-    const ct=document.querySelector(".count");if(ct)ct.textContent=q?`${n} résultat${n>1?"s":""}`:`${S&&live(S.recipes).length} recettes`});
 }
 // Champ de recherche d'un plat (types et recettes) ; renvoie une fonction qui donne le choix {type, recipe} ou null.
 function dishPicker(ov,initial){
