@@ -572,7 +572,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v200";
+const BASE=4,VERSION="v201";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -863,8 +863,8 @@ function renderSettings(){
   const hs=live(S.habits).filter(h=>h.state==="on").sort((a,b)=>a.days[0]-b.days[0]||b.slot.localeCompare(a.slot));
   const tabs=`<div class="seg">${STABS.map(([id,l])=>`<button data-stab="${id}" class="${stab===id?"on":""}">${l}</button>`).join("")}</div>`;
   const body={
-   recettes:`${rs.length?`<p class="mut count">${rs.length} recette${rs.length>1?"s":""}</p>`:""}${rs.length?(()=>{const g={};for(const r of rs){const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();(g[/[A-Z]/.test(L)?L:"#"]=g[/[A-Z]/.test(L)?L:"#"]||[]).push(r)}
-     return Object.keys(g).sort().map(L=>`<h3 class="ray letter">${L}</h3><div class="card">${g[L].map(r=>`<div class="row link" data-r="${r.id}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`,
+   recettes:`${rs.length>3?`<input type="search" id="rq" class="rsearch" placeholder="🔍 Chercher une recette ou un ingrédient" autocomplete="off">`:""}${rs.length?`<p class="mut count">${rs.length} recette${rs.length>1?"s":""}</p>`:""}${rs.length?(()=>{const g={};for(const r of rs){const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();(g[/[A-Z]/.test(L)?L:"#"]=g[/[A-Z]/.test(L)?L:"#"]||[]).push(r)}
+     return Object.keys(g).sort().map(L=>`<h3 class="ray letter" data-l="${L}">${L}</h3><div class="card" data-lc="${L}">${g[L].map(r=>`<div class="row link" data-r="${r.id}" data-q="${esc(Data.plain(r.name+" "+r.ingredients.map(i=>i.t).join(" ")))}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`,
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
    <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
    ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"],["autre","🍽️ Autres"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
@@ -948,6 +948,11 @@ function renderSettings(){
   document.querySelectorAll("[data-up]").forEach(el=>el.onclick=()=>moveR(+el.dataset.up,-1));
   document.querySelectorAll("[data-dn]").forEach(el=>el.onclick=()=>moveR(+el.dataset.dn,1));
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>cookView(S.recipes[el.dataset.r])); // toucher = voir la recette
+  // recherche : nom ou ingrédient, sans accents ; les lettres sans résultat disparaissent
+  on("#rq","oninput",e=>{const q=Data.plain(e.target.value).trim();let n=0;
+    document.querySelectorAll("[data-q]").forEach(el=>{const ok=!q||el.dataset.q.includes(q);el.hidden=!ok;n+=ok});
+    document.querySelectorAll("[data-lc]").forEach(c=>{const any=[...c.children].some(x=>!x.hidden);c.hidden=!any;document.querySelector(`[data-l="${c.dataset.lc}"]`).hidden=!any});
+    const ct=document.querySelector(".count");if(ct)ct.textContent=q?`${n} résultat${n>1?"s":""}`:`${S&&live(S.recipes).length} recettes`});
 }
 // Champ de recherche d'un plat (types et recettes) ; renvoie une fonction qui donne le choix {type, recipe} ou null.
 function dishPicker(ov,initial){
