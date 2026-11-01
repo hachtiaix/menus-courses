@@ -572,7 +572,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v194";
+const BASE=4,VERSION="v195";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -864,7 +864,7 @@ function renderSettings(){
   const tabs=`<div class="seg">${STABS.map(([id,l])=>`<button data-stab="${id}" class="${stab===id?"on":""}">${l}</button>`).join("")}</div>`;
   const body={
    recettes:`${rs.length?`<p class="mut count">${rs.length} recette${rs.length>1?"s":""}</p>`:""}${rs.length?(()=>{const g={};for(const r of rs){const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();(g[/[A-Z]/.test(L)?L:"#"]=g[/[A-Z]/.test(L)?L:"#"]||[]).push(r)}
-     return Object.keys(g).sort().map(L=>`<h3 class="ray letter">${L}</h3><div class="card">${g[L].map(r=>`<div class="row link" data-r="${r.id}"><button class="pill plan" data-plan="${r.id}" aria-label="Ajouter aux menus">+</button><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`,
+     return Object.keys(g).sort().map(L=>`<h3 class="ray letter">${L}</h3><div class="card">${g[L].map(r=>`<div class="row link" data-r="${r.id}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 décembre"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`,
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
    <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
    ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"],["autre","🍽️ Autres"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
@@ -947,8 +947,7 @@ function renderSettings(){
   const moveR=(i,d)=>{const ids=rayonOrder(ol()).map(r=>r.id);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];touch("lists",{...S.lists[ol()],order:ids});render()};
   document.querySelectorAll("[data-up]").forEach(el=>el.onclick=()=>moveR(+el.dataset.up,-1));
   document.querySelectorAll("[data-dn]").forEach(el=>el.onclick=()=>moveR(+el.dataset.dn,1));
-  document.querySelectorAll("[data-r]").forEach(el=>el.onclick=e=>{if(!e.target.closest("[data-plan]"))cookView(S.recipes[el.dataset.r])});
-  document.querySelectorAll("[data-plan]").forEach(el=>el.onclick=()=>planRecipe(S.recipes[el.dataset.plan]));
+  document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>cookView(S.recipes[el.dataset.r])); // toucher = voir la recette
 }
 // Champ de recherche d'un plat (types et recettes) ; renvoie une fonction qui donne le choix {type, recipe} ou null.
 function dishPicker(ov,initial){
@@ -1015,11 +1014,11 @@ function cookView(r){const B=r.serves||BASE;let n=B;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(r.name)}</h2>
    <div class="serv"><span>Pour</span><button class="btn sec" id="cm">−</button><b id="cn"></b><button class="btn sec" id="cp">+</button><span>personnes</span></div>
    <p class="mut" id="cb"></p><div id="cl" class="card cook"></div>
-   <div class="acts"><button class="btn sec" id="ced">✏️ Modifier</button><button class="btn" id="cx">Fermer</button></div></div>`;
+   <div class="acts"><button class="btn sec" id="ced">✏️ Modifier</button><button class="btn sec" id="cpl">📅 Au menu</button><button class="btn" id="cx">Fermer</button></div></div>`;
   document.body.appendChild(ov);draw();
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};
   $("#cm").onclick=()=>{if(n>1){n--;draw()}};$("#cp").onclick=()=>{if(n<30){n++;draw()}};
-  $("#cx").onclick=close;$("#ced").onclick=()=>{close();recipeEditor(r)};
+  $("#cx").onclick=close;$("#ced").onclick=()=>{close();recipeEditor(r)};$("#cpl").onclick=()=>{close();planRecipe(r)};
 }
 function recipeEditor(r){
   const lists=live(S.lists).sort(listSort);
