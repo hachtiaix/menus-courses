@@ -345,3 +345,4 @@ p.count{margin:0 4px 2px;font-size:12px;text-align:right}h3.ray.letter{margin:10
 .steps-h{margin:16px 2px 6px;font-size:15px}
 #stp{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px;border:1px solid #d5dae1;border-radius:10px;background:transparent;color:inherit;resize:vertical}
 .steps{margin:0;padding:6px 14px 6px 34px}.steps li{padding:8px 0;font-size:17px;line-height:1.4;border-bottom:1px solid rgba(0,0,0,.06)}.steps li:last-child{border:0}
+.steps.md{padding:8px 14px;font-size:17px;line-height:1.4}.steps.md h4{margin:10px 0 4px;font-size:16px}.steps.md p{margin:6px 0}.steps.md ul,.steps.md ol{margin:4px 0;padding-left:22px}.steps.md li{padding:4px 0;border:0}

@@ -572,7 +572,7 @@ function applyCompanion(key){
 const recipeOf=name=>name&&(live(S.recipes).find(x=>Data.plain(x.name).trim()===Data.plain(name).trim())||Data.suite(S,name))||null; // sans tenir compte des accents ni des majuscules
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(+LS.wk||0));return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v199";
+const BASE=4,VERSION="v200";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1006,6 +1006,19 @@ function foodEditor(cat,rec,done,step){ // rec : aliment inconnu d'un repas, don
     touch("foods",{id:rec?rec.id:"c-"+uid(),label:label.charAt(0).toUpperCase()+label.slice(1),cat:rec?$("#fc").value:cat,kind:kg?"g":$("#fk").value,q:kg?Math.round(q*1000):q,store:$("#fs").value,deleted:false});close();render();if(done)done()};
   if(!rec)setTimeout(()=>$("#fn").focus(),50);
 }
+// Étapes en markdown simple : # titre, **gras**, *italique*, listes « - » ou « 1. ».
+// Sans aucune marque de liste ni titre : une ligne = une étape numérotée.
+function md(text){const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\s][^*]*?)\*/g,"$1<i>$2</i>").replace(/__(.+?)__/g,"<b>$1</b>");
+  const L=text.split(/\r?\n/);
+  if(!L.some(l=>/^\s*(#{1,3}\s|[-*•]\s|\d+[.)]\s)/.test(l)))return `<ol class="card steps">${L.map(x=>x.trim()).filter(Boolean).map(x=>`<li>${inl(x)}</li>`).join("")}</ol>`;
+  let out="",list=null;const end=()=>{if(list){out+=`</${list}>`;list=null}};
+  for(const raw of L){const l=raw.trim();let m;
+    if(!l){end();continue}
+    if((m=l.match(/^#{1,3}\s+(.*)$/))){end();out+=`<h4>${inl(m[1])}</h4>`;continue}
+    if((m=l.match(/^(?:[-*•])\s+(.*)$/))){if(list!=="ul"){end();out+="<ul>";list="ul"}out+=`<li>${inl(m[1])}</li>`;continue}
+    if((m=l.match(/^\d+[.)]\s+(.*)$/))){if(list!=="ol"){end();out+="<ol>";list="ol"}out+=`<li>${inl(m[1])}</li>`;continue}
+    end();out+=`<p>${inl(l)}</p>`}
+  end();return `<div class="card steps md">${out}</div>`}
 // Vue cuisine : la recette pour un autre nombre de personnes, à l'écran seulement (la recette enregistrée ne change pas).
 function cookView(r){const B=r.serves||BASE;let n=B;
   const ov=document.createElement("div");ov.className="ov";
@@ -1013,7 +1026,7 @@ function cookView(r){const B=r.serves||BASE;let n=B;
     $("#cl").innerHTML=r.ingredients.map(i=>`<div class="row"><span class="t">${esc(Qty.cook(i.t,n/B))}</span></div>`).join("")};
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(r.name)}</h2>
    <div class="serv"><span>Pour</span><button class="btn sec" id="cm">−</button><b id="cn"></b><button class="btn sec" id="cp">+</button><span>personnes</span></div>
-   <p class="mut" id="cb"></p><div id="cl" class="card cook"></div>${(r.steps||"").trim()?`<h3 class="steps-h">Étapes</h3><ol class="card steps">${r.steps.split(/\n+/).map(x=>x.replace(/^\s*(?:\d+\s*[.)-]|[-•*])\s*/,"").trim()).filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`:""}
+   <p class="mut" id="cb"></p><div id="cl" class="card cook"></div>${(r.steps||"").trim()?`<h3 class="steps-h">Étapes</h3>${md(r.steps)}`:""}
    <div class="acts"><button class="btn sec" id="ced">✏️ Modifier</button><button class="btn sec" id="cpl">📅 Au menu</button><button class="btn" id="cx">Fermer</button></div></div>`;
   document.body.appendChild(ov);draw();
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};
@@ -1036,7 +1049,7 @@ function recipeEditor(r){
    <div id="eds">${(r?r.ingredients:[{t:""},{t:""},{t:""}]).map(rowH).join("")}</div>
    <button class="addrow" id="more"><i>+</i>Ajouter un ingrédient</button>
    <h3 class="steps-h">Étapes</h3>
-   <textarea id="stp" rows="6" placeholder="Une étape par ligne&#10;Faire revenir l'oignon&#10;Ajouter la viande…">${esc(r&&r.steps||"")}</textarea>
+   <textarea id="stp" rows="6" placeholder="Une étape par ligne (markdown possible : # titre, **gras**, - liste)&#10;Faire revenir l'oignon&#10;Ajouter la viande…">${esc(r&&r.steps||"")}</textarea>
    <div class="acts">${r?`<button class="btn sec danger" id="del">Supprimer</button>`:""}<button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();

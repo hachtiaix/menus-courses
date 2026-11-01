@@ -231,3 +231,8 @@ test("deux viandes le même repas (« Steak haché, Poulet, Riz ») : pas propos
   assert.ok(!names.includes("Steak haché, Poulet, Riz"), names.join(" | "));
   assert.ok(names.includes("Lasagnes, Riz, Salade"), names.join(" | "));
 });
+
+test("recette : les étapes sont gardées au nettoyage", () => {
+  const out = Data.cleanAll({ recipes: { r1: { id: "r1", name: "X", serves: 4, steps: "# A\n- b", ingredients: [] } } });
+  assert.equal(out.recipes.r1.steps, "# A\n- b");
+});

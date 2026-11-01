@@ -434,7 +434,7 @@ function clean(k,id,r){
     return text&&/[,+]/.test(text)?{id,text,ts,deleted}:null}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
-    dessert:r.dessert===true?true:r.dessert===false?false:null,
+    dessert:r.dessert===true?true:r.dessert===false?false:null,steps:str(r.steps,4000)||null, // étapes (markdown simple)
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
   return null;
 }
