@@ -432,3 +432,9 @@ section.day .dh small{text-transform:none}
 .card.imp .igl{margin:0 0 8px 38px;padding-left:10px;border-left:2px solid var(--line)}
 .card.imp .igl .row{min-height:40px;padding:6px 0;font-size:15px;cursor:pointer}
 .card.imp .igl input{width:20px;height:20px}
+/* QR code du foyer (toujours noir sur blanc) et lecture par l'appareil photo */
+.qrbox{display:flex;justify-content:center;margin:14px 0 6px}
+.qrbox svg{width:min(72vw,280px);height:auto;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.scanbox{position:relative;margin:12px auto 6px;width:min(100%,360px);aspect-ratio:1;border-radius:18px;overflow:hidden;background:#000}
+.scanbox video{width:100%;height:100%;object-fit:cover;display:block}
+.scanbox::after{content:"";position:absolute;inset:16%;border:3px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}

@@ -1,0 +1,3 @@
+jsQR 1.4.0 (https://github.com/cozmo/jsQR), licence Apache-2.0 (jsqr-LICENSE.txt).
+Fichier dist/jsQR.js du paquet npm officiel (empreinte vérifiée le 2026-11-01), non modifié.
+Chargé seulement au moment de scanner un QR code (⚙︎ → Synchro → Scanner).

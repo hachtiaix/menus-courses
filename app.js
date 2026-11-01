@@ -588,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v215";
+const BASE=4,VERSION="v216";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -928,7 +928,9 @@ function renderSettings(inRecipes){
    rayons:`<div class="card ordre"><div class="row"><span class="t">Magasin</span><select id="ordl">${live(S.lists).sort(listSort).map(l=>`<option value="${l.id}" ${l.id===LS.ordl?"selected":""}>${esc(l.name)}</option>`).join("")}</select></div>
    ${rayonOrder(LS.ordl&&S.lists[LS.ordl]?LS.ordl:"auchan").map((r,i,all)=>`<div class="row"><span class="t">${r.icon} ${esc(r.label)}</span><button class="pill" data-up="${i}" ${i?"":"disabled"} aria-label="Monter">↑</button><button class="pill" data-dn="${i}" ${i<all.length-1?"":"disabled"} aria-label="Descendre">↓</button></div>`).join("")}</div>`,
    foyer:`<div class="card"><div class="row"><span class="t">Code de cet appareil<br><small class="mut">${code?"•".repeat(Math.min(code.length,12)):"non défini"} · ${STATE[status]}</small></span><button class="btn sec" id="setcode">Saisir</button></div>
-   ${code?`<div class="row"><span class="t">Copier le code<br><small class="mut">Pour le coller sur un autre appareil</small></span><button class="btn sec" id="cpcode">Copier</button></div>`:""}
+   <div class="row"><span class="t">Scanner le QR code<br><small class="mut">Montré par l'autre téléphone (⚙︎ → Synchro → QR code)</small></span><button class="btn sec" id="scancode">📷 Scanner</button></div>
+   ${code?`<div class="row"><span class="t">Montrer le QR code<br><small class="mut">À scanner avec l'autre téléphone</small></span><button class="btn sec" id="qrcode">QR code</button></div>
+   <div class="row"><span class="t">Copier le code<br><small class="mut">Pour le coller sur un autre appareil</small></span><button class="btn sec" id="cpcode">Copier</button></div>`:""}
    ${status==="ok"?`<div class="row"><span class="t">Changer le code du foyer<br><small class="mut">Les autres appareils devront saisir le nouveau</small></span><button class="btn sec" id="rencode">Changer</button></div>`:""}</div>
    ${status==="unk"?`<p class="warn">Ce code ne correspond à aucun foyer. Vérifiez-le (majuscules, espaces) ou demandez-le à un autre membre du foyer.</p>`:""}
    <h3 class="ray" style="margin-top:22px">💾 Sauvegarde</h3>
@@ -981,6 +983,7 @@ function renderSettings(inRecipes){
     const rnd=n=>{const v=new Uint32Array(1),lim=Math.floor(2**32/n)*n;do crypto.getRandomValues(v);while(v[0]>=lim);return v[0]%n}; // sans biais
     const c=[Y,Y,Y,Y,D,D,U,U,L,L].map(set=>set[rnd(set.length)]);while(c.length<30)c.push(A[rnd(A.length)]);
     for(let i=c.length-1;i>0;i--){const j=rnd(i+1);[c[i],c[j]]=[c[j],c[i]]}return c.join("")};
+  on("#qrcode","onclick",showQR);on("#scancode","onclick",scanQR);
   // Rejoindre un foyer existant : ne change que cet appareil.
   const cp=$("#cpcode");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(code);cp.textContent="Copié ✓"}catch(_){alert("Copie impossible sur cet appareil.")}};
   on("#setcode","onclick",()=>{
@@ -1014,6 +1017,57 @@ function renderSettings(inRecipes){
   const moveR=(i,d)=>{const ids=rayonOrder(ol()).map(r=>r.id);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];touch("lists",{...S.lists[ol()],order:ids});render()};
   document.querySelectorAll("[data-up]").forEach(el=>el.onclick=()=>moveR(+el.dataset.up,-1));
   document.querySelectorAll("[data-dn]").forEach(el=>el.onclick=()=>moveR(+el.dataset.dn,1));
+}
+// QR code du foyer : affiché par un téléphone, lu par l'appareil photo de l'autre, dans l'app. Tout reste sur les téléphones
+// (dessin par qr.js, lecture par vendor/jsqr.js, chargés seulement à ce moment-là). Le préfixe évite de prendre un autre QR code.
+const QR_PREFIX="MC1:";
+const loadScript=(src,name)=>window[name]?Promise.resolve():new Promise((ok,ko)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)});
+async function showQR(){
+  if(!code)return;
+  try{await loadScript("qr.js","QR")}catch(_){alert("QR code indisponible pour l'instant (hors ligne ?) : utilisez « Copier ».");return}
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>QR code du foyer</h2>
+   <p class="mut">Sur l'autre téléphone : ⚙︎ → Synchro → 📷 Scanner, puis visez ce QR code. Ne le montrez qu'à un téléphone du foyer : il donne accès à vos listes.</p>
+   <div class="qrbox">${QR.svg(QR_PREFIX+code,260)}</div>
+   <div class="acts"><button class="btn" id="no">Fermer</button></div></div>`;
+  document.body.appendChild(ov);
+  // il disparaît à la fermeture, quand l'app passe en arrière-plan, et au bout de 2 minutes
+  const hide=()=>{if(document.hidden)close()},t=setTimeout(()=>close(),120000);
+  const close=()=>{clearTimeout(t);ov.remove();document.removeEventListener("visibilitychange",hide)};
+  document.addEventListener("visibilitychange",hide);ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+}
+async function scanQR(){
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Scanner le QR code</h2>
+   <p class="mut">Sur l'autre téléphone : ⚙︎ → Synchro → QR code. Visez-le avec l'appareil photo.</p>
+   <div class="scanbox"><video id="scv" playsinline muted autoplay></video></div>
+   <p class="mut" id="scm">Ouverture de l'appareil photo…</p>
+   <div class="acts"><button class="btn sec" id="no">Annuler</button></div></div>`;
+  document.body.appendChild(ov);
+  let stream=null,stopped=false;
+  const hide=()=>{if(document.hidden)close()};
+  const close=()=>{stopped=true;if(stream)stream.getTracks().forEach(t=>t.stop());ov.remove();document.removeEventListener("visibilitychange",hide)};
+  document.addEventListener("visibilitychange",hide);ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  const msg=t=>{const m=ov.querySelector("#scm");if(m)m.textContent=t};
+  try{await loadScript("vendor/jsqr.js","jsQR");
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false})}
+  catch(e){msg(e&&e.name==="NotAllowedError"?"Accès à l'appareil photo refusé : autorisez-le dans les réglages de l'iPhone (Safari → Appareil photo), ou utilisez « Saisir ».":"Appareil photo indisponible : utilisez « Saisir ».");return}
+  if(stopped){stream.getTracks().forEach(t=>t.stop());return}
+  const v=ov.querySelector("#scv");v.srcObject=stream;await v.play().catch(()=>{});msg("Visez le QR code…");
+  const c=document.createElement("canvas"),ctx=c.getContext("2d",{willReadFrequently:true});
+  const tick=()=>{if(stopped)return;
+    if(v.readyState>=2&&v.videoWidth){const w=Math.min(640,v.videoWidth),h=Math.round(v.videoHeight*w/v.videoWidth);c.width=w;c.height=h;ctx.drawImage(v,0,0,w,h);
+      const r=jsQR(ctx.getImageData(0,0,w,h).data,w,h,{inversionAttempts:"dontInvert"});
+      if(r&&r.data){if(r.data.startsWith(QR_PREFIX)&&r.data.length-QR_PREFIX.length>=MIN_CODE){close();useCode(r.data.slice(QR_PREFIX.length));return}
+        msg("Ce QR code ne vient pas de l'app Menus & Courses.")}}
+    setTimeout(tick,150)};
+  tick();
+}
+// code lu : enregistré sur cet appareil (comme « Saisir ») ; on demande seulement s'il remplace un code qui marche
+function useCode(c){
+  if(c===code){toast("✓ Ce téléphone a déjà ce code");return}
+  if(code&&status==="ok"&&!confirm("Ce téléphone utilise déjà un autre code qui fonctionne. Le remplacer par celui du QR code ?"))return;
+  code=LS.code=c;LS.since="";LS.deltaInit="";save();sync();render();toast("✓ Code du foyer enregistré");
 }
 // Import d'une sauvegarde (fichier exporté, ou fichier de la sauvegarde Home Assistant) : données vérifiées comme
 // celles de la synchro (cleanAll). Par défaut, seul ce qui manque (ou a été supprimé) revient ; rien d'actuel n'est remplacé.
