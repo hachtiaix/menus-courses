@@ -588,7 +588,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v219";
+const BASE=4,VERSION="v220";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1090,7 +1090,7 @@ async function maybePropose(force){
   let list=[];try{const r=await fetch("nouveautes.json",{cache:"no-cache"});list=((await r.json())||{}).recettes||[]}catch(_){return}
   const mine=new Set(live(S.recipes).map(x=>x.source).filter(Boolean)),names=new Set(live(S.recipes).map(x=>Data.plain(x.name).trim()));
   // des repas : pas de toasts ni de recettes pour robot (Thermomix, Cookeo…), même si la liste en contient encore
-  const NOT_MEAL=/toasts?\b|tartines?\b|bruschetta|crostini|canap[ée]s?\b|thermomix|cookeo|companion|monsieur cuisine/i;
+  const NOT_MEAL=/toasts?\b|tartines?\b|bruschetta|crostini|canap[ée]s?\b|\bchips\b|thermomix|cookeo|companion|monsieur cuisine/i;
   const ok=list.filter(x=>x&&Data.SOURCE.test(x.url)&&!mine.has(x.url)&&!names.has(Data.plain(x.titre||"").trim())&&x.prep>0&&x.prep<=30&&!NOT_MEAL.test((x.titre||"")+" "+x.url));
   const mix=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]),a=mix(ok.filter(x=>x.site==="marmiton")),b=mix(ok.filter(x=>x.site!=="marmiton")),pick=[];
   while(pick.length<5&&(a.length||b.length)){if(a.length)pick.push(a.shift());if(pick.length<5&&b.length)pick.push(b.shift())} // les deux sites, à tour de rôle

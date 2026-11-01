@@ -18,7 +18,7 @@ NOT_DISH = re.compile(r"sabl|bredele|bonbon|cr[eê]pe|g[aâ]teau|\bcake|tarte au
                       r"macaron|beignet|gaufre|pancake|friandise|chutney|confit\b|rillettes|terrine|toast|verrine|"
                       r"mignardise|punch|vin chaud|liqueur|cr[eè]me (?:dessert|anglaise|br[uû]l)|mousse au|panna|tiramisu|"
                       r"cheesecake|brownie|flan|clafoutis|crumble|fondant|financier|madeleine|donut|marbr|yaourt|douceur|[àa] tartiner|"
-                      r"toasts?\b|tartines?\b|bruschetta|crostini|canap[ée]s?\b|mouillettes?", re.I)
+                      r"toasts?\b|tartines?\b|bruschetta|crostini|canap[ée]s?\b|mouillettes?|\bchips\b", re.I)
 # recettes écrites pour un robot de cuisine (on n'en a pas)
 ROBOT = re.compile(r"thermomix|cookeo|companion|monsieur cuisine|robot (?:cuiseur|multifonction|chauffant)|\btm ?[56]\b", re.I)
 
