@@ -497,4 +497,4 @@ select.fk{font:inherit;font-size:13px;color:var(--fg);padding:1px 4px;border:1px
 .sedit .seg button{line-height:1.2;padding:6px 4px}.sedit .seg small{font-weight:400;color:var(--mut)}
 .sadd{display:flex;align-items:center;gap:8px;min-height:48px}.sadd input{flex:1;min-width:0;border:0;background:none;padding:8px 0;font:inherit}
 .splus{width:34px;height:34px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:22px;line-height:1;flex:none}
-.sq-own{color:var(--accent);font-weight:600}
+.sq-own{color:var(--accent);font-weight:600;white-space:nowrap}

@@ -114,9 +114,9 @@ function companionFor(S,name,today){
 const FOODS=[
   {id:"viande",icon:"🥩",cat:"prot",label:"Pièce de bœuf",words:["piece de boeuf","viande rouge","viande","steak","boeuf","bavette","entrecote","roti de boeuf"],kind:"g",q:150,store:"boucherie"},
   {id:"hache",icon:"🥩",cat:"prot",label:"Steak haché",words:["steak hache","viande hachee","hache"],kind:"n",q:1,store:"boucherie"},
-  {id:"poulet",grp:"Poulet",icon:"🍗",cat:"prot",label:"Poulet",words:["poulet","blanc de poulet"],kind:"g",q:150,store:"boucherie"},
-  {id:"poulet-entier",grp:"Poulet",icon:"🐔",cat:"prot",label:"Poulet entier",words:["poulet entier","poulet roti","poulet fermier"],kind:"n",q:0.25,store:"boucherie"},
-  {id:"esc-poulet",grp:"Poulet",icon:"🍗",cat:"prot",label:"Escalopes de poulet",words:["escalope de poulet","escalopes de poulet"],kind:"n",q:1,store:"boucherie"},
+  {id:"poulet",icon:"🍗",cat:"prot",label:"Poulet",words:["poulet","blanc de poulet"],kind:"g",q:150,store:"boucherie",
+    syn0:"poulet entier, poulet rôti, escalopes de poulet, cuisses de poulet, pilons de poulet", // autres noms d'office, chacun sa quantité
+    synq0:{"poulet entier":{kind:"n",q:0.25},"poulet rôti":{kind:"n",q:0.25},"escalopes de poulet":{kind:"n",q:1},"cuisses de poulet":{kind:"n",q:1},"pilons de poulet":{kind:"n",q:2}}},
   {id:"esc-dinde",icon:"🦃",cat:"prot",label:"Escalopes de dinde",words:["escalope de dinde","escalopes de dinde","dinde"],kind:"n",q:1,store:"boucherie"},
   {id:"esc-veau",icon:"🐄",cat:"prot",label:"Escalopes de veau",words:["escalope de veau","escalopes de veau","veau"],kind:"n",q:1,store:"boucherie"},
   {id:"paupiette",icon:"🐄",cat:"prot",label:"Paupiettes de veau",words:["paupiette"],kind:"n",q:1,store:"boucherie"},
@@ -128,7 +128,6 @@ const FOODS=[
   {id:"nuggets",icon:"🍗",cat:"prot",label:"Nuggets",words:["nugget"],kind:"n",q:6,store:"auchan"},
   {id:"roti-porc",icon:"🐖",cat:"prot",label:"Rôti de porc",words:["roti de porc"],kind:"g",q:150,store:"boucherie"},
   {id:"agneau",icon:"🐑",cat:"prot",label:"Côtes d'agneau",words:["cote d agneau","cotes d agneau","agneau"],kind:"n",q:2,store:"boucherie"},
-  {id:"cuisse-poulet",grp:"Poulet",icon:"🍗",cat:"prot",label:"Cuisses de poulet",words:["cuisse de poulet","cuisses de poulet","pilon de poulet"],kind:"n",q:1,store:"boucherie"},
   {id:"francfort",icon:"svg:saucisse",cat:"prot",label:"Saucisses de Francfort",words:["saucisse de francfort","francfort","knacki","saucisse de strasbourg"],kind:"n",q:2,store:"auchan"},
   {id:"boudin-noir",icon:"svg:saucisse",cat:"prot",label:"Boudin noir",words:["boudin noir","boudin"],kind:"n",q:1,store:"boucherie"},
   {id:"boudin-blanc",icon:"svg:saucisse",cat:"prot",label:"Boudin blanc",words:["boudin blanc"],kind:"n",q:1,store:"boucherie"},
@@ -196,12 +195,12 @@ const amtMap=r=>{const o={};for(const [t,v] of Object.entries(r.synq||{}))o[synK
 function setCustom(S){setPlaisir(S);
   const R=id=>S.foods&&S.foods[id]&&!S.foods[id].deleted?S.foods[id]:null;
   HIDDEN=FOODS.filter(f=>R(f.id)&&R(f.id).off).map(f=>R(f.id).label?{...f,label:R(f.id).label}:f); // ingrédients de l'app retirés de la liste
-  BASEX=FOODS.filter(f=>!(R(f.id)&&R(f.id).off)).map(f=>{const r=R(f.id);if(!r)return f;let x=f;
+  BASEX=FOODS.filter(f=>!(R(f.id)&&R(f.id).off)).map(f=>{const r0=R(f.id),own=r0&&(r0.syn||r0.synq),r=own?r0:{...(r0||{}),syn:f.syn0,synq:f.synq0};if(!r.syn&&!r0)return f;let x=f;
     if(r.kind&&r.kind!==f.kind&&(f.kind==="g"||f.kind==="n"))x={...x,kind:r.kind,as:undefined}; // au poids ou à la pièce, au choix
     if(r.label)x={...x,label:r.label}; // nom choisi (l'ancien reste reconnu)
-    const extra=[...(r.label?synWords(r.label):[]),...synWords(r.syn)];if(r.syn)x={...x,syn:r.syn};if(extra.length)x={...x,words:[...f.words,...extra]};if(amtMap(r))x={...x,amt:amtMap(r)};return x});CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
+    const extra=[...(r.label?synWords(r.label):[]),...synWords(r.syn)];if(r.syn)x={...x,syn:r.syn};if(extra.length)x={...x,words:[...f.words,...extra]};if(amtMap(r))x={...x,amt:amtMap(r)};if(r.synq)x={...x,synq:r.synq};return x});CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
   .map(r=>({id:r.id,icon:emojiFor(r.label)||CAT_ICON[r.cat],cat:r.cat,label:r.label,syn:r.syn||"",
-    words:[r.label,...String(r.syn||"").split(",")].map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean),kind:r.kind,q:r.q,store:r.store||"auchan",amt:amtMap(r),custom:true}))}
+    words:[r.label,...String(r.syn||"").split(",")].map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean),kind:r.kind,q:r.q,store:r.store||"auchan",amt:amtMap(r),synq:r.synq||null,custom:true}))}
 // synonymes ajoutés aux ingrédients fournis par l'app (S.foods[id].syn)
 let BASEX=FOODS,HIDDEN=[];
 const hiddenFoods=()=>HIDDEN;

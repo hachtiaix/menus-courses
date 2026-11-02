@@ -108,30 +108,38 @@ test("ingrédient de l'app retiré puis remis", () => {
   Data.setCustom({ foods: {} });
 });
 
-test("poulet : escalopes, cuisses, entier, au poids", () => {
+test("poulet : autres noms d'office, chacun sa quantité", () => {
+  const S = { foods: {} };
+  Data.setCustom(S);
+  const line = t => { const f = Data.foodFor(t); assert.equal(f.id, "poulet"); return Data.foodLine(S, f, f.own ? f.buy : f.label); };
+  assert.equal(line("poulet"), "150 g de poulet");
+  assert.equal(line("poulet entier"), "0,25 poulet entier");
+  assert.equal(line("poulet rôti"), "0,25 poulet rôti");
+  assert.equal(line("escalopes de poulet"), "1 escalopes de poulet");
+  assert.equal(line("cuisses de poulet"), "1 cuisses de poulet");
+  // réglés par l'utilisateur : remplacent ceux d'office
+  const T = { foods: { poulet: Data.clean("foods", "poulet", { id: "poulet", syn: "poulet entier", synq: { "poulet entier": { kind: "n", q: 0.5 } } }) } };
+  Data.setCustom(T);
+  assert.equal(Data.foodLine(T, Data.foodFor("poulet entier"), "poulet entier"), "0,5 poulet entier");
+  assert.equal(Data.foodFor("cuisses de poulet").own, undefined);
   Data.setCustom({ foods: {} });
-  assert.equal(Data.foodFor("escalopes de poulet").id, "esc-poulet");
-  assert.equal(Data.foodFor("cuisses de poulet").id, "cuisse-poulet");
-  assert.equal(Data.foodFor("poulet entier").id, "poulet-entier");
-  assert.equal(Data.foodFor("poulet rôti").id, "poulet-entier");
-  assert.equal(Data.foodFor("poulet").id, "poulet");
 });
 
 test("synonyme sur un ingrédient de l'app : la quantité par défaut est gardée", () => {
   assert.equal(Data.clean("foods", "poulet", { id: "poulet", syn: "volaille" }).q, null);
   assert.equal(Data.clean("foods", "poulet", { id: "poulet", syn: "volaille", q: 0.25 }).q, null);
   assert.equal(Data.clean("foods", "poulet", { id: "poulet", q: 160 }).q, 160);
-  assert.equal(Data.clean("foods", "poulet-entier", { id: "poulet-entier", q: 0.25 }).q, 0.25);
+  assert.equal(Data.clean("foods", "hache", { id: "hache", q: 0.25 }).q, 0.25);
 });
 
 test("ingrédient de l'app : au poids ou à la pièce", () => {
-  const r = Data.clean("foods", "cuisse-poulet", { id: "cuisse-poulet", kind: "g", q: 150 });
+  const r = Data.clean("foods", "hache", { id: "hache", kind: "g", q: 150 });
   assert.equal(r.kind, "g");
-  Data.setCustom({ foods: { "cuisse-poulet": r } });
-  const f = Data.foodFor("cuisses de poulet");
+  Data.setCustom({ foods: { "hache": r } });
+  const f = Data.foodFor("steak haché");
   assert.equal(f.kind, "g");
-  assert.equal(Data.foodLine({ foods: { "cuisse-poulet": r } }, f, "cuisses de poulet"), "150 g de cuisses de poulet");
-  assert.equal(Data.clean("foods", "cuisse-poulet", { id: "cuisse-poulet", kind: "n" }).kind, undefined);
+  assert.equal(Data.foodLine({ foods: { "hache": r } }, f, "steak haché"), "150 g de steak haché");
+  assert.equal(Data.clean("foods", "hache", { id: "hache", kind: "n" }).kind, undefined);
   Data.setCustom({ foods: {} });
 });
 
