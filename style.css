@@ -485,3 +485,6 @@ body.withaz #view .count{margin-right:28px}
 .hidf{margin-top:18px}.hidf summary{padding:8px 2px;cursor:pointer}
 .row .chev{color:var(--mut);font-size:22px;padding:0 4px}
 select.fk{font:inherit;font-size:13px;color:var(--fg);padding:1px 4px;border:1px solid var(--line);border-radius:6px;background:var(--card);margin-right:2px}
+.flab{display:block;font-size:14px;font-weight:600;margin:0 0 4px}.flab .mut{font-weight:400;font-size:13px}
+.synchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px}.synchips:empty{display:none}
+.synadd{display:flex;gap:8px;margin-bottom:8px}.synadd input{flex:1;min-width:0}

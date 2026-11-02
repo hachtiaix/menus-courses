@@ -596,7 +596,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v251";
+const BASE=4,VERSION="v254";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1332,21 +1332,21 @@ function foodEditor(cat,rec,done,step){ // rec : aliment inconnu d'un repas, don
   const ov=document.createElement("div");ov.className="ov";
   const ed=rec&&rec.edit,kg0=ed&&rec.kind==="g"&&rec.q>=1000,k0=ed?(kg0?"kg":rec.kind):"g",q0=ed?(kg0?rec.q/1000:rec.q):150,st0=ed&&rec.store||"auchan",c0=rec&&rec.cat||cat||"leg";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${ed?"Modifier l'ingrédient":"Nouvel ingrédient"+(rec&&step&&!step.endsWith("/1")?" "+step:"")}</h2>
-   <input type="text" id="fn" placeholder="Nom (ex. Haricots beurre)" autocapitalize="sentences" value="${rec?esc(rec.label):""}" style="width:100%;margin-bottom:10px">
-   <input type="text" id="fsyn" placeholder="Synonymes (ex. hachis, viande hachée)" autocapitalize="none" value="${ed&&rec.syn?esc(rec.syn):""}" style="width:100%;margin-bottom:4px">
-   <p class="mut" style="margin:0 0 10px;font-size:13px">Autres noms tapés dans les repas, séparés par des virgules.</p>
+   <label class="flab" for="fn">Nom</label>
+   <input type="text" id="fn" placeholder="ex. Haricots beurre" autocapitalize="sentences" value="${rec?esc(rec.label):""}" style="width:100%;margin-bottom:12px">
+   ${synHtml()}
    <div class="serv"><span>Famille</span><select id="fc">${Object.entries(FAM).map(([k,l])=>`<option value="${k}" ${k===c0?"selected":""}>${l}</option>`).join("")}</select></div>
    <div class="serv"><span>Par personne</span><input type="text" id="fqv" value="${String(q0).replace(".",",")}" inputmode="decimal" style="width:80px">
    <select id="fk">${[["g","grammes"],["kg","kilos"],["n","pièce(s)"]].map(([v,l])=>`<option value="${v}" ${v===k0?"selected":""}>${l}</option>`).join("")}</select></div>
    <div class="serv"><span>Magasin</span><select id="fs">${lists.map(l=>`<option value="${l.id}" ${l.id===st0?"selected":""}>${esc(SHORT[l.id]||l.name)}</option>`).join("")}</select></div>
    <div class="acts"><button class="btn sec" id="no">${done?"Plus tard":"Annuler"}</button><button class="btn" id="ok">${rec?"Enregistrer":"Ajouter"}</button></div></div>`;
-  document.body.appendChild(ov);
+  document.body.appendChild(ov);const getSyn=wireSyn(ed&&rec.syn);
   const close=()=>ov.remove(),later=()=>{close();if(done)done()};ov.onclick=e=>{if(e.target===ov)later()};$("#no").onclick=later;
   $("#fk").onchange=()=>{$("#fqv").value={n:1,kg:1,g:150}[$("#fk").value]};
   $("#ok").onclick=()=>{const label=$("#fn").value.trim(),q=parseFloat(String($("#fqv").value).replace(",","."));
     if(!label){$("#fn").focus();return}if(!(q>0)){$("#fqv").focus();return}
     const same=Data.foodFor(label,true);if(same&&!(ed&&same.id===rec.id)&&!confirm(`« ${label} » ressemble à un ingrédient existant. L'ajouter quand même ?`))return;
-    const syn=$("#fsyn").value.split(",").map(x=>x.trim()).filter(x=>x&&Data.plain(x)!==Data.plain(label));
+    const syn=getSyn().filter(x=>Data.plain(x)!==Data.plain(label));
     const pris=syn.map(x=>[x,Data.foodFor(x,true)]).filter(([x,f])=>f&&!(rec&&f.id===rec.id));
     if(pris.length&&!confirm(`Déjà utilisé : ${pris.map(([x,f])=>`« ${x} » (${f.label})`).join(", ")}. Garder quand même ?`))return;
     const kg=$("#fk").value==="kg"; // les kilos sont gardés en grammes
@@ -1381,18 +1381,37 @@ function wireFoods(root,again,leave){
   root.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.allFoods().find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
     const st=f.kind==="g"?10:cur<1||(cur===1&&+el.dataset.d<0)?0.25:1,q=Math.max(f.kind==="g"?10:0.25,Math.round((cur+st*el.dataset.d)*100)/100);
     touch("foods",{...(S.foods[f.id]||{}),id:f.id,q,deleted:false});again()});}
+// Synonymes : une pastille par synonyme (taper, puis Ajouter ou Entrée ; × pour retirer)
+const synHtml=()=>`<label class="flab" for="fsyn">Synonymes <span class="mut">· autres noms tapés dans les repas</span></label>
+   <div class="synchips" id="synchips"></div>
+   <div class="synadd"><input type="text" id="fsyn" placeholder="ex. hachis" autocapitalize="none" enterkeyhint="done"><button type="button" class="btn sec sm" id="synplus">Ajouter</button></div>`;
+function wireSyn(init){const list=String(init||"").split(",").map(x=>x.trim()).filter(Boolean);
+  const draw=()=>{$("#synchips").innerHTML=list.map((x,i)=>`<span class="chipw">${esc(x)} <button type="button" class="cdel" data-sx="${i}" aria-label="Retirer">×</button></span>`).join(" ");
+    document.querySelectorAll("[data-sx]").forEach(b=>b.onclick=()=>{list.splice(+b.dataset.sx,1);draw()})};
+  const add=()=>{const v=$("#fsyn").value;for(const x of v.split(/[,;\/\n]+/).map(y=>y.trim()).filter(Boolean))if(!list.some(y=>Data.plain(y)===Data.plain(x)))list.push(x);$("#fsyn").value="";draw()};
+  $("#synplus").onclick=()=>{add();$("#fsyn").focus()};$("#fsyn").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();add()}};draw();
+  return()=>{add();return list.slice()}}
 // Ingrédient fourni par l'app : on peut seulement lui ajouter des synonymes
 function synEditor(f){const ov=document.createElement("div");ov.className="ov";
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(f.label)}</h2>
-   <input type="text" id="fsyn" placeholder="Synonymes (ex. hachis, viande hachée)" autocapitalize="none" value="${esc(f.syn||"")}" style="width:100%;margin-bottom:4px">
-   <p class="mut" style="margin:0 0 10px;font-size:13px">Autres noms tapés dans les repas, séparés par des virgules.</p>
-   ${f.kind==="g"||f.kind==="n"?`<div class="serv"><span>Compter</span>${kindSel(f).replace('class="fk" data-fk="'+f.id+'"','id="skind"')}</div>`:""}
+  const cnt=f.kind==="g"||f.kind==="n",q0=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q,kg0=f.kind==="g"&&q0>=1000,k0=kg0?"kg":f.kind;
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Modifier l'ingrédient</h2>
+   <label class="flab" for="fn">Nom</label>
+   <input type="text" id="fn" autocapitalize="sentences" value="${esc(f.label)}" style="width:100%;margin-bottom:12px">
+   ${synHtml()}
+   ${Data.baseWords(f.id).length?`<p class="mut" style="margin:0 0 8px;font-size:13px">Déjà reconnus : ${esc(Data.baseWords(f.id).join(", "))}</p>`:""}
+   ${cnt?`<div class="serv"><span>Par personne</span><input type="text" id="fqv" value="${String(kg0?q0/1000:q0).replace(".",",")}" inputmode="decimal" style="width:80px">
+   <select id="fk">${[["g","grammes"],["kg","kilos"],["n","pièce(s)"]].map(([v,l])=>`<option value="${v}" ${v===k0?"selected":""}>${l}</option>`).join("")}</select></div>`:""}
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
-  document.body.appendChild(ov);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
-  $("#ok").onclick=()=>{const syn=$("#fsyn").value.split(",").map(x=>x.trim()).filter(x=>x&&Data.plain(x)!==Data.plain(f.label));
+  document.body.appendChild(ov);const getSyn=wireSyn(f.syn);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  if(cnt)$("#fk").onchange=()=>{$("#fqv").value={n:1,kg:1,g:150}[$("#fk").value]};
+  $("#ok").onclick=()=>{let label=$("#fn").value.trim();if(!label){$("#fn").focus();return}label=label.charAt(0).toUpperCase()+label.slice(1);
+    let kind,q;if(cnt){q=parseFloat(String($("#fqv").value).replace(",","."));if(!(q>0)){$("#fqv").focus();return}
+      const k=$("#fk").value;kind=k==="kg"?"g":k;if(k==="kg")q=Math.round(q*1000)}
+    const autre=Data.foodFor(label,true);if(autre&&autre.id!==f.id&&!confirm(`« ${label} » ressemble à « ${autre.label} ». Garder ce nom quand même ?`))return;
+    const syn=getSyn().filter(x=>Data.plain(x)!==Data.plain(label));
     const pris=syn.map(x=>[x,Data.foodFor(x,true)]).filter(([x,g])=>g&&g.id!==f.id);
     if(pris.length&&!confirm(`Déjà utilisé : ${pris.map(([x,g])=>`« ${x} » (${g.label})`).join(", ")}. Garder quand même ?`))return;
-    touch("foods",{...(S.foods[f.id]||{}),id:f.id,syn:syn.join(", ")||null,deleted:false});if($("#skind"))setKind(f.id,$("#skind").value);close();render()}}
+    touch("foods",{...(S.foods[f.id]||{}),id:f.id,label:label===Data.baseLabel(f.id)?null:label,syn:syn.join(", ")||null,...(cnt?{kind,q}:{}),deleted:false});close();render()}}
 // Étapes en markdown simple : # titre, **gras**, *italique*, listes « - » ou « 1. ».
 // Sans aucune marque de liste ni titre : une ligne = une étape numérotée.
 function md(text){const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\s][^*]*?)\*/g,"$1<i>$2</i>").replace(/__(.+?)__/g,"<b>$1</b>");

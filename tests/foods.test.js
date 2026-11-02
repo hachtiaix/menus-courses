@@ -134,3 +134,17 @@ test("ingrédient de l'app : au poids ou à la pièce", () => {
   assert.equal(Data.clean("foods", "cuisse-poulet", { id: "cuisse-poulet", kind: "n" }).kind, undefined);
   Data.setCustom({ foods: {} });
 });
+
+test("ingrédient de l'app renommé : nouveau nom affiché, ancien toujours reconnu", () => {
+  const r = Data.clean("foods", "poulet", { id: "poulet", label: "Blancs de poulet", syn: "filet de poulet" });
+  assert.equal(r.label, "Blancs de poulet");
+  Data.setCustom({ foods: { poulet: r } });
+  const f = Data.allFoods().find(x => x.id === "poulet");
+  assert.equal(f.label, "Blancs de poulet");
+  assert.equal(Data.foodFor("poulet").id, "poulet");
+  assert.equal(Data.foodFor("blancs de poulet").id, "poulet");
+  assert.equal(Data.foodFor("filets de poulet").id, "poulet");
+  assert.equal(Data.baseLabel("poulet"), "Poulet");
+  Data.setCustom({ foods: {} });
+  assert.equal(Data.allFoods().find(x => x.id === "poulet").label, "Poulet");
+});

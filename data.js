@@ -193,15 +193,18 @@ let CUSTOM=[];
 const synWords=syn=>String(syn||"").split(",").map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean);
 function setCustom(S){setPlaisir(S);
   const R=id=>S.foods&&S.foods[id]&&!S.foods[id].deleted?S.foods[id]:null;
-  HIDDEN=FOODS.filter(f=>R(f.id)&&R(f.id).off); // ingrédients de l'app retirés de la liste
+  HIDDEN=FOODS.filter(f=>R(f.id)&&R(f.id).off).map(f=>R(f.id).label?{...f,label:R(f.id).label}:f); // ingrédients de l'app retirés de la liste
   BASEX=FOODS.filter(f=>!(R(f.id)&&R(f.id).off)).map(f=>{const r=R(f.id);if(!r)return f;let x=f;
     if(r.kind&&r.kind!==f.kind&&(f.kind==="g"||f.kind==="n"))x={...x,kind:r.kind,as:undefined}; // au poids ou à la pièce, au choix
-    if(r.syn)x={...x,syn:r.syn,words:[...f.words,...synWords(r.syn)]};return x});CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
+    if(r.label)x={...x,label:r.label}; // nom choisi (l'ancien reste reconnu)
+    const extra=[...(r.label?synWords(r.label):[]),...synWords(r.syn)];if(r.syn)x={...x,syn:r.syn};if(extra.length)x={...x,words:[...f.words,...extra]};return x});CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
   .map(r=>({id:r.id,icon:emojiFor(r.label)||CAT_ICON[r.cat],cat:r.cat,label:r.label,syn:r.syn||"",
     words:[r.label,...String(r.syn||"").split(",")].map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean),kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
 // synonymes ajoutés aux ingrédients fournis par l'app (S.foods[id].syn)
 let BASEX=FOODS,HIDDEN=[];
 const hiddenFoods=()=>HIDDEN;
+const baseLabel=id=>(FOODS.find(f=>f.id===id)||{}).label;
+const baseWords=id=>((FOODS.find(f=>f.id===id)||{}).words||[]).filter(w=>w!==words(baseLabel(id)).trim().replace(/s$/,""));
 const allFoods=()=>[...BASEX,...CUSTOM];
 // Aliments inconnus d'une suite (« Saucisses, Asperges » → ["Asperges"]) : ni ingrédient, ni recette, ni déjà à classer ou écarté.
 // Repas pris dehors (restaurant, chez des amis…) : rien à acheter, jamais proposé comme plat
@@ -544,7 +547,7 @@ function clean(k,id,r){
     // v246-v248 : un synonyme ou un retrait enregistrait 0,25 par erreur (pas de quantité) → quantité par défaut
     const kind=base&&(r.kind==="g"||r.kind==="n")&&(base.kind==="g"||base.kind==="n")&&r.kind!==base.kind?r.kind:undefined;
     if(base&&q===0.25&&((kind||base.kind)==="g"||(!kind&&(r.syn||r.off))))q=null;
-    if(base)return{id,q,kind,syn:str(r.syn,200)||null,off:r.off===true||undefined,ts,deleted};
+    if(base)return{id,q,kind,label:str(r.label,40)||null,syn:str(r.syn,200)||null,off:r.off===true||undefined,ts,deleted};
     const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,syn:str(r.syn,200)||null,ts,deleted}}
   if(k==="combos"){const text=str(r.text,120);
@@ -586,6 +589,6 @@ function prune(S,now){
   for(const id of Object.keys(S.meals||{})){const d=Date.parse(id.slice(0,10));if(d&&now-d>MEAL_TTL){delete S.meals[id];n++}}
   return n;
 }
-root.Data={KINDS,hiddenFoods,okId,str,clean,cleanAll,splitSeasoning,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
+root.Data={KINDS,hiddenFoods,baseLabel,baseWords,okId,str,clean,cleanAll,splitSeasoning,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
   TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
