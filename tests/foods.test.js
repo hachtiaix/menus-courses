@@ -87,3 +87,12 @@ test("ingrédient de l'app : synonymes ajoutés", () => {
   Data.setCustom({ foods: {} });
   assert.equal(Data.foodFor("hachis"), null);
 });
+
+test("un ingrédient créé passe avant celui de l'app à égalité", () => {
+  Data.setCustom({ foods: { "c-h": { id: "c-h", label: "Hachis", cat: "prot", kind: "g", q: 125, syn: "viande hachée" } } });
+  assert.equal(Data.foodFor("hachis").id, "c-h");
+  assert.equal(Data.foodFor("viande hachée").id, "c-h");
+  assert.equal(Data.foodFor("steak haché").id, "hache");
+  Data.setCustom({ foods: {} });
+  assert.equal(Data.foodFor("viande hachée").id, "hache");
+});

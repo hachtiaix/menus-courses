@@ -210,7 +210,7 @@ function unknownFoods(S,text){
 }
 function foodFor(name,exact){
   const n=words(name);let best=null,len=0;
-  for(const f of allFoods())for(const w of f.words){const re=" "+w.replace(/ /g,"[sx]? ")+"[sx]? ";
+  for(const f of [...CUSTOM,...BASEX])for(const w of f.words){const re=" "+w.replace(/ /g,"[sx]? ")+"[sx]? "; // à égalité, l'ingrédient créé gagne
     if(w.length>len&&new RegExp(exact?"^"+re+"$":re).test(n)){best=f;len=w.length}}
   return best;
 }
