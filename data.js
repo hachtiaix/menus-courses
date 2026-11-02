@@ -191,15 +191,17 @@ function emojiFor(label){const n=words(label);let best=null,len=0;
   return best}
 let CUSTOM=[];
 const synWords=syn=>String(syn||"").split(",").map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean);
+const synKey=t=>words(t).trim().replace(/s$/,"");
+const amtMap=r=>{const o={};for(const [t,v] of Object.entries(r.synq||{}))o[synKey(t)]={...v,t};return Object.keys(o).length?o:null};
 function setCustom(S){setPlaisir(S);
   const R=id=>S.foods&&S.foods[id]&&!S.foods[id].deleted?S.foods[id]:null;
   HIDDEN=FOODS.filter(f=>R(f.id)&&R(f.id).off).map(f=>R(f.id).label?{...f,label:R(f.id).label}:f); // ingrédients de l'app retirés de la liste
   BASEX=FOODS.filter(f=>!(R(f.id)&&R(f.id).off)).map(f=>{const r=R(f.id);if(!r)return f;let x=f;
     if(r.kind&&r.kind!==f.kind&&(f.kind==="g"||f.kind==="n"))x={...x,kind:r.kind,as:undefined}; // au poids ou à la pièce, au choix
     if(r.label)x={...x,label:r.label}; // nom choisi (l'ancien reste reconnu)
-    const extra=[...(r.label?synWords(r.label):[]),...synWords(r.syn)];if(r.syn)x={...x,syn:r.syn};if(extra.length)x={...x,words:[...f.words,...extra]};return x});CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
+    const extra=[...(r.label?synWords(r.label):[]),...synWords(r.syn)];if(r.syn)x={...x,syn:r.syn};if(extra.length)x={...x,words:[...f.words,...extra]};if(amtMap(r))x={...x,amt:amtMap(r)};return x});CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
   .map(r=>({id:r.id,icon:emojiFor(r.label)||CAT_ICON[r.cat],cat:r.cat,label:r.label,syn:r.syn||"",
-    words:[r.label,...String(r.syn||"").split(",")].map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean),kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
+    words:[r.label,...String(r.syn||"").split(",")].map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean),kind:r.kind,q:r.q,store:r.store||"auchan",amt:amtMap(r),custom:true}))}
 // synonymes ajoutés aux ingrédients fournis par l'app (S.foods[id].syn)
 let BASEX=FOODS,HIDDEN=[];
 const hiddenFoods=()=>HIDDEN;
@@ -218,14 +220,16 @@ function unknownFoods(S,text){
   return parts.filter(p=>!foodFor(p)&&!recipeNamed(S,p)&&!seen.has(plain(p))&&(seen.add(plain(p)),true));
 }
 function foodFor(name,exact){
-  const n=words(name);let best=null,len=0;
+  const n=words(name);let best=null,len=0,bw=null;
   for(const f of [...CUSTOM,...BASEX])for(const w of f.words){const re=" "+w.replace(/ /g,"[sx]? ")+"[sx]? "; // à égalité, l'ingrédient créé gagne
-    if(w.length>len&&new RegExp(exact?"^"+re+"$":re).test(n)){best=f;len=w.length}}
-  return best;
+    if(w.length>len&&new RegExp(exact?"^"+re+"$":re).test(n)){best=f;len=w.length;bw=w}}
+  // synonyme avec sa propre quantité (ex. « steak » 1 pièce, « rumsteck » 180 g) : on l'achète sous ce nom
+  const a=best&&best.amt&&best.amt[bw];
+  return a?{...best,kind:a.kind,q:a.q,as:undefined,own:true,buy:a.t}:best;
 }
 // Ingrédient « pour 1 personne » d'un aliment (portion réglée dans S.foods, sinon par défaut).
 function foodLine(S,f,name){
-  const q=(S.foods&&S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+  const q=f.own?f.q:(S.foods&&S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
   const nm=name.trim().replace(/^(\p{Lu})(?=\p{Ll})/u,c=>c.toLowerCase()); // « Poulet » → « poulet », « PDT » inchangé
   if(f.kind==="g")return q+" g de "+nm;
   if(f.kind==="n"&&f.as)return String(q).replace(".",",")+" "+f.as; // ex. « 1 boîte de beans (400 g) »
@@ -542,14 +546,17 @@ function clean(k,id,r){
     last:/^\d{4}-\d{2}-\d{2}$/.test(r.last)?r.last:null,since:/^\d{4}-\d{2}-\d{2}$/.test(r.since)?r.since:null,
     adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,
     ts,deleted}:null;
+  const synq=o=>{if(!o||typeof o!=="object"||Array.isArray(o))return null;const out={};
+    for(const [t,v] of Object.entries(o).slice(0,30)){const k2=str(t,40),qq=+(v&&v.q);if(k2&&v&&(v.kind==="g"||v.kind==="n")&&qq>0)out[k2]={kind:v.kind,q:Math.max(0.25,Math.min(2000,qq))}}
+    return Object.keys(out).length?out:null};
   if(k==="foods"){let q=+r.q>0?Math.max(0.25,Math.min(2000,+r.q)):null;
     const base=FOODS.find(f=>f.id===id);
     // v246-v248 : un synonyme ou un retrait enregistrait 0,25 par erreur (pas de quantité) → quantité par défaut
     const kind=base&&(r.kind==="g"||r.kind==="n")&&(base.kind==="g"||base.kind==="n")&&r.kind!==base.kind?r.kind:undefined;
     if(base&&q===0.25&&((kind||base.kind)==="g"||(!kind&&(r.syn||r.off))))q=null;
-    if(base)return{id,q,kind,label:str(r.label,40)||null,syn:str(r.syn,200)||null,off:r.off===true||undefined,ts,deleted};
+    if(base)return{id,q,kind,label:str(r.label,40)||null,syn:str(r.syn,200)||null,synq:synq(r.synq),off:r.off===true||undefined,ts,deleted};
     const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;
-    return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,syn:str(r.syn,200)||null,ts,deleted}}
+    return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,syn:str(r.syn,200)||null,synq:synq(r.synq),ts,deleted}}
   if(k==="combos"){const text=str(r.text,120);
     if(r.kind==="plaisir")return text?{id,text:text.slice(0,40),kind:"plaisir",off:r.off===true,ts,deleted}:null; // mot de la liste des plats plaisir
     if(r.kind==="refus")return SOURCE.test(text)?{id,text,kind:"refus",label:str(r.label,100)||null,ts,deleted}:null; // nouvelle recette refusée : plus reproposée

@@ -488,3 +488,12 @@ select.fk{font:inherit;font-size:13px;color:var(--fg);padding:1px 4px;border:1px
 .flab{display:block;font-size:14px;font-weight:600;margin:0 0 4px}.flab .mut{font-weight:400;font-size:13px}
 .synchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px}.synchips:empty{display:none}
 .synadd{display:flex;gap:8px;margin-bottom:8px}.synadd input{flex:1;min-width:0}
+.synlist{padding:0 14px}
+.srow{display:flex;align-items:center;gap:8px;min-height:48px;border-bottom:1px solid var(--line)}
+.srow .sn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spill{background:none;border:0;font:inherit;font-size:15px;color:var(--fg);padding:6px 2px;white-space:nowrap}
+.spill.own{color:var(--accent);font-weight:600}
+.sedit{padding:6px 0 10px;border-bottom:1px solid var(--line)}
+.sedit .seg button{line-height:1.2;padding:6px 4px}.sedit .seg small{font-weight:400;color:var(--mut)}
+.sadd{display:flex;align-items:center;gap:8px;min-height:48px}.sadd input{flex:1;min-width:0;border:0;background:none;padding:8px 0;font:inherit}
+.splus{width:34px;height:34px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:22px;line-height:1;flex:none}

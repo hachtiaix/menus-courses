@@ -148,3 +148,19 @@ test("ingrédient de l'app renommé : nouveau nom affiché, ancien toujours reco
   Data.setCustom({ foods: {} });
   assert.equal(Data.allFoods().find(x => x.id === "poulet").label, "Poulet");
 });
+
+test("synonyme avec sa propre quantité", () => {
+  const r = Data.clean("foods", "viande", { id: "viande", syn: "rumsteck, faux-filet, steak", synq: { rumsteck: { kind: "g", q: 180 }, steak: { kind: "n", q: 1 }, bidon: { kind: "x", q: 3 } } });
+  assert.deepEqual(r.synq, { rumsteck: { kind: "g", q: 180 }, steak: { kind: "n", q: 1 } });
+  const S = { foods: { viande: r } };
+  Data.setCustom(S);
+  const a = Data.foodFor("rumsteck");
+  assert.equal(a.id, "viande");
+  assert.equal(Data.foodLine(S, a, a.buy), "180 g de rumsteck");
+  const b = Data.foodFor("steaks");
+  assert.equal(Data.foodLine(S, b, b.buy), "1 steak");
+  const c = Data.foodFor("faux-filet");
+  assert.equal(c.own, undefined);
+  assert.equal(Data.foodLine(S, c, c.label), "150 g de pièce de bœuf");
+  Data.setCustom({ foods: {} });
+});

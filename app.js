@@ -596,7 +596,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v254";
+const BASE=4,VERSION="v256";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1334,23 +1334,23 @@ function foodEditor(cat,rec,done,step){ // rec : aliment inconnu d'un repas, don
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${ed?"Modifier l'ingrédient":"Nouvel ingrédient"+(rec&&step&&!step.endsWith("/1")?" "+step:"")}</h2>
    <label class="flab" for="fn">Nom</label>
    <input type="text" id="fn" placeholder="ex. Haricots beurre" autocapitalize="sentences" value="${rec?esc(rec.label):""}" style="width:100%;margin-bottom:12px">
-   ${synHtml()}
    <div class="serv"><span>Famille</span><select id="fc">${Object.entries(FAM).map(([k,l])=>`<option value="${k}" ${k===c0?"selected":""}>${l}</option>`).join("")}</select></div>
    <div class="serv"><span>Par personne</span><input type="text" id="fqv" value="${String(q0).replace(".",",")}" inputmode="decimal" style="width:80px">
    <select id="fk">${[["g","grammes"],["kg","kilos"],["n","pièce(s)"]].map(([v,l])=>`<option value="${v}" ${v===k0?"selected":""}>${l}</option>`).join("")}</select></div>
    <div class="serv"><span>Magasin</span><select id="fs">${lists.map(l=>`<option value="${l.id}" ${l.id===st0?"selected":""}>${esc(SHORT[l.id]||l.name)}</option>`).join("")}</select></div>
+   ${synHtml()}
    <div class="acts"><button class="btn sec" id="no">${done?"Plus tard":"Annuler"}</button><button class="btn" id="ok">${rec?"Enregistrer":"Ajouter"}</button></div></div>`;
-  document.body.appendChild(ov);const getSyn=wireSyn(ed&&rec.syn);
+  document.body.appendChild(ov);const getSyn=wireSyn(ed&&rec.syn,ed&&rec.synq);
   const close=()=>ov.remove(),later=()=>{close();if(done)done()};ov.onclick=e=>{if(e.target===ov)later()};$("#no").onclick=later;
   $("#fk").onchange=()=>{$("#fqv").value={n:1,kg:1,g:150}[$("#fk").value]};
   $("#ok").onclick=()=>{const label=$("#fn").value.trim(),q=parseFloat(String($("#fqv").value).replace(",","."));
     if(!label){$("#fn").focus();return}if(!(q>0)){$("#fqv").focus();return}
     const same=Data.foodFor(label,true);if(same&&!(ed&&same.id===rec.id)&&!confirm(`« ${label} » ressemble à un ingrédient existant. L'ajouter quand même ?`))return;
-    const syn=getSyn().filter(x=>Data.plain(x)!==Data.plain(label));
+    const G=getSyn(),syn=G.names.filter(x=>Data.plain(x)!==Data.plain(label)),synq=G.synq;
     const pris=syn.map(x=>[x,Data.foodFor(x,true)]).filter(([x,f])=>f&&!(rec&&f.id===rec.id));
     if(pris.length&&!confirm(`Déjà utilisé : ${pris.map(([x,f])=>`« ${x} » (${f.label})`).join(", ")}. Garder quand même ?`))return;
     const kg=$("#fk").value==="kg"; // les kilos sont gardés en grammes
-    touch("foods",{id:rec?rec.id:"c-"+uid(),label:label.charAt(0).toUpperCase()+label.slice(1),cat:$("#fc").value,kind:kg?"g":$("#fk").value,q:kg?Math.round(q*1000):q,store:$("#fs").value,syn:syn.join(", ")||null,deleted:false});close();render();if(done)done()};
+    touch("foods",{id:rec?rec.id:"c-"+uid(),label:label.charAt(0).toUpperCase()+label.slice(1),cat:$("#fc").value,kind:kg?"g":$("#fk").value,q:kg?Math.round(q*1000):q,store:$("#fs").value,syn:syn.join(", ")||null,synq,deleted:false});close();render();if(done)done()};
   if(!rec)setTimeout(()=>$("#fn").focus(),50);
 }
 // Ligne d'un ingrédient (liste Ingrédients, ou détail d'un groupe comme « Poulet »)
@@ -1381,37 +1381,54 @@ function wireFoods(root,again,leave){
   root.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.allFoods().find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
     const st=f.kind==="g"?10:cur<1||(cur===1&&+el.dataset.d<0)?0.25:1,q=Math.max(f.kind==="g"?10:0.25,Math.round((cur+st*el.dataset.d)*100)/100);
     touch("foods",{...(S.foods[f.id]||{}),id:f.id,q,deleted:false});again()});}
-// Synonymes : une pastille par synonyme (taper, puis Ajouter ou Entrée ; × pour retirer)
-const synHtml=()=>`<label class="flab" for="fsyn">Synonymes <span class="mut">· autres noms tapés dans les repas</span></label>
-   <div class="synchips" id="synchips"></div>
-   <div class="synadd"><input type="text" id="fsyn" placeholder="ex. hachis" autocapitalize="none" enterkeyhint="done"><button type="button" class="btn sec sm" id="synplus">Ajouter</button></div>`;
-function wireSyn(init){const list=String(init||"").split(",").map(x=>x.trim()).filter(Boolean);
-  const draw=()=>{$("#synchips").innerHTML=list.map((x,i)=>`<span class="chipw">${esc(x)} <button type="button" class="cdel" data-sx="${i}" aria-label="Retirer">×</button></span>`).join(" ");
-    document.querySelectorAll("[data-sx]").forEach(b=>b.onclick=()=>{list.splice(+b.dataset.sx,1);draw()})};
-  const add=()=>{const v=$("#fsyn").value;for(const x of v.split(/[,;\/\n]+/).map(y=>y.trim()).filter(Boolean))if(!list.some(y=>Data.plain(y)===Data.plain(x)))list.push(x);$("#fsyn").value="";draw()};
-  $("#synplus").onclick=()=>{add();$("#fsyn").focus()};$("#fsyn").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();add()}};draw();
-  return()=>{add();return list.slice()}}
+// Autres noms (synonymes) : une liste ; chaque nom a la quantité de l'ingrédient, ou la sienne (toucher la quantité pour la changer)
+const synHtml=known=>`<h3 class="ray" style="margin:18px 0 4px">Autres noms</h3>
+   <p class="mut" style="margin:0 0 8px;font-size:13px">Noms que vous tapez dans les repas pour cet ingrédient.</p>
+   <div class="card synlist"><div id="synrows"></div>
+   <div class="sadd"><input type="text" id="fsyn" placeholder="Ajouter un nom (ex. rumsteck)" autocapitalize="none" enterkeyhint="done"><button type="button" class="splus" id="synplus" aria-label="Ajouter">+</button></div></div>
+   ${known&&known.length?`<p class="mut" style="margin:6px 2px 0;font-size:13px">Déjà reconnus par l'app : ${esc(known.join(", "))}</p>`:""}`;
+const UNIT={g:"g",kg:"kg",n:"pièce(s)"};
+function wireSyn(init,initQ){const Q=initQ||{};let open=-1;
+  let list=String(init||"").split(",").map(x=>x.trim()).filter(Boolean).map(t=>{const a=Q[t];return a?{t,k:a.kind==="g"&&a.q>=1000?"kg":a.kind,q:a.kind==="g"&&a.q>=1000?a.q/1000:a.q}:{t,k:"",q:""}});
+  const fmt=(q,k)=>String(q).replace(".",",")+" "+(k==="n"?(+String(q).replace(",",".")>1?"pièces":"pièce"):UNIT[k]);
+  const def=()=>{const q=$("#fqv"),k=$("#fk");return q&&k?fmt(q.value,k.value):"quantité de l'ingrédient"};
+  const sync=()=>{const r=document.querySelector("#synrows .sedit");if(r&&list[open]&&list[open].k){list[open].q=r.querySelector(".sq").value;list[open].k=r.querySelector(".su").value}};
+  const draw=()=>{$("#synrows").innerHTML=list.map((x,i)=>`<div class="srow"><span class="sn">${esc(x.t)}</span>
+      <button type="button" class="spill ${x.k?"own":""}" data-so="${i}">${x.k?esc(fmt(x.q,x.k)):`<span class="mut">comme l'ingrédient</span>`} ›</button>
+      <button type="button" class="cdel" data-sx="${i}" aria-label="Retirer">×</button></div>
+      ${open===i?`<div class="sedit"><div class="seg"><button type="button" data-own="0" class="${x.k?"":"on"}">Comme l'ingrédient<br><small>${esc(def())}</small></button><button type="button" data-own="1" class="${x.k?"on":""}">Sa quantité</button></div>
+      ${x.k?`<div class="serv"><span>Par personne</span><input type="text" class="sq" inputmode="decimal" value="${esc(String(x.q).replace(".",","))}" style="width:80px"><select class="su">${Object.entries({g:"grammes",kg:"kilos",n:"pièce(s)"}).map(([v,l])=>`<option value="${v}" ${v===x.k?"selected":""}>${l}</option>`).join("")}</select></div>`:""}</div>`:""}`).join("");
+    document.querySelectorAll("[data-so]").forEach(b=>b.onclick=()=>{sync();open=open===+b.dataset.so?-1:+b.dataset.so;draw()});
+    document.querySelectorAll("[data-sx]").forEach(b=>b.onclick=()=>{sync();list.splice(+b.dataset.sx,1);open=-1;draw()});
+    document.querySelectorAll("[data-own]").forEach(b=>b.onclick=()=>{const x=list[open];if(b.dataset.own==="1"&&!x.k){const k=$("#fk");x.k=k&&k.value||"g";x.q=$("#fqv")?$("#fqv").value:150}if(b.dataset.own==="0"){x.k="";x.q=""}draw()});
+    const su=document.querySelector("#synrows .su");if(su)su.onchange=()=>{list[open].k=su.value;list[open].q={g:150,kg:1,n:1}[su.value];draw()};
+    const sq=document.querySelector("#synrows .sq");if(sq)sq.oninput=()=>{list[open].q=sq.value;const p=document.querySelector(`[data-so="${open}"]`);if(p)p.firstChild.textContent=fmt(sq.value,list[open].k)+" "}};
+  const add=()=>{sync();const v=$("#fsyn").value;for(const x of v.split(/[,;\/\n]+/).map(y=>y.trim()).filter(Boolean))if(!list.some(y=>Data.plain(y.t)===Data.plain(x)))list.push({t:x,k:"",q:""});$("#fsyn").value="";draw()};
+  $("#synplus").onclick=()=>{add();$("#fsyn").focus()};$("#fsyn").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();add()}};
+  for(const id of ["#fqv","#fk"]){const el=$(id);if(el){el.addEventListener("input",()=>{if(open>=0){sync();draw()}});el.addEventListener("change",()=>{if(open>=0){sync();draw()}})}}
+  draw();
+  return()=>{add();const synq={};for(const x of list){const q=parseFloat(String(x.q).replace(",","."));if(x.k&&q>0)synq[x.t]={kind:x.k==="kg"?"g":x.k,q:x.k==="kg"?Math.round(q*1000):q}}
+    return{names:list.map(x=>x.t),synq:Object.keys(synq).length?synq:null}}}
 // Ingrédient fourni par l'app : on peut seulement lui ajouter des synonymes
 function synEditor(f){const ov=document.createElement("div");ov.className="ov";
   const cnt=f.kind==="g"||f.kind==="n",q0=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q,kg0=f.kind==="g"&&q0>=1000,k0=kg0?"kg":f.kind;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Modifier l'ingrédient</h2>
    <label class="flab" for="fn">Nom</label>
    <input type="text" id="fn" autocapitalize="sentences" value="${esc(f.label)}" style="width:100%;margin-bottom:12px">
-   ${synHtml()}
-   ${Data.baseWords(f.id).length?`<p class="mut" style="margin:0 0 8px;font-size:13px">Déjà reconnus : ${esc(Data.baseWords(f.id).join(", "))}</p>`:""}
    ${cnt?`<div class="serv"><span>Par personne</span><input type="text" id="fqv" value="${String(kg0?q0/1000:q0).replace(".",",")}" inputmode="decimal" style="width:80px">
    <select id="fk">${[["g","grammes"],["kg","kilos"],["n","pièce(s)"]].map(([v,l])=>`<option value="${v}" ${v===k0?"selected":""}>${l}</option>`).join("")}</select></div>`:""}
+   ${synHtml(Data.baseWords(f.id))}
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
-  document.body.appendChild(ov);const getSyn=wireSyn(f.syn);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  document.body.appendChild(ov);const getSyn=wireSyn(f.syn,(S.foods[f.id]||{}).synq);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
   if(cnt)$("#fk").onchange=()=>{$("#fqv").value={n:1,kg:1,g:150}[$("#fk").value]};
   $("#ok").onclick=()=>{let label=$("#fn").value.trim();if(!label){$("#fn").focus();return}label=label.charAt(0).toUpperCase()+label.slice(1);
     let kind,q;if(cnt){q=parseFloat(String($("#fqv").value).replace(",","."));if(!(q>0)){$("#fqv").focus();return}
       const k=$("#fk").value;kind=k==="kg"?"g":k;if(k==="kg")q=Math.round(q*1000)}
     const autre=Data.foodFor(label,true);if(autre&&autre.id!==f.id&&!confirm(`« ${label} » ressemble à « ${autre.label} ». Garder ce nom quand même ?`))return;
-    const syn=getSyn().filter(x=>Data.plain(x)!==Data.plain(label));
+    const G=getSyn(),syn=G.names.filter(x=>Data.plain(x)!==Data.plain(label)),synq=G.synq;
     const pris=syn.map(x=>[x,Data.foodFor(x,true)]).filter(([x,g])=>g&&g.id!==f.id);
     if(pris.length&&!confirm(`Déjà utilisé : ${pris.map(([x,g])=>`« ${x} » (${g.label})`).join(", ")}. Garder quand même ?`))return;
-    touch("foods",{...(S.foods[f.id]||{}),id:f.id,label:label===Data.baseLabel(f.id)?null:label,syn:syn.join(", ")||null,...(cnt?{kind,q}:{}),deleted:false});close();render()}}
+    touch("foods",{...(S.foods[f.id]||{}),id:f.id,label:label===Data.baseLabel(f.id)?null:label,syn:syn.join(", ")||null,synq,...(cnt?{kind,q}:{}),deleted:false});close();render()}}
 // Étapes en markdown simple : # titre, **gras**, *italique*, listes « - » ou « 1. ».
 // Sans aucune marque de liste ni titre : une ligne = une étape numérotée.
 function md(text){const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\s][^*]*?)\*/g,"$1<i>$2</i>").replace(/__(.+?)__/g,"<b>$1</b>");
