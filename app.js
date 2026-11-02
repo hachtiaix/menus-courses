@@ -596,7 +596,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v256";
+const BASE=4,VERSION="v257";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1355,9 +1355,12 @@ function foodEditor(cat,rec,done,step){ // rec : aliment inconnu d'un repas, don
 }
 // Ligne d'un ingrédient (liste Ingrédients, ou détail d'un groupe comme « Poulet »)
 const kindSel=f=>f.kind==="g"||f.kind==="n"?`<select class="fk" data-fk="${f.id}" aria-label="Compter"><option value="g" ${f.kind==="g"?"selected":""}>au poids</option><option value="n" ${f.kind==="n"?"selected":""}>à la pièce</option></select>`:"";
+// « aussi : bavette, rôti de bœuf (200 g) » : la quantité propre d'un autre nom est rappelée
+const synShow=f=>{const A=Object.values(f.amt||{});return String(f.syn).split(",").map(x=>x.trim()).filter(Boolean).map(t=>{const a=A.find(v=>v.t===t);
+  return esc(t)+(a?` <b class="sq-own">(${a.kind==="g"?(a.q>=1000?String(a.q/1000).replace(".",",")+" kg":a.q+" g"):String(a.q).replace(".",",")+(a.q>1?" pièces":" pièce")})</b>`:"")}).join(", ")};
 function foodRow(f,lab,withKind){const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
      const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
-     return `<div class="row link" data-fedit="${f.id}"><span class="t">${esc(lab||f.label)}<br><small class="mut">${withKind?kindSel(f)+" ":""}${esc(v)}${(f.kind==="g"||f.kind==="n")&&!withKind?" par personne":""}${f.syn?" · aussi : "+esc(f.syn):""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button></div>`}
+     return `<div class="row link" data-fedit="${f.id}"><span class="t">${esc(lab||f.label)}<br><small class="mut">${withKind?kindSel(f)+" ":""}${esc(v)}${(f.kind==="g"||f.kind==="n")&&!withKind?" par personne":""}${f.syn?" · aussi : "+synShow(f):""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button></div>`}
 // plusieurs sortes d'un même ingrédient (poulet au poids, entier, escalopes, cuisses) : une seule ligne, détail en la touchant
 function grpFoods(out,f){if(!f.grp)return out.push(f),out;let g=out.find(x=>x.members&&x.label===f.grp);
   if(!g)out.push(g={label:f.grp,members:[]});g.members.push(f);return out}
