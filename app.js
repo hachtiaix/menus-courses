@@ -596,7 +596,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v247";
+const BASE=4,VERSION="v249";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -960,9 +960,10 @@ function renderSettings(inRecipes){
   const body={
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
    <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
-   ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"],["autre","🍽️ Autres"]].map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+   ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"],["autre","🍽️ Autres"]].filter(([c])=>Data.allFoods().some(f=>f.cat===c)).map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
      const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
-     return `<div class="row link" data-fedit="${f.id}"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}${f.syn?" · aussi : "+esc(f.syn):""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}${f.custom?`<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button>`:""}</div>`}).join("")}</div>`).join("")}<button class="fab" id="fabf" aria-label="Ajouter un ingrédient">+</button>`,
+     return `<div class="row link" data-fedit="${f.id}"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}${f.syn?" · aussi : "+esc(f.syn):""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button></div>`}).join("")}</div>`).join("")}
+   ${Data.hiddenFoods().length?`<details class="hidf"><summary class="mut">Ingrédients retirés (${Data.hiddenFoods().length})</summary><div class="card">${Data.hiddenFoods().sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>`<div class="row"><span class="t">${esc(f.label)}</span><button class="btn sec sm" data-fback="${f.id}">Remettre</button></div>`).join("")}</div></details>`:""}<button class="fab" id="fabf" aria-label="Ajouter un ingrédient">+</button>`,
    habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
    <div class="card">${hs.length?hs.map(h=>`<div class="row link" data-hedit="${h.id}"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}${h.adj?" · ajustée":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
    <button class="addrow" id="newh"><i>+</i>Ajouter une habitude</button>
@@ -1008,7 +1009,9 @@ function renderSettings(inRecipes){
       c.style.display=any?"":"none";c.previousElementSibling.style.display=c.style.display})});
   on("#fabf","onclick",()=>foodEditor(null));
   document.querySelectorAll("[data-fedit]").forEach(el=>el.onclick=e=>{if(e.target.closest("button"))return;const r=S.foods[el.dataset.fedit],f=Data.allFoods().find(x=>x.id===el.dataset.fedit);if(f&&!f.custom)synEditor(f);else if(r)foodEditor(r.cat,{...r,edit:true})});
-  document.querySelectorAll("[data-fdel]").forEach(el=>el.onclick=e=>{e.stopPropagation();const r=S.foods[el.dataset.fdel];if(r&&confirm(`Retirer « ${r.label} » ?`)){touch("foods",{...r,deleted:true});render()}});
+  document.querySelectorAll("[data-fdel]").forEach(el=>el.onclick=e=>{e.stopPropagation();const id=el.dataset.fdel,f=Data.allFoods().find(x=>x.id===id);if(!f||!confirm(`Retirer « ${f.label} » ?`))return;
+    if(f.custom)touch("foods",{...S.foods[id],deleted:true});else touch("foods",{...(S.foods[id]||{}),id,off:true,deleted:false});render()});
+  document.querySelectorAll("[data-fback]").forEach(el=>el.onclick=()=>{const id=el.dataset.fback;touch("foods",{...(S.foods[id]||{}),id,off:false,deleted:false});render()});
   document.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.allFoods().find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
     const st=f.kind==="g"?10:cur<1||(cur===1&&+el.dataset.d<0)?0.25:1,q=Math.max(f.kind==="g"?10:0.25,Math.round((cur+st*el.dataset.d)*100)/100);
     touch("foods",{...(S.foods[f.id]||{}),id:f.id,q,deleted:false});render()});

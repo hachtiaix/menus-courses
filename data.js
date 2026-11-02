@@ -115,6 +115,7 @@ const FOODS=[
   {id:"viande",icon:"🥩",cat:"prot",label:"Pièce de bœuf",words:["piece de boeuf","viande rouge","viande","steak","boeuf","bavette","entrecote","roti de boeuf"],kind:"g",q:150,store:"boucherie"},
   {id:"hache",icon:"🥩",cat:"prot",label:"Steak haché",words:["steak hache","viande hachee","hache"],kind:"n",q:1,store:"boucherie"},
   {id:"poulet",icon:"🍗",cat:"prot",label:"Poulet",words:["poulet","blanc de poulet"],kind:"g",q:150,store:"boucherie"},
+  {id:"poulet-entier",icon:"🐔",cat:"prot",label:"Poulet entier",words:["poulet entier","poulet roti","poulet fermier"],kind:"n",q:0.25,store:"boucherie"},
   {id:"esc-poulet",icon:"🍗",cat:"prot",label:"Escalopes de poulet",words:["escalope de poulet","escalopes de poulet"],kind:"n",q:1,store:"boucherie"},
   {id:"esc-dinde",icon:"🦃",cat:"prot",label:"Escalopes de dinde",words:["escalope de dinde","escalopes de dinde","dinde"],kind:"n",q:1,store:"boucherie"},
   {id:"esc-veau",icon:"🐄",cat:"prot",label:"Escalopes de veau",words:["escalope de veau","escalopes de veau","veau"],kind:"n",q:1,store:"boucherie"},
@@ -127,7 +128,7 @@ const FOODS=[
   {id:"nuggets",icon:"🍗",cat:"prot",label:"Nuggets",words:["nugget"],kind:"n",q:6,store:"auchan"},
   {id:"roti-porc",icon:"🐖",cat:"prot",label:"Rôti de porc",words:["roti de porc"],kind:"g",q:150,store:"boucherie"},
   {id:"agneau",icon:"🐑",cat:"prot",label:"Côtes d'agneau",words:["cote d agneau","cotes d agneau","agneau"],kind:"n",q:2,store:"boucherie"},
-  {id:"cuisse-poulet",icon:"🍗",cat:"prot",label:"Cuisses de poulet",words:["cuisse de poulet","cuisses de poulet"],kind:"n",q:1,store:"boucherie"},
+  {id:"cuisse-poulet",icon:"🍗",cat:"prot",label:"Cuisses de poulet",words:["cuisse de poulet","cuisses de poulet","pilon de poulet"],kind:"n",q:1,store:"boucherie"},
   {id:"francfort",icon:"svg:saucisse",cat:"prot",label:"Saucisses de Francfort",words:["saucisse de francfort","francfort","knacki","saucisse de strasbourg"],kind:"n",q:2,store:"auchan"},
   {id:"boudin-noir",icon:"svg:saucisse",cat:"prot",label:"Boudin noir",words:["boudin noir","boudin"],kind:"n",q:1,store:"boucherie"},
   {id:"boudin-blanc",icon:"svg:saucisse",cat:"prot",label:"Boudin blanc",words:["boudin blanc"],kind:"n",q:1,store:"boucherie"},
@@ -191,11 +192,14 @@ function emojiFor(label){const n=words(label);let best=null,len=0;
 let CUSTOM=[];
 const synWords=syn=>String(syn||"").split(",").map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean);
 function setCustom(S){setPlaisir(S);
-  BASEX=FOODS.map(f=>{const r=S.foods&&S.foods[f.id];return r&&!r.deleted&&r.syn?{...f,syn:r.syn,words:[...f.words,...synWords(r.syn)]}:f});CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
+  const R=id=>S.foods&&S.foods[id]&&!S.foods[id].deleted?S.foods[id]:null;
+  HIDDEN=FOODS.filter(f=>R(f.id)&&R(f.id).off); // ingrédients de l'app retirés de la liste
+  BASEX=FOODS.filter(f=>!(R(f.id)&&R(f.id).off)).map(f=>{const r=R(f.id);return r&&r.syn?{...f,syn:r.syn,words:[...f.words,...synWords(r.syn)]}:f});CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
   .map(r=>({id:r.id,icon:emojiFor(r.label)||CAT_ICON[r.cat],cat:r.cat,label:r.label,syn:r.syn||"",
     words:[r.label,...String(r.syn||"").split(",")].map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean),kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
 // synonymes ajoutés aux ingrédients fournis par l'app (S.foods[id].syn)
-let BASEX=FOODS;
+let BASEX=FOODS,HIDDEN=[];
+const hiddenFoods=()=>HIDDEN;
 const allFoods=()=>[...BASEX,...CUSTOM];
 // Aliments inconnus d'une suite (« Saucisses, Asperges » → ["Asperges"]) : ni ingrédient, ni recette, ni déjà à classer ou écarté.
 // Repas pris dehors (restaurant, chez des amis…) : rien à acheter, jamais proposé comme plat
@@ -533,8 +537,11 @@ function clean(k,id,r){
     last:/^\d{4}-\d{2}-\d{2}$/.test(r.last)?r.last:null,since:/^\d{4}-\d{2}-\d{2}$/.test(r.since)?r.since:null,
     adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,
     ts,deleted}:null;
-  if(k==="foods"){const q=Math.max(0.25,Math.min(2000,+r.q||0))||null;
-    if(FOODS.some(f=>f.id===id))return{id,q,syn:str(r.syn,200)||null,ts,deleted};
+  if(k==="foods"){let q=+r.q>0?Math.max(0.25,Math.min(2000,+r.q)):null;
+    const base=FOODS.find(f=>f.id===id);
+    // v246-v248 : un synonyme ou un retrait enregistrait 0,25 par erreur (pas de quantité) → quantité par défaut
+    if(base&&q===0.25&&(base.kind==="g"||r.syn||r.off))q=null;
+    if(base)return{id,q,syn:str(r.syn,200)||null,off:r.off===true||undefined,ts,deleted};
     const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,syn:str(r.syn,200)||null,ts,deleted}}
   if(k==="combos"){const text=str(r.text,120);
@@ -576,6 +583,6 @@ function prune(S,now){
   for(const id of Object.keys(S.meals||{})){const d=Date.parse(id.slice(0,10));if(d&&now-d>MEAL_TTL){delete S.meals[id];n++}}
   return n;
 }
-root.Data={KINDS,okId,str,clean,cleanAll,splitSeasoning,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
+root.Data={KINDS,hiddenFoods,okId,str,clean,cleanAll,splitSeasoning,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
   TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

@@ -96,3 +96,30 @@ test("un ingrédient créé passe avant celui de l'app à égalité", () => {
   Data.setCustom({ foods: {} });
   assert.equal(Data.foodFor("viande hachée").id, "hache");
 });
+
+test("ingrédient de l'app retiré puis remis", () => {
+  const r = Data.clean("foods", "poulet", { id: "poulet", off: true });
+  Data.setCustom({ foods: { poulet: r } });
+  assert.equal(Data.foodFor("poulet"), null);
+  assert.deepEqual(Data.hiddenFoods().map(f => f.id), ["poulet"]);
+  Data.setCustom({ foods: { poulet: Data.clean("foods", "poulet", { id: "poulet", off: false }) } });
+  assert.equal(Data.foodFor("poulet").id, "poulet");
+  assert.equal(Data.hiddenFoods().length, 0);
+  Data.setCustom({ foods: {} });
+});
+
+test("poulet : escalopes, cuisses, entier, au poids", () => {
+  Data.setCustom({ foods: {} });
+  assert.equal(Data.foodFor("escalopes de poulet").id, "esc-poulet");
+  assert.equal(Data.foodFor("cuisses de poulet").id, "cuisse-poulet");
+  assert.equal(Data.foodFor("poulet entier").id, "poulet-entier");
+  assert.equal(Data.foodFor("poulet rôti").id, "poulet-entier");
+  assert.equal(Data.foodFor("poulet").id, "poulet");
+});
+
+test("synonyme sur un ingrédient de l'app : la quantité par défaut est gardée", () => {
+  assert.equal(Data.clean("foods", "poulet", { id: "poulet", syn: "volaille" }).q, null);
+  assert.equal(Data.clean("foods", "poulet", { id: "poulet", syn: "volaille", q: 0.25 }).q, null);
+  assert.equal(Data.clean("foods", "poulet", { id: "poulet", q: 160 }).q, 160);
+  assert.equal(Data.clean("foods", "poulet-entier", { id: "poulet-entier", q: 0.25 }).q, 0.25);
+});
