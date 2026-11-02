@@ -189,10 +189,14 @@ function emojiFor(label){const n=words(label);let best=null,len=0;
   for(const [w,e] of EMOJI)if(w.length>len&&new RegExp(" "+w.replace(/ /g,"[sx]? ")+"[sx]? ").test(n)){best=e;len=w.length}
   return best}
 let CUSTOM=[];
-function setCustom(S){setPlaisir(S);CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
+const synWords=syn=>String(syn||"").split(",").map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean);
+function setCustom(S){setPlaisir(S);
+  BASEX=FOODS.map(f=>{const r=S.foods&&S.foods[f.id];return r&&!r.deleted&&r.syn?{...f,syn:r.syn,words:[...f.words,...synWords(r.syn)]}:f});CUSTOM=Object.values(S.foods||{}).filter(r=>r&&!r.deleted&&r.label&&!FOODS.some(f=>f.id===r.id))
   .map(r=>({id:r.id,icon:emojiFor(r.label)||CAT_ICON[r.cat],cat:r.cat,label:r.label,syn:r.syn||"",
     words:[r.label,...String(r.syn||"").split(",")].map(w=>words(w).trim().replace(/s$/,"")).filter(Boolean),kind:r.kind,q:r.q,store:r.store||"auchan",custom:true}))}
-const allFoods=()=>[...FOODS,...CUSTOM];
+// synonymes ajoutés aux ingrédients fournis par l'app (S.foods[id].syn)
+let BASEX=FOODS;
+const allFoods=()=>[...BASEX,...CUSTOM];
 // Aliments inconnus d'une suite (« Saucisses, Asperges » → ["Asperges"]) : ni ingrédient, ni recette, ni déjà à classer ou écarté.
 // Repas pris dehors (restaurant, chez des amis…) : rien à acheter, jamais proposé comme plat
 const OUT="Repas à l'extérieur";
@@ -530,7 +534,7 @@ function clean(k,id,r){
     adj:/^\d{4}-\d{2}-\d{2}$/.test(r.adj)?r.adj:null,
     ts,deleted}:null;
   if(k==="foods"){const q=Math.max(0.25,Math.min(2000,+r.q||0))||null;
-    if(FOODS.some(f=>f.id===id))return{id,q,ts,deleted};
+    if(FOODS.some(f=>f.id===id))return{id,q,syn:str(r.syn,200)||null,ts,deleted};
     const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,syn:str(r.syn,200)||null,ts,deleted}}
   if(k==="combos"){const text=str(r.text,120);

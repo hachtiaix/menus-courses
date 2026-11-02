@@ -77,3 +77,13 @@ test("ingrédient perso : synonymes reconnus et gardés au nettoyage", () => {
   assert.equal(Data.foodFor("pommes de terre grenaille").id, "c-9");
   Data.setCustom({ foods: {} });
 });
+
+test("ingrédient de l'app : synonymes ajoutés", () => {
+  const r = Data.clean("foods", "hache", { id: "hache", syn: "hachis" });
+  assert.equal(r.syn, "hachis");
+  Data.setCustom({ foods: { hache: r } });
+  assert.equal(Data.foodFor("1 kg hachis").id, "hache");
+  assert.equal(Data.foodFor("steak haché").id, "hache");
+  Data.setCustom({ foods: {} });
+  assert.equal(Data.foodFor("hachis"), null);
+});
