@@ -480,3 +480,4 @@ body.withaz #view .count{margin-right:28px}
 .nvfoot .acts{margin-top:0}
 .nvskip{display:block;margin:8px auto 0;border:0;background:none;color:var(--mut);font:inherit;font-size:14px;text-decoration:underline}
 #nvref{white-space:nowrap;padding-left:6px;padding-right:6px} /* « Passer ce repas → » sur une ligne */
+.nvwhen{width:100%;margin:0 0 6px;font:inherit;font-size:15px;font-weight:600;color:var(--fg);padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
