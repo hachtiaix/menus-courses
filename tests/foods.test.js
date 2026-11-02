@@ -67,3 +67,13 @@ test("ingrédients placard : épices, sel, huile… ; herbes fraîches seulement
   assert.ok(!Data.isPantry(S2, "moutarde"));
   assert.ok(Data.isPantry(S2, "crème fraîche"));
 });
+
+test("ingrédient perso : synonymes reconnus et gardés au nettoyage", () => {
+  const r = Data.clean("foods", "c-9", { id: "c-9", label: "Pommes de terre grenaille", cat: "fec", kind: "g", q: 200, syn: "grenailles, patates nouvelles" });
+  assert.equal(r.syn, "grenailles, patates nouvelles");
+  Data.setCustom({ foods: { "c-9": r } });
+  assert.equal(Data.foodFor("patates nouvelles").id, "c-9");
+  assert.equal(Data.foodFor("Grenailles").id, "c-9");
+  assert.equal(Data.foodFor("pommes de terre grenaille").id, "c-9");
+  Data.setCustom({ foods: {} });
+});
