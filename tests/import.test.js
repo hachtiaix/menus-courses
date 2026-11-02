@@ -109,3 +109,10 @@ test("import : sel et poivre séparés", () => {
   assert.deepEqual(f(["Pommes de terre et carottes"]), ["Pommes de terre et carottes"]); // pas de sel ni poivre : inchangé
   assert.deepEqual(Data.fromSchema({ name: "X", ingredients: ["400 g Pâtes", "Sel, poivre"] }, "").ingredients, ["400 g de pâtes", "sel", "poivre"]);
 });
+
+test("idées refusées et avis gardés par la synchro", () => {
+  const u = "https://www.marmiton.org/recettes/recette_wrap-thon-et-avocat_540082.aspx";
+  assert.deepEqual(Data.clean("combos", "n1", { text: u, kind: "refus", ts: 1 }), { id: "n1", text: u, kind: "refus", label: null, ts: 1, deleted: false });
+  assert.equal(Data.clean("combos", "n2", { text: "javascript:x", kind: "refus", ts: 1 }), null);
+  assert.equal(Data.clean("recipes", "r", { name: "A", avis: "oui", ingredients: [] }).avis, "oui");
+});

@@ -475,3 +475,7 @@ body.withaz #view .count{margin-right:28px}
 .tag.out{background:#e8eef7;border-color:#b7c6dd;color:#2c4a73}
 @media(prefers-color-scheme:dark){.tag.out{background:#1f2a3a;border-color:#3b4d68;color:#b9cbe6}}
 .slots{text-transform:none} /* « 4 pers. », « Rien à acheter » : sans majuscules ajoutées */
+/* idées repas par repas : boutons toujours visibles en bas */
+.nvfoot{position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom));background:var(--bg);margin:0 -16px calc(-16px - env(safe-area-inset-bottom));padding:10px 16px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -6px 14px rgba(0,0,0,.06)}
+.nvfoot .acts{margin-top:0}
+.nvskip{display:block;margin:8px auto 0;border:0;background:none;color:var(--mut);font:inherit;font-size:14px;text-decoration:underline}

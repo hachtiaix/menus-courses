@@ -534,12 +534,13 @@ function clean(k,id,r){
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,ts,deleted}}
   if(k==="combos"){const text=str(r.text,120);
     if(r.kind==="plaisir")return text?{id,text:text.slice(0,40),kind:"plaisir",off:r.off===true,ts,deleted}:null; // mot de la liste des plats plaisir
+    if(r.kind==="refus")return SOURCE.test(text)?{id,text,kind:"refus",label:str(r.label,100)||null,ts,deleted}:null; // nouvelle recette refusée : plus reproposée
     if(r.kind==="off")return text&&/[,+]/.test(text)?{id,text,kind:"off",ts,deleted}:null; // association retirée à la main
     return text&&/[,+]/.test(text)?{id,text,ts,deleted}:null}
   if(k==="aisles")return R&&R.byId[r.rayon]?{id,rayon:r.rayon,ts,deleted}:null;
   if(k==="recipes")return{id,name:str(r.name,120),serves:int(r.serves,1,30,4),season:SEASONS.includes(r.season)?r.season:null,
     dessert:r.dessert===true?true:r.dessert===false?false:null,steps:str(r.steps,4000)||null, // étapes (markdown simple)
-    gourmand:r.gourmand===true?true:null, // plat riche (case « Plat gourmand ») : 4 au plus par semaine dans 💡
+    gourmand:r.gourmand===true?true:null,avis:r.avis==="oui"?"oui":null, // recette importée : aimée (« Avez-vous aimé ? ») // plat riche (case « Plat gourmand ») : 4 au plus par semaine dans 💡
     source:SOURCE.test(str(r.source,300))?str(r.source,300):null,prep:Number.isInteger(r.prep)&&r.prep>0&&r.prep<=600?r.prep:null, // importée : lien d'origine, préparation (min)
     ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
   return null;

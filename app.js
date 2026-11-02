@@ -379,13 +379,13 @@ function nextFreeSlot(){const t=new Date();t.setHours(12);
     for(const s of ["m","s"]){const o=S.meals[k+"-"+s];if(!o||!o.text)return k+"-"+s}}
   return t.toISOString().slice(0,10)+"-s"}
 // « + » sur une recette : on choisit le jour, le repas est créé puis la fenêtre des ingrédients s'ouvre.
-function planRecipe(r,sel){
+function planRecipe(r,sel,done){
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Ajouter « ${esc(r.name)} » aux menus</h2>
    <select id="plto" style="width:100%">${slotOptions(null,sel||nextFreeSlot()," (remplace)")}</select>
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Ajouter</button></div></div>`;
   document.body.appendChild(ov);
-  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  const close=()=>ov.remove(),cancel=()=>{close();if(done)done()};ov.onclick=e=>{if(e.target===ov)cancel()};$("#no").onclick=cancel;
   $("#ok").onclick=()=>{
     const key=$("#plto").value,o=S.meals[key];
     if(o&&o.text){
@@ -396,7 +396,7 @@ function planRecipe(r,sel){
     const n=+LS.defN||r.serves||BASE;
     touch("meals",{key,text:r.name,servings:n});gourmandWarn(key);applyCompanion(key);close();
     tab=LS.tab="menus";const d=new Date(key.slice(0,10)+"T12:00"),m=monday();setWk(wkOff()+Math.floor((d-m)/(7*864e5)+1e-9));
-    render();ingredientsDialog(r.name,key);
+    render();ingredientsDialog(r.name,key,undefined,done);
   };
 }
 // Repas déjà acheté pour prev.n personnes : on passe à n et on n'achète que la différence.
@@ -591,7 +591,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v238";
+const BASE=4,VERSION="v240";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -904,7 +904,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-st2]");if(b){tab=LS.tab=b.dataset.st2;render();scrollTo(0,0)}});
 $("#tabs").onclick=e=>{let t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t==="recettes")rview="rec";if(t==="courses")t=S.lists[LS.store]&&!S.lists[LS.store].deleted?LS.store:"auchan";if(t){tab=LS.tab=t;render();scrollTo(0,0);
-  if(t==="menus"){toToday();setTimeout(()=>maybePropose(),600)}
+  if(t==="menus"){toToday();setTimeout(()=>{if(!maybeAvis())maybePropose()},600)}
   if(window.syncSoon)syncSoon()}};
 // Menus : aujourd'hui en haut de l'écran (ouverture de l'app ou de l'onglet)
 const toToday=()=>{const d=document.querySelector(".day.today");if(d)scrollTo(0,Math.max(0,d.getBoundingClientRect().top+scrollY-(document.querySelector("header").offsetHeight+8)))};
@@ -968,6 +968,9 @@ function renderSettings(inRecipes){
      <h3 class="ray" style="margin-top:22px">😋 Plats gourmands</h3>
      <p class="mut">Plats riches (gratins, tartiflette…) : cochez « Plat gourmand » dans la recette. Dans 💡 : 4 au plus par semaine, un même plat pas deux fois en 30 jours ; les gratins de pâtes et pâtes riches forment une seule famille (après l'un d'eux, aucun pendant 30 jours, puis un seul, au hasard). La junk food compte aussi, sans case à cocher.</p>
      <div class="card" style="padding:12px 14px;line-height:2.1">${live(S.recipes).filter(r=>r.gourmand).sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<span class="chipw">${esc(r.name)}</span>`).join(" ")||`<span class="mut">Aucune recette cochée pour l'instant</span>`}</div>
+     <h3 class="ray" style="margin-top:22px">🚫 Idées refusées</h3>
+     <p class="mut">Nouvelles recettes que vous avez refusées : elles ne sont plus proposées. × pour en remettre une.</p>
+     <div class="card" style="padding:12px 14px;line-height:2.1">${live(S.combos||{}).filter(c=>c.kind==="refus").map(c=>`<span class="chipw">${esc(c.label||decodeURIComponent(c.text.replace(/^.*\/(recette_)?|[_-]\d+\.aspx$/g,"")).replace(/-/g," "))}<button class="cdel" data-rdel="${c.id}" aria-label="Remettre">×</button></span>`).join(" ")||`<span class="mut">Aucune</span>`}</div>
      <h3 class="ray" style="margin-top:22px">🍔 Junk food</h3>
      <p class="mut">Une seule toutes les 2 semaines dans 💡, et elle compte dans les 4 plats gourmands de la semaine. Un plat dont le nom contient l'un de ces mots en fait partie.</p>
      <div class="card" style="padding:12px 14px;line-height:2.1">${Data.plaisirList(S).map(x=>`<span class="chipw">${esc(x.word.charAt(0).toUpperCase()+x.word.slice(1))}<button class="cdel" data-pdel="${x.id||""}" data-pw="${esc(x.word)}" aria-label="Retirer">×</button></span>`).join(" ")}</div>
@@ -1059,6 +1062,7 @@ function renderSettings(inRecipes){
     if(off)touch("combos",{...off,deleted:true});else touch("combos",{id:"p-"+uid(),text:t,kind:"plaisir"});render()});
   document.querySelectorAll("[data-pw]").forEach(el=>el.onclick=()=>{const id=el.dataset.pdel,w=el.dataset.pw;if(!confirm(`Retirer « ${w} » de la junk food ?`))return;
     if(id&&S.combos[id])touch("combos",{...S.combos[id],deleted:true});else touch("combos",{id:"o-"+uid(),text:w,kind:"plaisir",off:true});render()});
+  document.querySelectorAll("[data-rdel]").forEach(el=>el.onclick=()=>{const c=S.combos[el.dataset.rdel];if(c){touch("combos",{...c,deleted:true});render()}});
   // accompagnement appris des repas : retiré = plus jamais proposé ni affiché
   document.querySelectorAll("[data-coff]").forEach(el=>el.onclick=()=>{const t=el.dataset.coff;if(!confirm(`Retirer l'association « ${t} » ?`))return;
     touch("combos",{id:"x-"+uid(),text:t,kind:"off"});render()});
@@ -1133,36 +1137,88 @@ async function fetchRecipe(url){
 // Mercredi, jeudi, vendredi : si la période suivante (samedi → vendredi) est remplie à moitié ou moins, 5 nouveautés au plus,
 // rapides (30 min de préparation au plus) de Marmiton et CuisineAZ (nouveautes.json, mis à jour chaque mardi soir).
 // Une fois par jour au plus ; « Non merci » : plus rien jusqu'à la période suivante.
-async function maybePropose(force){
+async function maybePropose(force,direct){
   const t=todayKey(),wd=new Date(t+"T12:00").getDay(),slots=Data.planSlots(t),period=slots[0].slice(0,10);
   const filled=slots.filter(k=>S.meals[k]&&!S.meals[k].deleted&&S.meals[k].text).length;
   if(!force&&(wd<3||wd>5||LS.nvDay===t||LS.nvNo===period||filled>slots.length/2))return;
   if(!canSync()||document.querySelector(".ov"))return;
   let list=[];try{const r=await fetch("nouveautes.json",{cache:"no-cache"});list=((await r.json())||{}).recettes||[]}catch(_){return}
-  const mine=new Set(live(S.recipes).map(x=>x.source).filter(Boolean)),names=new Set(live(S.recipes).map(x=>Data.plain(x.name).trim()));
+  const refus=new Set(live(S.combos||{}).filter(c=>c.kind==="refus").map(c=>c.text));
+  const mine=new Set([...live(S.recipes).map(x=>x.source).filter(Boolean),...refus]),names=new Set(live(S.recipes).map(x=>Data.plain(x.name).trim()));
   // des repas : pas de toasts ni de recettes pour robot (Thermomix, Cookeo…), même si la liste en contient encore
   const NOT_MEAL=/toasts?\b|tartines?\b|bruschetta|crostini|canap[ée]s?\b|\bchips\b|thermomix|cookeo|companion|monsieur cuisine/i;
   const ok=list.filter(x=>x&&Data.SOURCE.test(x.url)&&!mine.has(x.url)&&!names.has(Data.plain(x.titre||"").trim())&&x.prep>0&&x.prep<=30&&!NOT_MEAL.test((x.titre||"")+" "+x.url));
   const mix=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]),a=mix(ok.filter(x=>x.site==="marmiton")),b=mix(ok.filter(x=>x.site!=="marmiton")),pick=[];
-  while(pick.length<5&&(a.length||b.length)){if(a.length)pick.push(a.shift());if(pick.length<5&&b.length)pick.push(b.shift())} // les deux sites, à tour de rôle
+  while(a.length||b.length){if(a.length)pick.push(a.shift());if(b.length)pick.push(b.shift())} // les deux sites, à tour de rôle
+  if(direct){if(pick.length)ideaFlow(pick);else toast("Pas d'autre idée pour l'instant");return}
   if(!pick.length||tab!=="menus"||document.querySelector(".ov"))return;
   LS.nvDay=t;
   const day=new Date(period+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
   const ov=document.createElement("div");ov.className="ov";
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>🆕 Nouvelles recettes rapides</h2>
-   <p class="mut">Pour la semaine du samedi ${esc(day)}, ${filled?`${filled} repas sur ${slots.length} ${filled>1?"sont prévus":"est prévu"}`:"aucun repas n'est encore prévu"}. Une idée nouvelle ? Moins de 30 min de préparation.</p>
-   <div class="card nv">${pick.map((x,i)=>`<div class="nvrow"><span class="t"><b>${esc(String(x.titre||""))}</b><br><small class="mut">⏱ ${+x.prep} min · ${x.site==="marmiton"?"Marmiton":"CuisineAZ"}</small><small class="nverr" id="nve${i}"></small></span>
-     <span class="nvb"><a class="btn sec" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Voir</a><button class="btn" data-nv="${i}">Ajouter</button></span></div>`).join("")}</div>
-   <div class="acts"><button class="btn sec" id="nvno">Non merci<br><small>jusqu'à samedi</small></button><button class="btn sec" id="nvlater">Plus tard</button></div></div>`;
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>🆕 Envie d'idées ?</h2>
+   <p class="mut">Pour la semaine du samedi ${esc(day)}, ${filled?`${filled} repas sur ${slots.length} ${filled>1?"sont prévus":"est prévu"}`:"aucun repas n'est encore prévu"}. Des nouvelles recettes rapides (moins de 30 min de préparation) vous attendent, repas par repas.</p>
+   <div class="acts"><button class="btn sec" id="nvlater">Plus tard</button><button class="btn" id="nvgo">Voir les idées</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#nvlater").onclick=close;
-  $("#nvno").onclick=()=>{LS.nvNo=period;close()};
-  // Ajouter : la recette est lue, montrée pour vérification, puis placée dans les menus (premier repas libre de la période)
-  ov.querySelectorAll("[data-nv]").forEach(b=>b.onclick=async()=>{const x=pick[+b.dataset.nv];b.disabled=true;b.textContent="Lecture…";
-    try{const rec=await fetchRecipe(x.url);close();
-      recipeEditor(null,rec,saved=>{const sl=Data.planSlots(todayKey()),libre=k=>!(S.meals[k]&&S.meals[k].text); // le premier soir libre, sinon un midi
-        planRecipe(saved,sl.find(k=>k.endsWith("-s")&&libre(k))||sl.find(libre))})}
-    catch(e){b.disabled=false;b.textContent="Réessayer";const m=ov.querySelector("#nve"+b.dataset.nv);if(m)m.textContent="⚠ "+e.message}});
+  $("#nvgo").onclick=()=>{close();ideaFlow(pick)};
+}
+// Les idées repas par repas (repas libres de la période samedi → vendredi, les soirs d'abord) : la recette s'affiche
+// (ingrédients, étapes) ; « Ajouter » la place sur ce repas (puis les ingrédients pour les listes) et passe au repas suivant ;
+// « Passer ce repas → » la refuse (liste des idées refusées, modifiable dans ⚙︎ → Habitudes) et va au repas suivant.
+// Fermée : on arrête là, retour sur Menus.
+function ideaFlow(pool){
+  const sl=Data.planSlots(todayKey()),libre=k=>!(S.meals[k]&&S.meals[k].text);
+  const slots=[...sl.filter(k=>k.endsWith("-s")&&libre(k)),...sl.filter(k=>k.endsWith("-m")&&libre(k))];
+  let si=0,ii=0;const done=()=>{tab=LS.tab="menus";render();toast("✓ Fini pour les idées")};
+  const load=x=>x.rec||(x.rec=fetchRecipe(x.url).catch(e=>({error:e.message})));
+  const show=async()=>{
+    if(si>=slots.length||ii>=pool.length){done();return}
+    const key=slots[si],x=pool[ii],site=x.site==="marmiton"?"Marmiton":"CuisineAZ";
+    if(pool[ii+1])load(pool[ii+1]); // la suivante se prépare en avance
+    const when=new Date(key.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+(key.endsWith("-m")?" midi":" soir");
+    const ov=document.createElement("div");ov.className="ov";
+    ov.innerHTML=`<div class="sheet"><div class="grab"></div><p class="mut step">${esc(when)}</p><h2>${esc(String(x.titre||""))}</h2>
+     <p class="mut">⏱ ${+x.prep} min de préparation · ${site} · <a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Voir sur le site ↗</a></p>
+     <div id="nvrec"><p class="mut">Lecture de la recette…</p></div>
+     <div class="nvfoot"><div class="acts"><button class="btn sec" id="nvref">Passer ce repas →</button><button class="btn" id="nvadd" disabled>Ajouter</button></div></div></div>`;
+    document.body.appendChild(ov);
+    const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov){close();tab=LS.tab="menus";render()}};
+    // passer : l'idée est refusée (plus reproposée), on va au repas suivant avec une autre idée
+    $("#nvref").onclick=()=>{touch("combos",{id:"n-"+uid(),text:x.url,kind:"refus",label:String(x.titre||"").slice(0,100)});close();ii++;si++;show()};
+    const rec=await load(x);if(!ov.isConnected)return;
+    if(rec.error){$("#nvrec").innerHTML=`<p class="nverr">⚠ ${esc(rec.error)}</p>`;return}
+    $("#nvrec").innerHTML=`<p class="mut">Pour ${rec.serves} personne${rec.serves>1?"s":""}${rec.from?` (adaptée, prévue pour ${rec.from})`:""}</p>
+      <div class="card cook">${rec.ingredients.map(t=>`<div class="row"><span class="t">${esc(t)}</span></div>`).join("")}</div>
+      ${rec.steps?`<details class="fold"><summary class="steps-h">Étapes</summary>${md(rec.steps)}</details>`:""}`;
+    const add=$("#nvadd");add.disabled=false;
+    add.onclick=()=>{close();
+      const r={id:uid(),name:rec.name,serves:rec.serves,ingredients:rec.ingredients.map(t=>({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})),
+        steps:rec.steps||"",source:rec.source,prep:rec.prep,season:Data.recipeSeason({name:rec.name}),dessert:false};
+      touch("recipes",r);touch("meals",{key,text:r.name,servings:+LS.defN||r.serves||BASE});gourmandWarn(key);render();
+      ii++;si++;ingredientsDialog(r.name,key,undefined,show)}; // puis le repas suivant
+  };
+  show();
+}
+// Recette importée, mangée : « Avez-vous aimé ? » — oui : gardée ; non : retirée (et plus reproposée), une autre idée si on veut.
+const avisAsked=new Set();
+function maybeAvis(){
+  if(document.querySelector(".ov"))return false;const t=todayKey(),norm=Data.plain;
+  const r=live(S.recipes).find(r=>r.source&&!r.avis&&!avisAsked.has(r.id)&&live(S.meals).some(m=>m.text&&m.key&&m.key.slice(0,10)<t&&norm(m.text).includes(norm(r.name))));
+  if(!r)return false;avisAsked.add(r.id);
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Avez-vous aimé « ${esc(r.name)} » ?</h2>
+   <p class="mut">Nouvelle recette essayée récemment.</p>
+   <div class="acts"><button class="btn sec" id="avno">Non</button><button class="btn" id="avok">Oui, on la garde</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};
+  $("#avok").onclick=()=>{touch("recipes",{...r,avis:"oui"});close();toast("✓ Recette gardée")};
+  $("#avno").onclick=()=>{close();touch("recipes",{...r,deleted:true});if(r.source)touch("combos",{id:"n-"+uid(),text:r.source,kind:"refus",label:r.name});render();
+    const o2=document.createElement("div");o2.className="ov";
+    o2.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Recette retirée</h2><p class="mut">Voulez-vous une autre nouvelle recette à la place ?</p>
+     <div class="acts"><button class="btn sec" id="av2no">Non merci</button><button class="btn" id="av2ok">Oui, une autre</button></div></div>`;
+    document.body.appendChild(o2);const c2=()=>o2.remove();o2.onclick=e=>{if(e.target===o2)c2()};$("#av2no").onclick=c2;
+    $("#av2ok").onclick=()=>{c2();maybePropose(true,true)}};
+  return true;
 }
 // Import d'une sauvegarde (fichier exporté, ou fichier de la sauvegarde Home Assistant) : données vérifiées comme
 // celles de la synchro (cleanAll). Par défaut, seul ce qui manque (ou a été supprimé) revient ; rien d'actuel n'est remplacé.
@@ -1320,7 +1376,7 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
 }
 const readMsg=p=>`✓ Recette lue${p.from?` (prévue pour ${p.from}, adaptée pour ${p.serves})`:""} : vérifiez, puis « Enregistrer ».`;
 // pre : recette importée (pré-remplie, à vérifier) ; after(recette) : appelé une fois enregistrée
-function recipeEditor(r,pre,after){
+function recipeEditor(r,pre,after,onCancel){
   const lists=live(S.lists).sort(listSort);
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(SHORT[l.id]||l.name)}</option>`).join("");
   const rowH=i=>`<div class="ed-row"><input type="text" class="ing" value="${esc(i.t)}" placeholder="400 g de pâtes"><select>${opts(i.store||"auchan")}</select><button type="button" class="pill pan ${i.t&&pantryOf(i.t)?"on":""}" aria-label="Toujours à la maison (placard)" title="Placard : toujours à la maison">🏠</button><button class="x">×</button></div>`;
@@ -1358,9 +1414,10 @@ function recipeEditor(r,pre,after){
   // toucher à côté de la fenêtre : on ferme seulement si rien n'a changé (sinon on demande)
   const snap=()=>[...ov.querySelectorAll("input,textarea,select,.pan")].map(e=>e.classList.contains("pan")?e.classList.contains("on"):e.type==="checkbox"?e.checked:e.value).join("\u0001");
   const start=pre?null:snap(); // recette importée : pas encore enregistrée, on demande toujours
-  ov.onclick=e=>{if(e.target===ov){if(snap()===start||confirm(pre?"Abandonner cette recette importée ?":"Abandonner les modifications de la recette ?"))close();return}const x=e.target.closest(".x");if(x)x.parentNode.remove();
+  const cancel=()=>{close();if(onCancel)onCancel()};
+  ov.onclick=e=>{if(e.target===ov){if(snap()===start||confirm(pre?"Abandonner cette recette importée ?":"Abandonner les modifications de la recette ?"))cancel();return}const x=e.target.closest(".x");if(x)x.parentNode.remove();
     const p=e.target.closest(".pan");if(p)p.classList.toggle("on")}; // 🏠 placard : vaut pour toutes les recettes
-  $("#no").onclick=close;
+  $("#no").onclick=cancel;
   // Texte collé : une ligne d'ingrédient par ligne (puces, titres et étapes ignorés), « pour 6 personnes » règle le nombre.
   $("#paste").oninput=()=>{const v=$("#paste").value;if(!/\n/.test(v.trim()))return;
     let lines=[],st="",pour=0;const all=v.split(/\r?\n/);
@@ -1453,7 +1510,7 @@ function toast(msg,undo){document.querySelectorAll(".toast").forEach(x=>x.remove
   const t=document.createElement("div");t.className="toast"+(undo?" undo":"");const m=document.createElement("span");m.textContent=msg;t.appendChild(m);
   if(undo){const b=document.createElement("button");b.type="button";b.textContent="Annuler";b.onclick=()=>{t.remove();undo()};t.appendChild(b)}
   document.body.appendChild(t);setTimeout(()=>t.remove(),undo?5000:3500)}
-purgeDone();render();if(tab==="menus"){toToday();setTimeout(()=>maybePropose(),1500)}sync();
+purgeDone();render();if(tab==="menus"){toToday();setTimeout(()=>{if(!maybeAvis())maybePropose()},1500)}sync();
 setInterval(purgeDone,5*60*1000);
 // pas encore de code (nouvel appareil) : directement sur l'onglet Foyer, où on le saisit
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>{tab=LS.tab="settings";stab="foyer";render()},300);
