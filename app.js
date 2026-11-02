@@ -596,7 +596,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v258";
+const BASE=4,VERSION="v260";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1355,11 +1355,15 @@ function foodEditor(cat,rec,done,step){ // rec : aliment inconnu d'un repas, don
 // Ligne d'un ingrédient (liste Ingrédients, ou détail d'un groupe comme « Poulet »)
 const kindSel=f=>f.kind==="g"||f.kind==="n"?`<select class="fk" data-fk="${f.id}" aria-label="Compter"><option value="g" ${f.kind==="g"?"selected":""}>au poids</option><option value="n" ${f.kind==="n"?"selected":""}>à la pièce</option></select>`:"";
 // « aussi : bavette, rôti de bœuf (200 g) » : la quantité propre d'un autre nom est rappelée
-const synShow=f=>{const A=Object.values(f.amt||{});return String(f.syn).split(",").map(x=>x.trim()).filter(Boolean).map(t=>{const a=A.find(v=>v.t===t);
-  return esc(t)+(a?` <b class="sq-own">(${a.kind==="g"?(a.q>=1000?String(a.q/1000).replace(".",",")+" kg":a.q+" g"):(a.q<1?"1 pour "+Math.round(1/a.q):String(a.q).replace(".",",")+(a.q>1?" pièces":" pièce"))})</b>`:"")}).join(", ")};
+const synShow=f=>{const A=Object.values(f.amt||{}),lab=a=>a.kind==="g"?(a.q>=1000?String(a.q/1000).replace(".",",")+" kg":a.q+" g"):a.q<1?"1 pour "+Math.round(1/a.q):String(a.q).replace(".",",")+(a.q>1?" pièces":" pièce");
+  const groups=new Map(); // même quantité → un seul groupe : « 1 pour 4 · poulet entier, poulet rôti »
+  const base={kind:f.kind,q:(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q},kb=f.kind==="g"||f.kind==="n"?lab(base):"";
+  groups.set(kb,[f.self&&f.label===Data.baseLabel(f.id)?f.self:f.label.charAt(0).toLowerCase()+f.label.slice(1)]); // l'ingrédient lui-même en premier, avec sa quantité
+  for(const t of String(f.syn).split(",").map(x=>x.trim()).filter(Boolean)){const a=A.find(v=>v.t===t),k=a?lab(a):kb;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(t)}
+  return [...groups].map(([k,ts])=>`<span class="sgrp">${k?`<b class="sq-own">${k}</b> · `:""}${esc(ts.join(", "))}</span>`).join("")};
 function foodRow(f,lab,withKind){const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
      const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
-     return `<div class="row link" data-fedit="${f.id}"><span class="t">${esc(lab||f.label)}<br><small class="mut">${withKind?kindSel(f)+" ":""}${esc(v)}${(f.kind==="g"||f.kind==="n")&&!withKind?" par personne":""}${f.syn?" · aussi : "+synShow(f):""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button></div>`}
+     return `<div class="row link" data-fedit="${f.id}"><span class="t">${esc(lab||f.label)}<br><small class="mut">${f.syn&&!withKind?synShow(f):`${withKind?kindSel(f)+" ":""}${esc(v)}${(f.kind==="g"||f.kind==="n")&&!withKind?" par personne":""}`}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button></div>`}
 // au poids ↔ à la pièce : la quantité repart d'une valeur simple (150 g ou 1)
 function setKind(id,kind){const f=Data.allFoods().find(x=>x.id===id);if(!f||f.kind===kind)return;
   touch("foods",{...(S.foods[id]||{}),id,kind,q:kind==="g"?150:1,deleted:false})}

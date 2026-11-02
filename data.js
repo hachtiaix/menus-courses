@@ -114,7 +114,7 @@ function companionFor(S,name,today){
 const FOODS=[
   {id:"viande",icon:"🥩",cat:"prot",label:"Pièce de bœuf",words:["piece de boeuf","viande rouge","viande","steak","boeuf","bavette","entrecote","roti de boeuf"],kind:"g",q:150,store:"boucherie"},
   {id:"hache",icon:"🥩",cat:"prot",label:"Steak haché",words:["steak hache","viande hachee","hache"],kind:"n",q:1,store:"boucherie"},
-  {id:"poulet",icon:"🍗",cat:"prot",label:"Poulet",words:["poulet","blanc de poulet"],kind:"g",q:150,store:"boucherie",
+  {id:"poulet",icon:"🍗",cat:"prot",label:"Poulet",self:"morceaux de poulet",words:["poulet","blanc de poulet","morceau de poulet"],kind:"g",q:150,store:"boucherie",
     syn0:"poulet entier, poulet rôti, escalopes de poulet, cuisses de poulet, pilons de poulet", // autres noms d'office, chacun sa quantité
     synq0:{"poulet entier":{kind:"n",q:0.25},"poulet rôti":{kind:"n",q:0.25},"escalopes de poulet":{kind:"n",q:1},"cuisses de poulet":{kind:"n",q:1},"pilons de poulet":{kind:"n",q:2}}},
   {id:"esc-dinde",icon:"🦃",cat:"prot",label:"Escalopes de dinde",words:["escalope de dinde","escalopes de dinde","dinde"],kind:"n",q:1,store:"boucherie"},
