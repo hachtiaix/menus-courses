@@ -596,7 +596,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v249";
+const BASE=4,VERSION="v251";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -960,9 +960,7 @@ function renderSettings(inRecipes){
   const body={
    aliments:`<p class="mut">Quantité par personne quand vous tapez une suite d'aliments dans un repas (ex. « viande rouge, haricots verts, pommes de terre surgelées »).</p>
    <input type="search" id="fsearch" placeholder="🔎 Rechercher un ingrédient" autocomplete="off" style="width:100%;margin-bottom:6px">
-   ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"],["autre","🍽️ Autres"]].filter(([c])=>Data.allFoods().some(f=>f.cat===c)).map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>{const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
-     const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
-     return `<div class="row link" data-fedit="${f.id}"><span class="t">${esc(f.label)}<br><small class="mut">${esc(v)}${f.kind==="g"||f.kind==="n"?" par personne":""}${f.syn?" · aussi : "+esc(f.syn):""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button></div>`}).join("")}</div>`).join("")}
+   ${[["leg","🥦 Légumes"],["fec","🥔 Féculents"],["prot","🥩 Viandes, œufs"],["pois","🐟 Poissons, crustacés"],["autre","🍽️ Autres"]].filter(([c])=>Data.allFoods().some(f=>f.cat===c)).map(([c,t])=>`<h3 class="fam ${c}">${t}</h3><div class="card fam ${c}">${Data.allFoods().filter(f=>f.cat===c).sort((x,y)=>x.label.localeCompare(y.label,"fr")).reduce(grpFoods,[]).sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>f.members?grpRow(f):foodRow(f)).join("")}</div>`).join("")}
    ${Data.hiddenFoods().length?`<details class="hidf"><summary class="mut">Ingrédients retirés (${Data.hiddenFoods().length})</summary><div class="card">${Data.hiddenFoods().sort((x,y)=>x.label.localeCompare(y.label,"fr")).map(f=>`<div class="row"><span class="t">${esc(f.label)}</span><button class="btn sec sm" data-fback="${f.id}">Remettre</button></div>`).join("")}</div></details>`:""}<button class="fab" id="fabf" aria-label="Ajouter un ingrédient">+</button>`,
    habitudes:`<p class="mut">Les suggestions 💡 proposent ces plats en priorité sur ces créneaux. L'app en apprend aussi toute seule à partir des repas passés.</p>
    <div class="card">${hs.length?hs.map(h=>`<div class="row link" data-hedit="${h.id}"><span class="t">${habitWhat(h).icon} ${esc(habitWhat(h).label)}<br><small class="mut">${habitWhen(h)}${h.auto?" · apprise":""}${h.adj?" · ajustée":""}</small></span><button class="x" data-hdel="${h.id}" aria-label="Retirer">×</button></div>`).join(""):`<div class="empty">Aucune habitude</div>`}</div>
@@ -1008,13 +1006,8 @@ function renderSettings(inRecipes){
       c.querySelectorAll(".row").forEach(r=>{const ok=!q||norm(r.querySelector(".t").textContent).includes(q);r.style.display=ok?"":"none";any=any||ok});
       c.style.display=any?"":"none";c.previousElementSibling.style.display=c.style.display})});
   on("#fabf","onclick",()=>foodEditor(null));
-  document.querySelectorAll("[data-fedit]").forEach(el=>el.onclick=e=>{if(e.target.closest("button"))return;const r=S.foods[el.dataset.fedit],f=Data.allFoods().find(x=>x.id===el.dataset.fedit);if(f&&!f.custom)synEditor(f);else if(r)foodEditor(r.cat,{...r,edit:true})});
-  document.querySelectorAll("[data-fdel]").forEach(el=>el.onclick=e=>{e.stopPropagation();const id=el.dataset.fdel,f=Data.allFoods().find(x=>x.id===id);if(!f||!confirm(`Retirer « ${f.label} » ?`))return;
-    if(f.custom)touch("foods",{...S.foods[id],deleted:true});else touch("foods",{...(S.foods[id]||{}),id,off:true,deleted:false});render()});
-  document.querySelectorAll("[data-fback]").forEach(el=>el.onclick=()=>{const id=el.dataset.fback;touch("foods",{...(S.foods[id]||{}),id,off:false,deleted:false});render()});
-  document.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.allFoods().find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
-    const st=f.kind==="g"?10:cur<1||(cur===1&&+el.dataset.d<0)?0.25:1,q=Math.max(f.kind==="g"?10:0.25,Math.round((cur+st*el.dataset.d)*100)/100);
-    touch("foods",{...(S.foods[f.id]||{}),id:f.id,q,deleted:false});render()});
+  wireFoods(document,render);
+  document.querySelectorAll("[data-fgrp]").forEach(el=>el.onclick=()=>grpSheet(el.dataset.fgrp));
 
   // Sauvegarde : un fichier JSON (tout le foyer), partagé vers Google Drive (Enregistrer dans Fichiers) ou téléchargé
   on("#exp","onclick",async()=>{const day=todayKey(),name=`menus-courses-${day}.json`;
@@ -1360,17 +1353,46 @@ function foodEditor(cat,rec,done,step){ // rec : aliment inconnu d'un repas, don
     touch("foods",{id:rec?rec.id:"c-"+uid(),label:label.charAt(0).toUpperCase()+label.slice(1),cat:$("#fc").value,kind:kg?"g":$("#fk").value,q:kg?Math.round(q*1000):q,store:$("#fs").value,syn:syn.join(", ")||null,deleted:false});close();render();if(done)done()};
   if(!rec)setTimeout(()=>$("#fn").focus(),50);
 }
+// Ligne d'un ingrédient (liste Ingrédients, ou détail d'un groupe comme « Poulet »)
+const kindSel=f=>f.kind==="g"||f.kind==="n"?`<select class="fk" data-fk="${f.id}" aria-label="Compter"><option value="g" ${f.kind==="g"?"selected":""}>au poids</option><option value="n" ${f.kind==="n"?"selected":""}>à la pièce</option></select>`:"";
+function foodRow(f,lab,withKind){const q=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+     const v=f.kind==="g"?(q>=1000?String(q/1000).replace(".",",")+" kg":q+" g"):f.kind==="n"&&f.as?q+" "+f.as.replace(/^(\S+?)s?(?= )/,(m,w)=>q>1?w+"s":w):f.kind==="n"?String(q).replace(".",",")+(q<1?" (une pour "+Math.round(1/q)+")":""):f.kind==="box"?"boîtes : petite 1, moyenne 2, grande 4":"« "+f.line+" »";
+     return `<div class="row link" data-fedit="${f.id}"><span class="t">${esc(lab||f.label)}<br><small class="mut">${withKind?kindSel(f)+" ":""}${esc(v)}${(f.kind==="g"||f.kind==="n")&&!withKind?" par personne":""}${f.syn?" · aussi : "+esc(f.syn):""}</small></span>${f.kind==="g"||f.kind==="n"?`<span class="stp sm"><button data-fq="${f.id}" data-d="-1" aria-label="Moins">−</button><button data-fq="${f.id}" data-d="1" aria-label="Plus">+</button></span>`:""}<button class="x" data-fdel="${f.id}" aria-label="Retirer">×</button></div>`}
+// plusieurs sortes d'un même ingrédient (poulet au poids, entier, escalopes, cuisses) : une seule ligne, détail en la touchant
+function grpFoods(out,f){if(!f.grp)return out.push(f),out;let g=out.find(x=>x.members&&x.label===f.grp);
+  if(!g)out.push(g={label:f.grp,members:[]});g.members.push(f);return out}
+const sorte=(f,g)=>{const x=f.label.toLowerCase().replace(new RegExp("\\b(de |d')?"+g.toLowerCase()+"\\b","g"),"").trim();return x||"morceaux"};
+function grpRow(g){return `<div class="row link" data-fgrp="${esc(g.label)}"><span class="t">${esc(g.label)}<br><small class="mut">${Data.allFoods().filter(f=>f.grp===g.label).map(f=>esc(sorte(f,g.label))).join(" · ")}</small></span><span class="chev">›</span></div>`}
+function grpSheet(name){const ov=document.createElement("div");ov.className="ov";document.body.appendChild(ov);
+  const fill=()=>{const ms=Data.allFoods().filter(f=>f.grp===name),nm=f=>{const x=sorte(f,name);return x.charAt(0).toUpperCase()+x.slice(1)};if(!ms.length){ov.remove();return}
+    ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(name)}</h2><p class="mut" style="margin:0 0 8px">Quantité par personne pour chaque sorte.</p><div class="card">${ms.map(f=>foodRow(f,nm(f),true)).join("")}</div>
+      <div class="acts"><button class="btn" id="gok">OK</button></div></div>`;
+    $("#gok").onclick=()=>ov.remove();wireFoods(ov,()=>{render();fill()},()=>ov.remove())};
+  ov.onclick=e=>{if(e.target===ov)ov.remove()};fill()}
+// au poids ↔ à la pièce : la quantité repart d'une valeur simple (150 g ou 1)
+function setKind(id,kind){const f=Data.allFoods().find(x=>x.id===id);if(!f||f.kind===kind)return;
+  touch("foods",{...(S.foods[id]||{}),id,kind,q:kind==="g"?150:1,deleted:false})}
+function wireFoods(root,again,leave){
+  root.querySelectorAll("[data-fk]").forEach(el=>el.onchange=()=>{setKind(el.dataset.fk,el.value);again()});
+  root.querySelectorAll("[data-fedit]").forEach(el=>el.onclick=e=>{if(e.target.closest("button,select"))return;const r=S.foods[el.dataset.fedit],f=Data.allFoods().find(x=>x.id===el.dataset.fedit);if(leave)leave();if(f&&!f.custom)synEditor(f);else if(r)foodEditor(r.cat,{...r,edit:true})});
+  root.querySelectorAll("[data-fdel]").forEach(el=>el.onclick=e=>{e.stopPropagation();const id=el.dataset.fdel,f=Data.allFoods().find(x=>x.id===id);if(!f||!confirm(`Retirer « ${f.label} » ?`))return;
+    if(f.custom)touch("foods",{...S.foods[id],deleted:true});else touch("foods",{...(S.foods[id]||{}),id,off:true,deleted:false});again()});
+  root.querySelectorAll("[data-fback]").forEach(el=>el.onclick=()=>{const id=el.dataset.fback;touch("foods",{...(S.foods[id]||{}),id,off:false,deleted:false});again()});
+  root.querySelectorAll("[data-fq]").forEach(el=>el.onclick=()=>{const f=Data.allFoods().find(x=>x.id===el.dataset.fq),cur=(S.foods[f.id]&&!S.foods[f.id].deleted&&S.foods[f.id].q)||f.q;
+    const st=f.kind==="g"?10:cur<1||(cur===1&&+el.dataset.d<0)?0.25:1,q=Math.max(f.kind==="g"?10:0.25,Math.round((cur+st*el.dataset.d)*100)/100);
+    touch("foods",{...(S.foods[f.id]||{}),id:f.id,q,deleted:false});again()});}
 // Ingrédient fourni par l'app : on peut seulement lui ajouter des synonymes
 function synEditor(f){const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(f.label)}</h2>
    <input type="text" id="fsyn" placeholder="Synonymes (ex. hachis, viande hachée)" autocapitalize="none" value="${esc(f.syn||"")}" style="width:100%;margin-bottom:4px">
    <p class="mut" style="margin:0 0 10px;font-size:13px">Autres noms tapés dans les repas, séparés par des virgules.</p>
+   ${f.kind==="g"||f.kind==="n"?`<div class="serv"><span>Compter</span>${kindSel(f).replace('class="fk" data-fk="'+f.id+'"','id="skind"')}</div>`:""}
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok">Enregistrer</button></div></div>`;
   document.body.appendChild(ov);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
   $("#ok").onclick=()=>{const syn=$("#fsyn").value.split(",").map(x=>x.trim()).filter(x=>x&&Data.plain(x)!==Data.plain(f.label));
     const pris=syn.map(x=>[x,Data.foodFor(x,true)]).filter(([x,g])=>g&&g.id!==f.id);
     if(pris.length&&!confirm(`Déjà utilisé : ${pris.map(([x,g])=>`« ${x} » (${g.label})`).join(", ")}. Garder quand même ?`))return;
-    touch("foods",{...(S.foods[f.id]||{}),id:f.id,syn:syn.join(", ")||null,deleted:false});close();render()}}
+    touch("foods",{...(S.foods[f.id]||{}),id:f.id,syn:syn.join(", ")||null,deleted:false});if($("#skind"))setKind(f.id,$("#skind").value);close();render()}}
 // Étapes en markdown simple : # titre, **gras**, *italique*, listes « - » ou « 1. ».
 // Sans aucune marque de liste ni titre : une ligne = une étape numérotée.
 function md(text){const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\s][^*]*?)\*/g,"$1<i>$2</i>").replace(/__(.+?)__/g,"<b>$1</b>");

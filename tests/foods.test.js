@@ -123,3 +123,14 @@ test("synonyme sur un ingrédient de l'app : la quantité par défaut est gardé
   assert.equal(Data.clean("foods", "poulet", { id: "poulet", q: 160 }).q, 160);
   assert.equal(Data.clean("foods", "poulet-entier", { id: "poulet-entier", q: 0.25 }).q, 0.25);
 });
+
+test("ingrédient de l'app : au poids ou à la pièce", () => {
+  const r = Data.clean("foods", "cuisse-poulet", { id: "cuisse-poulet", kind: "g", q: 150 });
+  assert.equal(r.kind, "g");
+  Data.setCustom({ foods: { "cuisse-poulet": r } });
+  const f = Data.foodFor("cuisses de poulet");
+  assert.equal(f.kind, "g");
+  assert.equal(Data.foodLine({ foods: { "cuisse-poulet": r } }, f, "cuisses de poulet"), "150 g de cuisses de poulet");
+  assert.equal(Data.clean("foods", "cuisse-poulet", { id: "cuisse-poulet", kind: "n" }).kind, undefined);
+  Data.setCustom({ foods: {} });
+});
