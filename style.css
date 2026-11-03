@@ -163,7 +163,7 @@ section.day:has(.slotw.past) .dh{opacity:.5}
 #cfg{font-size:34px;line-height:1;width:48px;height:48px;padding:0;display:inline-flex;align-items:center;justify-content:center;margin-right:-8px}
 #status{width:12px;height:12px}
 #title:has(.hsugg){display:flex;align-items:center;gap:10px;min-width:0}
-.hsugg{margin-left:auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;min-width:150px;height:50px;padding:0 14px 0 10px;border:0;border-radius:14px;background:var(--accent);color:#fff;font:inherit;font-size:17px;letter-spacing:0;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.hsugg{margin:0 auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;min-width:150px;height:50px;padding:0 14px 0 10px;border:0;border-radius:14px;background:var(--accent);color:#fff;font:inherit;font-size:17px;letter-spacing:0;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .hsugg i{font-style:normal;font-size:30px;line-height:1}.hsugg span{display:flex;flex-direction:column;align-items:flex-start;gap:1px}.hsugg b{font-weight:700;white-space:nowrap}.hsugg small{font-size:12px;font-weight:500;opacity:.9;white-space:nowrap}
 .hsugg:active{transform:scale(.97)}
 .sugrow{padding:10px 0;border-bottom:1px solid var(--line)}.sugrow:last-child{border:0}

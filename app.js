@@ -113,7 +113,7 @@ function renderList(id){
   const need=i=>{const k=Data.pantryKey(pantryName(i.text)),out=[],withQty=QTY_PANTRY.test(Data.plain(pantryName(i.text)).trim());
     for(const mk of i.meals||[]){const m=S.meals[mk];if(!m||m.deleted||!m.text)continue;const r=recipeOf(m.text),a=m.added;
       // ce que le repas a demandé (enregistré à l'ajout), sinon la recette
-      const B=a?a.b||BASE:(r&&r.serves)||BASE,n=a?a.n:m.servings||BASE,src=a?a.items:r?r.ingredients:[];
+      const B=a?a.b||BASE:(r&&r.serves)||BASE,n=a?a.n:m.servings||DEFN,src=a?a.items:r?r.ingredients:[];
       const lines=src.filter(g=>Data.pantryKey(pantryName(g.t))===k&&(withQty||isCan(g.t))).map(g=>Qty.buy(g.t,n/B,B));
       out.push({meal:m.text,lines})}
     const all=out.flatMap(x=>x.lines),tot=all.length>1?all.reduce((s,t)=>s&&Qty.add(s,t)):all[0];
@@ -336,7 +336,7 @@ const bought=m=>!!(m&&m.added&&(m.added.ids||[]).some(id=>S.items[id]&&S.items[i
 function moveMeal(from){
   const m=S.meals[from],nx=new Date(from.slice(0,10)+"T12:00");nx.setDate(nx.getDate()+1);
   const slots=[slotOptions(from,nx.toISOString().slice(0,10)+"-"+from.slice(-1)," (échange)")];
-  const was=m.servings||BASE,min=bought(m)?was:1; // ingrédients achetés : on ne peut qu'augmenter
+  const was=m.servings||DEFN,min=bought(m)?was:1; // ingrédients achetés : on ne peut qu'augmenter
   let n=was;
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>Déplacer « ${esc(m.text)} »</h2>
@@ -351,7 +351,7 @@ function moveMeal(from){
   $("#ok").onclick=()=>{
     const to=$("#mvto").value,o=S.meals[to];
     touch("meals",{...m,key:to});
-    touch("meals",o&&o.text?{...o,key:from}:{key:from,text:"",servings:m.servings||BASE});
+    touch("meals",o&&o.text?{...o,key:from}:{key:from,text:"",servings:m.servings||DEFN});
     // les « à vérifier » suivent aussi leurs repas
     const sw=k=>k===from?to:k===to?from:k.startsWith(from)&&Data.isSecond(k)?to+k.slice(from.length):k.startsWith(to)&&Data.isSecond(k)?from+k.slice(to.length):k;
     for(const i of live(S.items))if(i.check&&(i.meals||[]).some(k=>sw(k)!==k))touch("items",{...i,meals:i.meals.map(sw)});
@@ -398,7 +398,7 @@ function planRecipe(r,sel,done){
       if(!confirm(`Remplacer « ${o.text} » ?`))return;
       if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)));
     }
-    const n=+LS.defN||r.serves||BASE;
+    const n=+LS.nPers||DEFN;
     touch("meals",{key,text:r.name,servings:n});gourmandWarn(key);applyCompanion(key);close();
     tab=LS.tab="menus";const d=new Date(key.slice(0,10)+"T12:00"),m=monday();setWk(wkOff()+Math.floor((d-m)/(7*864e5)+1e-9));
     render();ingredientsDialog(r.name,key,undefined,done);
@@ -445,7 +445,7 @@ function extraDialog(key,n){
 // Ajoute d'un coup les ingrédients de la recette d'un repas (magasin habituel, cumul) et s'en souvient.
 function addMealIngredients(key){
   const m=S.meals[key],r=m&&recipeOf(m.text);if(!r)return;
-  const B=r.serves||BASE,n=m.servings||BASE,ids=new Set(),items=[];
+  const B=r.serves||BASE,n=m.servings||DEFN,ids=new Set(),items=[];
   for(const g of r.ingredients){const store=defaultStore(g.t,g.store),t=Qty.buy(g.t,n/B,B);(pantryOf(g.t)?addCheck(store,t,key.slice(0,10),key):addToList(store,t)).forEach(x=>ids.add(x));items.push({t:g.t,store})}
   touch("meals",{...S.meals[key],added:{n,items,ids:[...ids],b:B}});
 }
@@ -456,7 +456,7 @@ function suggestDialog(){
   const today=todayKey(),rows=[];
   // samedi → vendredi suivant : midi et soir le week-end, soir seulement en semaine
   for(const key of Data.planSlots(today)){const we=[0,6].includes(new Date(key.slice(0,10)+"T12:00").getDay());
-    if((we||key.endsWith("-s"))&&!(S.meals[key]&&S.meals[key].text))rows.push({key,n:+LS.defN||BASE})}
+    if((we||key.endsWith("-s"))&&!(S.meals[key]&&S.meals[key].text))rows.push({key,n:+LS.nPers||DEFN})}
   if(!rows.length){alert("Tous les repas de samedi à vendredi sont déjà prévus.");return}
   // les propositions comptent comme prévues (pas deux fois le même plat, « vendredi ou samedi » respecté)
   const withProposals=except=>({...S,meals:{...S.meals,...Object.fromEntries(rows.filter(r=>r.sug&&r!==except).map(r=>[r.key,{key:r.key,text:r.sug.name,ts:0}]))}});
@@ -597,7 +597,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v261";
+const BASE=4,DEFN=3,VERSION="v262"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -622,7 +622,7 @@ function placeBox(box,host,slot){
 // Historique : les 7 derniers jours restent modifiables (ce qui a vraiment été mangé), sans toucher aux listes
 const histOk=k=>{const d=k.slice(0,10),t=todayKey();return d<t&&d>=Data.addDays(t,-7)};
 function slotHtml(key,label,past){
-  const e=S.meals[key]||{},n=e.servings||BASE,b=bought(e),extras=extrasOf(key),has2=extras.length>=MAX_DISHES-1; // has2 : plus de place pour un plat de plus
+  const e=S.meals[key]||{},n=e.servings||DEFN,b=bought(e),extras=extrasOf(key),has2=extras.length>=MAX_DISHES-1; // has2 : plus de place pour un plat de plus
   const h=past&&histOk(key);
   const lock=past?(h?"":e.text?'readonly title="Jour passé"':"disabled"):b?'readonly title="Ingrédients déjà achetés : déplacez le repas avec ⇄"':"";
   // la case prend toute la largeur : × (ou 🔒) passe dans la rangée de boutons du dessous ; seul 💡 reste à droite d'une case vide
@@ -696,10 +696,10 @@ function renderMenus(){
     const dropOld=()=>{if(norm(o.text||"")===norm(t))return;dropChecks(key);
       if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)))};
     dropOld();
-    if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||BASE});if(!Data.isSecond(key))removeSecond(key);render();return}
+    if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||DEFN});if(!Data.isSecond(key))removeSecond(key);render();return}
     t=t.replace(/[\s,+]+$/,"");if(Data.isOut(t))t=Data.OUT; // restaurant, invitation… : « Repas à l'extérieur »
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
-    touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.defN||BASE)});
+    touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.nPers||DEFN)});
     gourmandWarn(key);
     if(Data.isOut(t)){render();return} // repas dehors : rien à acheter, pas de fenêtre des ingrédients
     applyCompanion(key);render();if(quiet)return;
@@ -782,7 +782,7 @@ function renderMenus(){
         // 2e plat principal sur la même ligne : nouveau plat du même repas, même nombre de personnes ;
         // avec Entrée, sa fenêtre des ingrédients s'ouvre après celle du premier
         const key=el.dataset.m,base=key.replace(/\d+$/,""),k2s=[];
-        if(extra.length&&(key.slice(0,10)>=todayKey()||histOk(key))){const n=(S.meals[key]&&S.meals[key].servings)||(S.meals[base]&&S.meals[base].servings)||+LS.defN||BASE;
+        if(extra.length&&(key.slice(0,10)>=todayKey()||histOk(key))){const n=(S.meals[key]&&S.meals[key].servings)||(S.meals[base]&&S.meals[base].servings)||+LS.nPers||DEFN;
           for(const t of extra){const r=live(S.recipes).find(x=>norm(x.name)===norm(t)),k2=addSecond(base,n,r?r.name:t.charAt(0).toUpperCase()+t.slice(1),true);if(!k2)break;k2s.push(k2)}}
         const more=i=>{if(i<k2s.length)ingredientsDialog(S.meals[k2s[i]].text,k2s[i],undefined,()=>more(i+1))};
         const fut=key.slice(0,10)>=todayKey(); // pas de fenêtre des ingrédients pour un jour passé
@@ -809,17 +809,17 @@ function renderMenus(){
     else if(m.text&&!confirm(`Supprimer « ${m.text} »${m.added?" et retirer ses ingrédients des listes":""} ?`))return;
     dropChecks(key);if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/(m.added.b||BASE),m.added.b||BASE)));
     if(Data.isSecond(key))touch("meals",{key,text:"",deleted:true});
-    else{touch("meals",{key,text:"",servings:m.servings||BASE});removeSecond(key)}
+    else{touch("meals",{key,text:"",servings:m.servings||DEFN});removeSecond(key)}
     render();
   });
   // − / + sur un repas : ouvre la fenêtre des ingrédients au nouveau nombre de personnes (rien n'est appliqué sans valider).
   const step=(key,d)=>{const m=S.meals[key];
     // − à 1 personne : 0 personne = repas à l'extérieur (ses ingrédients sont retirés des listes, sauf déjà achetés)
-    if(d<0&&(m.servings||BASE)<=1&&!Data.isSecond(key)&&!bought(m)){
+    if(d<0&&(m.servings||DEFN)<=1&&!Data.isSecond(key)&&!bought(m)){
       if(!confirm(`0 personne : « ${m.text} » devient « ${Data.OUT} »${m.added?" et ses ingrédients sont retirés des listes":""} ?`))return;
       dropChecks(key);if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/(m.added.b||BASE),m.added.b||BASE)));
       removeSecond(key);touch("meals",{key,text:Data.OUT,servings:1,added:null});render();return}
-    const n=Math.max(1,Math.min(30,(m.servings||BASE)+d));if(!Data.isSecond(key))LS.defN=n;
+    const n=Math.max(1,Math.min(30,(m.servings||DEFN)+d));if(!Data.isSecond(key))LS.nPers=n;
     if(bought(m)&&d>0)extraDialog(key,n);
     else if(recipeOf(m.text))ingredientsDialog(m.text,key,n);
     else{touch("meals",{...m,servings:n});render()}};
@@ -837,7 +837,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
   const opts=sel=>lists.map(l=>`<option value="${l.id}" ${l.id===sel?"selected":""}>${esc(l.name)}</option>`).join("");
   const B=(r&&r.serves)||BASE; // la recette est écrite pour B personnes
   const meal=mealKey&&S.meals[mealKey],prev=meal&&meal.text===name&&meal.added;
-  let n=startN||(meal&&meal.servings)||BASE;
+  let n=startN||(meal&&meal.servings)||DEFN;
   const was=t=>prev&&prev.items.find(g=>g.t===t);
   const ov=document.createElement("div");ov.className="ov";
   const home=t=>prev&&t&&!was(t); // décoché lors de l'ajout : on l'avait à la maison
@@ -854,7 +854,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
   const close=()=>ov.remove();
   // « Ne pas ajouter aux listes » : rien n'est ajouté aux listes, mais le nombre de personnes choisi est gardé pour le repas
   const skip=()=>{close();const m=mealKey&&S.meals[mealKey];
-    if(r&&m&&m.text){addPantry(r,mealKey);if(n!==(m.servings||BASE))touch("meals",{...m,servings:n});render()} // les « à vérifier » sont ajoutés quand même
+    if(r&&m&&m.text){addPantry(r,mealKey);if(n!==(m.servings||DEFN))touch("meals",{...m,servings:n});render()} // les « à vérifier » sont ajoutés quand même
     if(after)after()};
   ov.onclick=e=>{if(e.target===ov)skip()};
   $("#no").onclick=skip;
@@ -1207,7 +1207,7 @@ function ideaFlow(pool){
       close();
       const r={id:uid(),name:rec.name,serves:rec.serves,ingredients:rec.ingredients.map(t=>({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})),
         steps:rec.steps||"",source:rec.source,prep:rec.prep,season:Data.recipeSeason({name:rec.name}),dessert:false};
-      touch("recipes",r);touch("meals",{key,text:r.name,servings:+LS.defN||r.serves||BASE});gourmandWarn(key);render();
+      touch("recipes",r);touch("meals",{key,text:r.name,servings:+LS.nPers||DEFN});gourmandWarn(key);render();
       // ce repas n'est plus à remplir ; si on en a choisi un autre, celui proposé reste libre pour l'idée suivante
       ii++;const at=slots.indexOf(key);if(at>=0){slots.splice(at,1);if(at<si)si--}
       ingredientsDialog(r.name,key,undefined,show)};
