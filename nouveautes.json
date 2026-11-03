@@ -1,5 +1,5 @@
 {
- "maj": "2026-11-01",
+ "maj": "2026-11-03",
  "recettes": [
   {
    "site": "marmiton",
@@ -21,11 +21,11 @@
   },
   {
    "site": "marmiton",
-   "titre": "Hamburger maison",
-   "url": "https://www.marmiton.org/recettes/recette_hamburger-maison_32672.aspx",
-   "prep": 5,
-   "total": 10,
-   "pour": 4,
+   "titre": "Saumon Gravlax",
+   "url": "https://www.marmiton.org/recettes/recette_saumon-gravelax_24589.aspx",
+   "prep": 15,
+   "total": 15,
+   "pour": 6,
    "publie": "2006-10-23"
   },
   {
@@ -48,21 +48,57 @@
   },
   {
    "site": "marmiton",
-   "titre": "Chips de lard",
-   "url": "https://www.marmiton.org/recettes/recette_chips-de-lard_539928.aspx",
-   "prep": 5,
-   "total": 13,
-   "pour": 4,
-   "publie": "2026-05-27"
-  },
-  {
-   "site": "marmiton",
    "titre": "Wrap kebab",
    "url": "https://www.marmiton.org/recettes/recette_wrap-kebab_539927.aspx",
    "prep": 10,
    "total": 15,
    "pour": 4,
    "publie": "2026-05-27"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Pâtes au curry coco, brocoli et bœuf",
+   "url": "https://www.cuisineaz.com/recettes/pates-au-curry-coco-brocoli-et-boeuf-recette-facile-a-la-poele-126183.aspx",
+   "prep": 20,
+   "total": 40,
+   "pour": 4,
+   "publie": "2026-11-03"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Morue de Terre-Neuve",
+   "url": "https://www.cuisineaz.com/recettes/morue-de-terre-neuve-recette-facile-a-la-puree-de-pommes-de-terre-126178.aspx",
+   "prep": 30,
+   "total": 45,
+   "pour": 4,
+   "publie": "2026-11-03"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Soupe minestrone familiale",
+   "url": "https://www.cuisineaz.com/recettes/soupe-minestrone-familiale-recette-rapide-et-equilibree-126168.aspx",
+   "prep": 25,
+   "total": 55,
+   "pour": 4,
+   "publie": "2026-11-03"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Minestrone maison",
+   "url": "https://www.cuisineaz.com/recettes/minestrone-maison-la-soupe-complete-de-l-automne-126163.aspx",
+   "prep": 25,
+   "total": 65,
+   "pour": 4,
+   "publie": "2026-11-02"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Soupe de citrouille aux oignons",
+   "url": "https://www.cuisineaz.com/recettes/soupe-de-citrouille-aux-oignons-recette-facile-en-3-ingredients-126191.aspx",
+   "prep": 15,
+   "total": 40,
+   "pour": 4,
+   "publie": "2026-11-01"
   },
   {
    "site": "cuisineaz",
@@ -90,51 +126,6 @@
    "total": 60,
    "pour": 4,
    "publie": "2026-10-30"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Soupe de lentilles et épinards au lait de coco",
-   "url": "https://www.cuisineaz.com/recettes/soupe-de-lentilles-et-epinards-au-lait-de-coco-un-diner-reconfortant-et-tout-simple-126062.aspx",
-   "prep": 15,
-   "total": 40,
-   "pour": 4,
-   "publie": "2026-10-30"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Soupe potimarron, lentilles corail et carottes",
-   "url": "https://www.cuisineaz.com/recettes/soupe-potimarron-lentilles-corail-et-carottes-une-recette-reconfortante-d-automne-126082.aspx",
-   "prep": 20,
-   "total": 45,
-   "pour": 4,
-   "publie": "2026-10-29"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Escalopes de veau panées, rémoulade sucrée aux pommes",
-   "url": "https://www.cuisineaz.com/recettes/escalopes-de-veau-panees-remoulade-sucree-aux-pommes-le-duo-crousti-frais-126098.aspx",
-   "prep": 25,
-   "total": 40,
-   "pour": 4,
-   "publie": "2026-10-28"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Pintade rôtie aux champignons et guanciale",
-   "url": "https://www.cuisineaz.com/recettes/pintade-rotie-aux-champignons-et-guanciale-une-volaille-automnale-a-partager-126091.aspx",
-   "prep": 30,
-   "total": 75,
-   "pour": 6,
-   "publie": "2026-10-28"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Crevettes braisées au lait de coco, au cari doux et au basilic thaï",
-   "url": "https://www.cuisineaz.com/recettes/crevettes-braisees-au-lait-de-coco-au-cari-doux-et-au-basilic-thai-le-diner-depaysant-facile-a-preparer-126085.aspx",
-   "prep": 25,
-   "total": 45,
-   "pour": 4,
-   "publie": "2026-10-28"
   }
  ]
 }
