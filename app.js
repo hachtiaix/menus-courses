@@ -453,10 +453,11 @@ const slotName=k=>new Date(k.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{w
 // 💡 : un plat pour chaque soir libre et pour les midis du week-end de la semaine affichée.
 // Chaque ligne a son nombre de personnes ; × retire une suggestion ; ↻ en tire une autre.
 function suggestDialog(){
-  const today=todayKey(),mon=monday().toISOString().slice(0,10),rows=[];
-  for(let i=0;i<7;i++){const ymd=Data.addDays(mon,i);if(ymd<today)continue;
-    for(const s of i>=5?["m","s"]:["s"]){const key=ymd+"-"+s;if(!(S.meals[key]&&S.meals[key].text))rows.push({key,n:+LS.defN||BASE})}}
-  if(!rows.length){alert("Plus aucun créneau libre cette semaine : passez à la semaine suivante avec ›.");return}
+  const today=todayKey(),rows=[];
+  // samedi → vendredi suivant : midi et soir le week-end, soir seulement en semaine
+  for(const key of Data.planSlots(today)){const we=[0,6].includes(new Date(key.slice(0,10)+"T12:00").getDay());
+    if((we||key.endsWith("-s"))&&!(S.meals[key]&&S.meals[key].text))rows.push({key,n:+LS.defN||BASE})}
+  if(!rows.length){alert("Tous les repas de samedi à vendredi sont déjà prévus.");return}
   // les propositions comptent comme prévues (pas deux fois le même plat, « vendredi ou samedi » respecté)
   const withProposals=except=>({...S,meals:{...S.meals,...Object.fromEntries(rows.filter(r=>r.sug&&r!==except).map(r=>[r.key,{key:r.key,text:r.sug.name,ts:0}]))}});
   // variété : pas deux plats du même type dans la semaine, sauf celui de l'habitude du créneau
@@ -493,7 +494,7 @@ function suggestDialog(){
   const ov=document.createElement("div");ov.className="ov";
   const paint=()=>{ov.querySelector("#sugs").innerHTML=rows.map(rowH).join("")||`<div class="empty">Plus aucune suggestion</div>`;
     ov.querySelector("#ok").textContent=`Placer ${live_().length} plat${live_().length>1?"s":""}`};
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>💡 Suggestions</h2>
+  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>💡 Suggestions</h2><p class="sugper">${esc(label(rows[0].key).replace(/ (midi|soir)$/,""))} → ${esc(label(rows[rows.length-1].key).replace(/ (midi|soir)$/,""))}</p>
    <p class="mut">De saison, pas cuisinés depuis plus de 20 jours. Ensuite, les ingrédients s'affichent repas par repas : vous cochez ce qu'il faut acheter.</p>
    <div class="card" id="sugs"></div>
    ${rows.some(r=>!r.sug)?`<p class="mut">${rows.filter(r=>!r.sug).length} créneau${rows.filter(r=>!r.sug).length>1?"x":""} sans suggestion : plus de recettes donneront plus de choix.</p>`:""}
@@ -596,7 +597,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,VERSION="v260";
+const BASE=4,VERSION="v261";
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -654,11 +655,12 @@ function secondHtml(k2,e,past,pos){ // pos : rang affiché (2ᵉ, 3ᵉ…), sans
   return `<div class="slotw second ${past?"past":""} ${h?"hist":""}"><div class="slot"><span class="lbl">+ ${pos||2}ᵉ plat</span><span class="tagwrap ${tagsHtml(e.text)?"has":""}"><input type="text" data-m="${k2}" placeholder="${past?(h?"Qu'avez-vous mangé ?":"—"):"Autre plat…"}" autocomplete="off" autocapitalize="sentences" value="${esc(e.text||"")}" ${lock}>${tagsHtml(e.text,k2)}</span>${right}</div>${sub}</div>`;
 }
 function renderMenus(){
-  $("#title").innerHTML=`Menus <span class="hicon">${MENU_ICON}</span>`;
+  const ps=Data.planSlots(todayKey()),sd=k=>new Date(k.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"}).replace(".","");
+  $("#title").innerHTML=`<span>Menus <span class="hicon">${MENU_ICON}</span></span><button class="hsugg" id="sugg"><i>💡</i><span><b>Suggérer</b><small>${sd(ps[0])} → ${sd(ps[ps.length-1])}</small></span></button>`;
   const m=monday(),today=todayKey();
   const end=new Date(m);end.setDate(m.getDate()+6);
   const f=d=>d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-  let h=`<div class="wk"><button class="btn sec" id="pv">‹</button><div>${f(m)} – ${f(end)}</div><button class="btn sec" id="sugg" aria-label="Suggestions de plats">💡</button><button class="btn sec" id="nx">›</button></div>`;
+  let h=`<div class="wk"><button class="btn sec" id="pv">‹</button><div>${f(m)} – ${f(end)}</div><button class="btn sec" id="nx">›</button></div>`;
   for(let n=0;n<7;n++){
     const d=new Date(m);d.setDate(m.getDate()+n);const k=d.toISOString().slice(0,10);
     const wd=d.toLocaleDateString("fr-FR",{weekday:"long"}); // jour en en-tête de la carte : « lundi 26 octobre », « dimanche 1er novembre »
