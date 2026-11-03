@@ -398,7 +398,7 @@ function planRecipe(r,sel,done){
       if(!confirm(`Remplacer « ${o.text} » ?`))return;
       if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)));
     }
-    const n=+LS.nPers||DEFN;
+    const n=DEFN;
     touch("meals",{key,text:r.name,servings:n});gourmandWarn(key);applyCompanion(key);close();
     tab=LS.tab="menus";const d=new Date(key.slice(0,10)+"T12:00"),m=monday();setWk(wkOff()+Math.floor((d-m)/(7*864e5)+1e-9));
     render();ingredientsDialog(r.name,key,undefined,done);
@@ -456,7 +456,7 @@ function suggestDialog(){
   const today=todayKey(),rows=[];
   // samedi → vendredi suivant : midi et soir le week-end, soir seulement en semaine
   for(const key of Data.planSlots(today)){const we=[0,6].includes(new Date(key.slice(0,10)+"T12:00").getDay());
-    if((we||key.endsWith("-s"))&&!(S.meals[key]&&S.meals[key].text))rows.push({key,n:+LS.nPers||DEFN})}
+    if((we||key.endsWith("-s"))&&!(S.meals[key]&&S.meals[key].text))rows.push({key,n:DEFN})}
   if(!rows.length){alert("Tous les repas de samedi à vendredi sont déjà prévus.");return}
   // les propositions comptent comme prévues (pas deux fois le même plat, « vendredi ou samedi » respecté)
   const withProposals=except=>({...S,meals:{...S.meals,...Object.fromEntries(rows.filter(r=>r.sug&&r!==except).map(r=>[r.key,{key:r.key,text:r.sug.name,ts:0}]))}});
@@ -597,7 +597,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v262"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v263"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -699,7 +699,7 @@ function renderMenus(){
     if(!t){if(o.text)touch("meals",{key,text:"",servings:o.servings||DEFN});if(!Data.isSecond(key))removeSecond(key);render();return}
     t=t.replace(/[\s,+]+$/,"");if(Data.isOut(t))t=Data.OUT; // restaurant, invitation… : « Repas à l'extérieur »
     const known=live(S.recipes).find(r=>norm(r.name)===norm(t));
-    touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:+LS.nPers||DEFN)});
+    touch("meals",{key,text:known?known.name:t,servings:o.servings||(Data.isSecond(key)?1:DEFN)});
     gourmandWarn(key);
     if(Data.isOut(t)){render();return} // repas dehors : rien à acheter, pas de fenêtre des ingrédients
     applyCompanion(key);render();if(quiet)return;
@@ -782,7 +782,7 @@ function renderMenus(){
         // 2e plat principal sur la même ligne : nouveau plat du même repas, même nombre de personnes ;
         // avec Entrée, sa fenêtre des ingrédients s'ouvre après celle du premier
         const key=el.dataset.m,base=key.replace(/\d+$/,""),k2s=[];
-        if(extra.length&&(key.slice(0,10)>=todayKey()||histOk(key))){const n=(S.meals[key]&&S.meals[key].servings)||(S.meals[base]&&S.meals[base].servings)||+LS.nPers||DEFN;
+        if(extra.length&&(key.slice(0,10)>=todayKey()||histOk(key))){const n=(S.meals[key]&&S.meals[key].servings)||(S.meals[base]&&S.meals[base].servings)||DEFN;
           for(const t of extra){const r=live(S.recipes).find(x=>norm(x.name)===norm(t)),k2=addSecond(base,n,r?r.name:t.charAt(0).toUpperCase()+t.slice(1),true);if(!k2)break;k2s.push(k2)}}
         const more=i=>{if(i<k2s.length)ingredientsDialog(S.meals[k2s[i]].text,k2s[i],undefined,()=>more(i+1))};
         const fut=key.slice(0,10)>=todayKey(); // pas de fenêtre des ingrédients pour un jour passé
@@ -819,7 +819,7 @@ function renderMenus(){
       if(!confirm(`0 personne : « ${m.text} » devient « ${Data.OUT} »${m.added?" et ses ingrédients sont retirés des listes":""} ?`))return;
       dropChecks(key);if(m.added)m.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,m.added.n/(m.added.b||BASE),m.added.b||BASE)));
       removeSecond(key);touch("meals",{key,text:Data.OUT,servings:1,added:null});render();return}
-    const n=Math.max(1,Math.min(30,(m.servings||DEFN)+d));if(!Data.isSecond(key))LS.nPers=n;
+    const n=Math.max(1,Math.min(30,(m.servings||DEFN)+d));
     if(bought(m)&&d>0)extraDialog(key,n);
     else if(recipeOf(m.text))ingredientsDialog(m.text,key,n);
     else{touch("meals",{...m,servings:n});render()}};
@@ -1207,7 +1207,7 @@ function ideaFlow(pool){
       close();
       const r={id:uid(),name:rec.name,serves:rec.serves,ingredients:rec.ingredients.map(t=>({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})),
         steps:rec.steps||"",source:rec.source,prep:rec.prep,season:Data.recipeSeason({name:rec.name}),dessert:false};
-      touch("recipes",r);touch("meals",{key,text:r.name,servings:+LS.nPers||DEFN});gourmandWarn(key);render();
+      touch("recipes",r);touch("meals",{key,text:r.name,servings:DEFN});gourmandWarn(key);render();
       // ce repas n'est plus à remplir ; si on en a choisi un autre, celui proposé reste libre pour l'idée suivante
       ii++;const at=slots.indexOf(key);if(at>=0){slots.splice(at,1);if(at<si)si--}
       ingredientsDialog(r.name,key,undefined,show)};
