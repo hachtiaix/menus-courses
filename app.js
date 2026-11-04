@@ -600,7 +600,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v264"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v265"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1140,7 +1140,7 @@ async function fetchRecipe(url){
   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Lecture impossible.");
   return Data.fromSchema(j,j.url||url);
 }
-// Mercredi, jeudi, vendredi : si la période suivante (samedi → vendredi) est remplie à moitié ou moins, 5 nouveautés au plus,
+// Mercredi, jeudi, vendredi : si la période suivante (samedi → vendredi) est remplie à moitié ou moins, 15 nouveautés au plus,
 // rapides (30 min de préparation au plus) de Marmiton et CuisineAZ (nouveautes.json, mis à jour chaque mardi soir).
 // Une fois par jour au plus ; « Non merci » : plus rien jusqu'à la période suivante.
 async function maybePropose(force,direct){
@@ -1155,7 +1155,7 @@ async function maybePropose(force,direct){
   const NOT_MEAL=/toasts?\b|tartines?\b|bruschetta|crostini|canap[ée]s?\b|\bchips\b|thermomix|cookeo|companion|monsieur cuisine/i;
   const ok=list.filter(x=>x&&Data.SOURCE.test(x.url)&&!mine.has(x.url)&&!names.has(Data.plain(x.titre||"").trim())&&x.prep>0&&x.prep<=30&&!NOT_MEAL.test((x.titre||"")+" "+x.url));
   const mix=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]),a=mix(ok.filter(x=>x.site==="marmiton")),b=mix(ok.filter(x=>x.site!=="marmiton")),pick=[];
-  while(a.length||b.length){if(a.length)pick.push(a.shift());if(b.length)pick.push(b.shift())} // les deux sites, à tour de rôle
+  while((a.length||b.length)&&pick.length<15){if(a.length)pick.push(a.shift());if(b.length&&pick.length<15)pick.push(b.shift())} // les deux sites, à tour de rôle, 15 au plus
   if(direct){if(pick.length)ideaFlow(pick);else toast("Pas d'autre idée pour l'instant");return}
   if(!pick.length||tab!=="menus"||document.querySelector(".ov"))return;
   LS.nvDay=t;
