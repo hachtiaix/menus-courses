@@ -480,7 +480,7 @@ function tidyIngredient(line){
     const u=unit.replace(new RegExp("^"+QTY+"\\s*"),"").toLowerCase().replace(/s$/,""),w=rest.match(/^(\S+?)s?(?=\s|$)/);
     if(w&&u.length>2&&w[1].toLowerCase()===u)rest=rest.slice(w[0].length).trimStart();
     if(!rest)return unit;
-    if(/^(de\s|d['’]|du\s|des\s|à\s|au\s|aux\s)/i.test(rest))return (unit+" "+rest).slice(0,200);
+    if(/^((?:petites?|moyennes?|grosses?|grandes?)\s+(?:de\s|d['’])|de\s|d['’]|du\s|des\s|à\s|au\s|aux\s)/i.test(rest))return (unit+" "+rest).slice(0,200);
     const low=rest.charAt(0).toLowerCase()+rest.slice(1);
     return (unit+(/^[aeiouhâàéèêëîïôûœ]/i.test(low)&&!/^h(aricot|achis|omard)/i.test(low)?" d'":" de ")+low).slice(0,200)}
   // sans unité : « 3 Oeufs » → « 3 oeufs », « ½ oignons rouges » → « ½ oignon rouge »
@@ -520,13 +520,16 @@ function fromSchema(x,url){
 // Période planifiée (du samedi au vendredi) : les 7 soirs et les midis du samedi et du dimanche
 function planSlots(ymd){const d=new Date(ymd+"T12:00"),toSat=(6-d.getDay()+7)%7||7,sat=addDays(ymd,toSat),out=[];
   for(let i=0;i<7;i++){const k=addDays(sat,i);if(i<2)out.push(k+"-m");out.push(k+"-s")}return out}
+// « 1 boîte de moyenne de tomates » (ancienne lecture des recettes), « 1 moyenne boîte » → « 1 boîte moyenne »
+function boxFix(t){return t.replace(/\b(bo[iî]tes?) de (petites?|moyennes?|grosses?|grandes?) (de\s|d['’])/gi,(m,b,a,d)=>/^moy/i.test(a)?b+" "+a+" "+d:a+" "+b+" "+d)
+  .replace(/\b(moyennes?) (bo[iî]tes?)\b/gi,"$2 $1")}
 function clean(k,id,r){
   if(!okId(id)||!r||typeof r!=="object")return null;
   const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;
   const R=root.Rayons;
   if(k==="lists")return{id,name:str(r.name,60)||id,
     order:(Array.isArray(r.order)?r.order:[]).filter(x=>R&&R.byId[x]).slice(0,30),ts,deleted};
-  if(k==="items")return okId(r.list)?{id,list:r.list,text:str(r.text,200),done:r.done===true,archived:r.archived===true,
+  if(k==="items")return okId(r.list)?{id,list:r.list,text:boxFix(str(r.text,200)),done:r.done===true,archived:r.archived===true,
     check:r.check===true,until:/^\d{4}-\d{2}-\d{2}$/.test(r.until)?r.until:null, // check : 🏠 à vérifier au placard, jusqu'au repas « until »
     meals:Array.isArray(r.meals)?r.meals.filter(okId).slice(0,20):[], // repas qui en ont besoin (affichés en petit)
     c:Number.isFinite(r.c)?r.c:ts,ts,deleted}:null;
@@ -566,7 +569,7 @@ function clean(k,id,r){
     dessert:r.dessert===true?true:r.dessert===false?false:null,steps:str(r.steps,4000)||null, // étapes (markdown simple)
     gourmand:r.gourmand===true?true:null,avis:r.avis==="oui"?"oui":null, // recette importée : aimée (« Avez-vous aimé ? ») // plat riche (case « Plat gourmand ») : 4 au plus par semaine dans 💡
     source:SOURCE.test(str(r.source,300))?str(r.source,300):null,prep:Number.isInteger(r.prep)&&r.prep>0&&r.prep<=600?r.prep:null, // importée : lien d'origine, préparation (min)
-    ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:str(i&&i.t,200),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
+    ingredients:(Array.isArray(r.ingredients)?r.ingredients:[]).slice(0,80).map(i=>({t:boxFix(str(i&&i.t,200)),store:okId(i&&i.store)?i.store:"auchan"})),ts,deleted};
   return null;
 }
 function cleanAll(src){

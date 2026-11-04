@@ -8,8 +8,8 @@ const cases = [
   ["pluriel", Qty.buy("1 oignon", 3), "3 oignons"],
   ["accord adjectif + nom", Qty.buy("4 grosses pommes de terre", 0.25), "1 grosse pomme de terre"],
   ["demi-boîte → 1 boîte", Qty.buy("1/2 boîte de tomates", 1), "1 boîte de tomates"],
-  ["boîtes regroupées dans une recette", Qty.buy("1 grosse boîte de tomates", 1.5), "1 grosse boîte + 1 moyenne boîte de tomates"],
-  ["2 petites = 1 moyenne", Qty.buy("1 petite boîte de maïs", 2), "1 moyenne boîte de maïs"],
+  ["boîtes regroupées dans une recette", Qty.buy("1 grosse boîte de tomates", 1.5), "1 grosse boîte + 1 boîte moyenne de tomates"],
+  ["2 petites = 1 moyenne", Qty.buy("1 petite boîte de maïs", 2), "1 boîte moyenne de maïs"],
   ["400 g × 3 → kg", Qty.buy("400 g de pâtes", 3), "1,2 kg de pâtes"],
   ["arrondi des grammes", Qty.buy("400 g de lardons", 2 / 3), "270 g de lardons"],
   ["20 cl × 6 → l", Qty.buy("20 cl de crème", 6), "1,2 l de crème"],
@@ -32,7 +32,7 @@ const cases = [
 ];
 cases.push(
   ["boîte de légumes : 4 pers. → 1 grande", Qty.buy("haricots verts", 1, 4), "1 grosse boîte de haricots verts"],
-  ["boîte de légumes : 3 pers. → 1 moyenne + 1 petite", Qty.buy("petits pois", 3, 1), "1 moyenne boîte + 1 petite boîte de petits pois"],
+  ["boîte de légumes : 3 pers. → 1 moyenne + 1 petite", Qty.buy("petits pois", 3, 1), "1 boîte moyenne + 1 petite boîte de petits pois"],
   ["boîte de légumes : 1 pers. → 1 petite", Qty.buy("flageolets", 1/4, 4), "1 petite boîte de flageolets"],
   ["surgelés : pas des boîtes", Qty.buy("haricots verts surgelés", 2, 4), "haricots verts surgelés"],
   ["h aspiré : haricots verts", Qty.buy("200 g de haricots verts", 3), "600 g de haricots verts"],
@@ -49,7 +49,7 @@ for (const [name, got, want] of cases) test(name, () => assert.equal(got, want))
 
 test("boîtes : une ligne par taille", () => {
   assert.deepEqual(Qty.boxLines({ n: 6, name: "tomates" }).map(l => l.text),
-    ["1 grosse boîte de tomates", "1 moyenne boîte de tomates"]);
+    ["1 grosse boîte de tomates", "1 boîte moyenne de tomates"]);
 });
 test("ancienne ligne combinée relue", () => {
   const p = Qty.parse("1 grosse boîte + 1 petite boîte de tomates");
@@ -122,4 +122,13 @@ test("œufs : la préparation ne compte pas pour les courses", () => {
   assert.equal(Qty.add("4 oeufs cuits durs", "1 oeuf cru"), "5 oeufs");
   assert.equal(Qty.add("2 œufs", "1 oeuf"), "3 œufs");
   assert.equal(Qty.cook("4 oeufs cuits durs", 0.5), "2 oeufs cuits durs");
+});
+
+test("boîte moyenne : l'adjectif après le nom, petite et grosse avant", () => {
+  const { Data } = require("./load");
+  assert.equal(Data.tidyIngredient("1 boîte moyenne de tomates pelées"), "1 boîte moyenne de tomates pelées");
+  assert.equal(Qty.buy("1 boîte moyenne de tomates pelées", 1, 4), "1 boîte moyenne de tomates pelées");
+  assert.equal(Qty.buy("1 petite boîte de maïs", 3, 4), "1 boîte moyenne + 1 petite boîte de maïs");
+  assert.equal(Data.clean("items", "i1", { list: "auchan", text: "1 boîte moyenne de tomates pelées" }).text, "1 boîte moyenne de tomates pelées");
+  assert.equal(Data.clean("recipes", "r1", { name: "X", ingredients: [{ t: "1 boîte de moyenne de tomates pelées" }] }).ingredients[0].t, "1 boîte moyenne de tomates pelées");
 });

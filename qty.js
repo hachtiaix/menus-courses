@@ -96,15 +96,17 @@ function format(p){
     return (ml>=1000?fr(ml/1000)+" l":ml%10===0?ml/10+" cl":ml+" ml")+de(p.name)}
   if(p.kind==="ail"){const g=Math.ceil(p.n-1e-9),t=Math.ceil(g/AIL);
     return t+" "+plural("tête",t)+" d'ail"+(g%AIL?" (pour "+g+" "+plural("gousse",g)+")":"")}
-  if(p.kind==="box"&&p.size){const c=Math.max(1,Math.ceil(p.n/BOX[p.size]-1e-9));return c+" "+plural(p.size,c)+" "+plural("boîte",c)+de(p.name)}
+  if(p.kind==="box"&&p.size){const c=Math.max(1,Math.ceil(p.n/BOX[p.size]-1e-9));return c+" "+boxWord(p.size,c)+de(p.name)}
   if(p.kind==="box"){let s=Math.ceil(p.n-1e-9);const parts=[];
-    for(const [adj,k] of [["grosse",4],["moyenne",2],["petite",1]]){const c=Math.floor(s/k);s-=c*k;if(c)parts.push(c+" "+plural(adj,c)+" "+plural("boîte",c))}
+    for(const [adj,k] of [["grosse",4],["moyenne",2],["petite",1]]){const c=Math.floor(s/k);s-=c*k;if(c)parts.push(c+" "+boxWord(adj,c))}
     return parts.join(" + ")+de(p.name)}
   const c=Math.ceil(p.n-1e-9);
   if(p.kind==="boxany")return c+" "+plural("boîte",c)+de(p.name);
   return c+(p.name?" "+pluralFirst(p.name,c):"");
 }
 
+// « petite boîte », « grosse boîte », mais « boîte moyenne » (l'adjectif après le nom)
+function boxWord(size,c){return size==="moyenne"?plural("boîte",c)+" "+plural("moyenne",c):plural(size,c)+" "+plural("boîte",c)}
 // Boîtes : total en petites boîtes → une ligne par taille (grosse, moyenne, petite).
 function boxLines(p){let s=Math.ceil(p.n-1e-9);const out=[];
   for(const [size,k] of [["grosse",4],["moyenne",2],["petite",1]]){const c=Math.floor(s/k);s-=c*k;if(c)out.push({size,text:format({kind:"box",size,n:c*k,name:p.name})})}

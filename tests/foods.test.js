@@ -6,7 +6,7 @@ const buy = (t, n) => Qty.buy(t, n, 1);
 
 test("suite d'aliments : viande rouge, haricots verts, PDT surgelés pour 3", () => {
   const r = Data.suite(S, "viande rouge, haricots verts, PDT surgelés");
-  assert.deepEqual(r.ingredients.map(i => buy(i.t, 3)), ["450 g de viande rouge", "1 moyenne boîte + 1 petite boîte de haricots verts", "600 g de pommes de terre surgelées"]);
+  assert.deepEqual(r.ingredients.map(i => buy(i.t, 3)), ["450 g de viande rouge", "1 boîte moyenne + 1 petite boîte de haricots verts", "600 g de pommes de terre surgelées"]);
   assert.deepEqual(r.ingredients.map(i => i.store), ["boucherie", "auchan", "auchan"]);
 });
 test("soupe seule : légumes à choisir", () => {
