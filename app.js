@@ -495,12 +495,15 @@ function suggestDialog(){
   const paint=()=>{ov.querySelector("#sugs").innerHTML=rows.map(rowH).join("")||`<div class="empty">Plus aucune suggestion</div>`;
     ov.querySelector("#ok").textContent=`Placer ${live_().length} plat${live_().length>1?"s":""}`};
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>💡 Suggestions</h2><p class="sugper">${esc(label(rows[0].key).replace(/ (midi|soir)$/,""))} → ${esc(label(rows[rows.length-1].key).replace(/ (midi|soir)$/,""))}</p>
-   <p class="mut">De saison, pas cuisinés depuis plus de 20 jours. Ensuite, les ingrédients s'affichent repas par repas : vous cochez ce qu'il faut acheter.</p>
+   <button type="button" class="btn sec nvbtn" id="nvnew">🆕 Découvrir de nouvelles recettes<small>Marmiton, CuisineAZ · moins de 30 min</small></button>
+   <h3 class="sugh">📖 Parmi vos recettes</h3>
+   <p class="mut">De saison, pas cuisinées depuis plus de 20 jours. Ensuite, les ingrédients s'affichent repas par repas : vous cochez ce qu'il faut acheter.</p>
    <div class="card" id="sugs"></div>
    ${rows.some(r=>!r.sug)?`<p class="mut">${rows.filter(r=>!r.sug).length} créneau${rows.filter(r=>!r.sug).length>1?"x":""} sans suggestion : plus de recettes donneront plus de choix.</p>`:""}
    <div class="acts"><button class="btn sec" id="no">Annuler</button><button class="btn" id="ok"></button></div></div>`;
   document.body.appendChild(ov);paint();
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#no").onclick=close;
+  $("#nvnew").onclick=()=>{close();maybePropose(true,true)};
   const seen=new Set(rows.filter(r=>r.sug).map(r=>r.sug.name));
   $("#sugs").addEventListener("click",e=>{
     const re=e.target.closest("[data-re]"),rm=e.target.closest("[data-rm]"),nb=e.target.closest("[data-n]"),re2=e.target.closest("[data-re2]");
@@ -597,7 +600,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v263"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v264"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
