@@ -116,3 +116,19 @@ test("idées refusées et avis gardés par la synchro", () => {
   assert.equal(Data.clean("combos", "n2", { text: "javascript:x", kind: "refus", ts: 1 }), null);
   assert.equal(Data.clean("recipes", "r", { name: "A", avis: "oui", ingredients: [] }).avis, "oui");
 });
+
+test("recette collée en entier : nom, personnes, ingrédients et étapes triés", () => {
+  const x = Data.splitPaste(require("fs").readFileSync(__dirname + "/blanquette.txt", "utf8"));
+  assert.equal(x.name, "Blanquette de veau à l'ancienne");
+  assert.equal(x.pour, 4);
+  assert.equal(x.ingredients.length, 11);
+  assert.equal(x.ingredients[0], "320 g de [jarret ?] de veau (avec os)");
+  assert.equal(x.steps.split("\n").length, 7);
+  assert.ok(x.steps.startsWith("Couper le veau"));
+});
+test("recette collée : seulement les étapes, ou seulement les ingrédients", () => {
+  const e = Data.splitPaste("1. Couper le veau en morceaux.\n2. Recouvrir la viande d'eau chaude.\n3. Couvrir et faire mijoter 1 h.");
+  assert.deepEqual([e.ingredients.length, e.steps.split("\n").length], [0, 3]);
+  const i = Data.splitPaste("400 g de pâtes\n2 oeufs\n100 g de lardons");
+  assert.deepEqual([i.ingredients.length, i.steps], [3, ""]);
+});

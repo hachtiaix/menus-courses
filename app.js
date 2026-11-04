@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v268"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v269"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1494,7 +1494,7 @@ function recipeEditor(r,pre,after,onCancel){
    <div class="serv"><span>Saison</span><select id="ssn">${[["all","Toute l'année"],["ete","Été (pas de novembre à mars)"],["hiver","Hiver (pas de mai à septembre)"],["dec","Décembre seulement (Noël)"]]
      .map(([v,l])=>`<option value="${v}" ${v===Data.recipeSeason(r||{name:""})?"selected":""}>${l}</option>`).join("")}</select></div>
    <p class="mut">Ingrédients pour ce nombre de personnes, avec la quantité en premier. Le magasin est celui proposé par défaut.</p>
-   <textarea id="paste" rows="3" placeholder="📋 Collez ici toute la liste d'ingrédients : une ligne par ingrédient"></textarea>
+   <textarea id="paste" rows="3" placeholder="📋 Collez ici la recette : tout, ou seulement les ingrédients, ou seulement les étapes"></textarea>
    <div id="eds">${(r?r.ingredients:[{t:""},{t:""},{t:""}]).map(rowH).join("")}</div>
    <button class="addrow" id="more"><i>+</i>Ajouter un ingrédient</button>
    <h3 class="steps-h">Étapes</h3>
@@ -1522,21 +1522,20 @@ function recipeEditor(r,pre,after,onCancel){
   ov.onclick=e=>{if(e.target===ov){if(snap()===start||confirm(pre?"Abandonner cette recette importée ?":"Abandonner les modifications de la recette ?"))cancel();return}const x=e.target.closest(".x");if(x)x.parentNode.remove();
     const p=e.target.closest(".pan");if(p)p.classList.toggle("on")}; // 🏠 placard : vaut pour toutes les recettes
   $("#no").onclick=cancel;
-  // Texte collé : une ligne d'ingrédient par ligne (puces, titres et étapes ignorés), « pour 6 personnes » règle le nombre.
+  // Texte collé : la recette entière, ou seulement les ingrédients, ou seulement les étapes (tri dans Data.splitPaste) ;
+  // le nom du plat (au-dessus de « Ingrédients ») remplit le nom s'il est vide, « pour 6 personnes » règle le nombre.
   $("#paste").oninput=()=>{const v=$("#paste").value;if(!/\n/.test(v.trim()))return;
-    let lines=[],st="",pour=0;const all=v.split(/\r?\n/);
-    for(let [k,l] of all.entries()){l=l.replace(/^\s*(?:[-•*·▪◦–—]|\d+[.)](?=\s))\s*/,"").trim();
-      if(/^(pr[ée]paration|[ée]tapes?|instructions?)\b/i.test(l)){st=all.slice(k+1).map(x=>x.trim()).filter(Boolean).join("\n");break} // la suite : les étapes
-      const p=l.match(/pour\s+(\d+)\s*(?:pers|parts?|couverts?)/i);if(p){pour=+p[1];continue}
-      if(!l||/^ingr[ée]dients?\s*:?$/i.test(l)||l.length>80)continue;lines.push(l)}
-    if(!lines.length)return;
-    lines=Data.splitSeasoning(lines); // « Sel, poivre » : deux ingrédients
+    const x=Data.splitPaste(v);let lines=x.ingredients;
+    if(!lines.length&&!x.steps)return;
     // prévue pour 1 ou 2 : adaptée pour 3 ou 4 (le nombre qui tombe le plus juste), étapes comprises
-    const a=pour?Data.adaptServes(pour,lines,st):{serves:0,ingredients:lines,steps:st,from:null};lines=a.ingredients;
-    if(pour)$("#sv").value=a.serves;if(a.steps&&!$("#stp").value.trim())$("#stp").value=a.steps;
-    [...ov.querySelectorAll(".ed-row")].filter(el=>!el.querySelector(".ing").value.trim()).forEach(el=>el.remove());
-    $("#eds").insertAdjacentHTML("beforeend",lines.map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})).join(""));
-    $("#paste").value="";toast(`✓ ${lines.length} ingrédient${lines.length>1?"s":""} ajouté${lines.length>1?"s":""}${a.from?` · prévue pour ${a.from}, adaptée pour ${a.serves}`:""}`)};
+    const a=x.pour?Data.adaptServes(x.pour,lines,x.steps):{serves:0,ingredients:lines,steps:x.steps,from:null};lines=a.ingredients;
+    if(x.pour)$("#sv").value=a.serves;
+    if(x.name&&!$("#rn").value.trim())$("#rn").value=x.name;
+    if(a.steps){const cur=$("#stp").value.trim();$("#stp").value=cur?cur+"\n"+a.steps:a.steps}
+    if(lines.length){[...ov.querySelectorAll(".ed-row")].filter(el=>!el.querySelector(".ing").value.trim()).forEach(el=>el.remove());
+      $("#eds").insertAdjacentHTML("beforeend",lines.map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})).join(""))}
+    const ns=a.steps?a.steps.split("\n").length:0,pl=(n,w)=>n+" "+w+(n>1?"s":"");
+    $("#paste").value="";toast("✓ "+[lines.length?pl(lines.length,"ingrédient"):"",ns?pl(ns,"étape"):""].filter(Boolean).join(" et ")+(a.from?` · prévue pour ${a.from}, adaptée pour ${a.serves}`:""))};
   $("#more").onclick=()=>{$("#eds").insertAdjacentHTML("beforeend",rowH({t:""}));$("#eds").lastChild.querySelector(".ing").focus()};
   if(r)$("#del").onclick=()=>{if(confirm("Supprimer cette recette ?")){touch("recipes",{...r,deleted:true});close();render()}};
   $("#ok").onclick=()=>{

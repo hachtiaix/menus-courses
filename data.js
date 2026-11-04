@@ -523,6 +523,30 @@ function planSlots(ymd){const d=new Date(ymd+"T12:00"),toSat=(6-d.getDay()+7)%7|
 // « 1 boîte de moyenne de tomates » (ancienne lecture des recettes), « 1 moyenne boîte » → « 1 boîte moyenne »
 function boxFix(t){return t.replace(/\b(bo[iî]tes?) de (petites?|moyennes?|grosses?|grandes?) (de\s|d['’])/gi,(m,b,a,d)=>/^moy/i.test(a)?b+" "+a+" "+d:a+" "+b+" "+d)
   .replace(/\b(moyennes?) (bo[iî]tes?)\b/gi,"$2 $1")}
+// Texte de recette collé : ingrédients, étapes, ou les deux. Titres « Ingrédients » / « Préparation » reconnus ;
+// sans titre, une ligne est une étape si c'est une phrase (verbe en tête, longue, « Étape 2 »…), sinon un ingrédient.
+// Après la première étape, la suite est faite d'étapes (sauf un nouveau titre « Ingrédients »).
+const STEP_VERB=/^(ajout|mett|met\b|mel|mél|coup|epluch|éplouch|éplu|prech|préch|vers|laiss|cuir|cuis|faire|fait|serv|depos|dépos|dispos|enfourn|egout|égout|batt|incorpor|sal(er|ez)\b|poivr(er|ez)\b|port(er|ez)\b|remu|repart|répart|hach|emin|émin|lav|pel(er|ez)\b|plac|retir|reserv|réserv|fouett|chauff|rechauff|réchauff|dor(er|ez)\b|saupoudr|arros|nap|couvr|recouvr|mix|travaill|form|roul|etal|étal|beurr|graiss|huil|assaison|rect|rinc|plong|egrain|égrain|decoup|découp|tranch|râp|rap(er|ez)\b|press|mélang|melang|déglac|deglac|fair|prenez|prendre|commenc|termin|lorsque|quand|pendant|dans un|dans une|une fois|enfin|ensuite|puis|pour finir)/i;
+function splitPaste(v){
+  const out={ingredients:[],steps:[],pour:0,name:""};let mode="",before=[];
+  const all=String(v||"").split(/\r?\n/),hasHead=all.some(l=>/^\W*ingr[ée]dients?\b/i.test(l.trim()));
+  for(let l of all){
+    const num=/^\s*(?:\d+\s*[.)]|[ée]tape\s*\d+\s*[:.)-]?)\s*/i.test(l);
+    l=l.replace(/^\s*(?:[-•*·▪◦–—]|\d+[.)](?=\s)|[ée]tape\s*\d+\s*[:.)-]?)\s*/i,"").trim();
+    if(!l)continue;
+    if(/^ingr[ée]dients?\b\s*(?:\(.*\))?\s*:?$/i.test(l)||/^ingr[ée]dients?\s+pour\b/i.test(l)){mode="ing";const p=l.match(/(\d+)\s*(?:pers|parts?|couverts?)/i);if(p)out.pour=+p[1];continue}
+    if(/^(pr[ée]paration|[ée]tapes?|instructions?|d[ée]roul[ée]|recette|cuisson)\b\s*:?\s*$/i.test(l)){mode="step";continue}
+    // ligne d'infos (« Préparation : 10 min · Cuisson : 1 h · Pour 4 personnes ») : seulement le nombre de personnes
+    const pp=l.match(/pour\s+(\d+)\s*(?:pers|parts?|couverts?)/i)||l.match(/^(\d+)\s*(?:pers(?:onnes?)?|parts?|couverts?)\s*:?$/i);
+    if(pp&&(l.length<40||/\b(min|minutes?|h|heures?|cuisson|pr[ée]paration|repos)\b/i.test(l))){out.pour=+pp[1];continue}
+    if(/^(pr[ée]paration|cuisson|repos|temps|difficult[ée]|co[uû]t)\s*:/i.test(l)&&mode!=="step")continue;
+    // avant le titre « Ingrédients » : le nom du plat
+    if(hasHead&&!mode){if(!out.name&&l.length<=100)out.name=l;continue}
+    const step=mode==="step"||(mode!=="ing"&&(l.length>80||(num&&!/^\d/.test(l)&&l.split(/\s+/).length>3)||STEP_VERB.test(l)||(/[.!]$/.test(l)&&l.split(/\s+/).length>5)));
+    if(step){out.steps.push(l);if(mode!=="ing")mode="step"}
+    else if(l.length<=80)out.ingredients.push(l);
+  }
+  out.ingredients=splitSeasoning(out.ingredients);out.steps=out.steps.join("\n");return out}
 function clean(k,id,r){
   if(!okId(id)||!r||typeof r!=="object")return null;
   const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;
@@ -598,6 +622,6 @@ function prune(S,now){
   for(const id of Object.keys(S.meals||{})){const d=Date.parse(id.slice(0,10));if(d&&now-d>MEAL_TTL){delete S.meals[id];n++}}
   return n;
 }
-root.Data={KINDS,hiddenFoods,baseLabel,baseWords,okId,str,clean,cleanAll,splitSeasoning,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
+root.Data={KINDS,splitPaste,hiddenFoods,baseLabel,baseWords,okId,str,clean,cleanAll,splitSeasoning,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
   TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);
