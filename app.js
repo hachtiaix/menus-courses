@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v277"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v278"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1513,10 +1513,8 @@ function recipeEditor(r,pre,after,onCancel){
    <textarea id="paste" class="rlink" rows="3" placeholder="📋 Collez ici la recette : ${r?"":"le lien Marmiton ou CuisineAZ, ou "}le texte (tout, ou seulement les ingrédients, ou seulement les étapes)" autocomplete="off"></textarea><p class="mut rlinkm" id="rlinkm"></p>
    <input type="text" id="rn" placeholder="Nom du plat" value="${esc(r?r.name:"")}" style="width:100%;margin-bottom:10px">
    <div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${r?r.serves||BASE:BASE}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div>
-   <div class="serv"><span>Type</span><select id="sdes"><option value="p">Plat</option><option value="d" ${Data.recipeDessert(r||{name:""})?"selected":""}>Dessert (jamais proposé dans les menus)</option></select></div>
-   <label class="serv chk"><input type="checkbox" id="sgou" ${r&&r.gourmand?"checked":""}><span>😋 Plat gourmand <small class="mut">riche : 4 au plus par semaine dans 💡</small></span></label>
-   <div class="serv"><span>Saison</span><select id="ssn">${[["all","Toute l'année"],["ete","Été (pas de novembre à mars)"],["hiver","Hiver (pas de mai à septembre)"],["dec","Noël (du 1er décembre au 31 janvier)"]]
-     .map(([v,l])=>`<option value="${v}" ${v===Data.recipeSeason(r||{name:""})?"selected":""}>${l}</option>`).join("")}</select></div>
+   <input type="hidden" id="sdes" value="${Data.recipeDessert(r||{name:""})?"d":"p"}"><input type="checkbox" id="sgou" hidden ${r&&r.gourmand?"checked":""}><input type="hidden" id="ssn" value="${Data.recipeSeason(r||{name:""})}">
+   <div id="rtags" class="nvtags"></div>
    <p class="mut">Ingrédients pour ce nombre de personnes, avec la quantité en premier. Le magasin est celui proposé par défaut.</p>
    <div id="eds">${(r?r.ingredients:[{t:""},{t:""},{t:""}]).map(rowH).join("")}</div>
    <button class="addrow" id="more"><i>+</i>Ajouter un ingrédient</button>
@@ -1528,10 +1526,18 @@ function recipeEditor(r,pre,after,onCancel){
   // recette d'un site : tous les champs remplis, le lien d'origine gardé ; on vérifie puis « Enregistrer »
   let src=r&&r.source||null,prep=r&&r.prep||null;
   const fill=p=>{$("#rn").value=p.name||"";$("#sv").value=p.serves||BASE;$("#stp").value=p.steps||"";src=p.source||null;prep=p.prep||null;
-    $("#sdes").value=Data.guessDessert(p.name||"")?"d":"p";$("#ssn").value=Data.recipeSeason({name:p.name||""});
+    $("#sdes").value=Data.guessDessert(p.name||"")?"d":"p";$("#ssn").value=Data.recipeSeason({name:p.name||""});if($("#rtags"))paintT();
     [...ov.querySelectorAll(".ed-row")].forEach(el=>el.remove());
     $("#eds").insertAdjacentHTML("beforeend",(p.ingredients||[]).map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})).join("")||rowH({t:""}))};
   // une seule case : un lien Marmiton / CuisineAZ (nouvelle recette) est lu sur le site, un texte est trié (plus bas)
+  // Plat / Dessert, Gourmand, saison : les mêmes boutons que pour les idées (valeurs dans les champs cachés)
+  const SE=[["all","Toute l'année"],["ete","☀️ Été"],["hiver","❄️ Hiver"],["dec","🎄 Noël"]];
+  const paintT=()=>{const d=$("#sdes").value==="d",g=$("#sgou").checked,se=$("#ssn").value;
+    $("#rtags").innerHTML=`<div class="rfil"><button type="button" data-tg="p" class="${!d?"on":""}">🍽️ Plat</button><button type="button" data-tg="d" class="${d?"on":""}">🍰 Dessert</button><button type="button" data-tg="g" class="${g?"on":""}">😋 Gourmand</button></div>
+      <div class="rfil">${SE.map(([v,l])=>`<button type="button" data-ts="${v}" class="${se===v?"on":""}">${l}</button>`).join("")}</div>`};
+  paintT();
+  $("#rtags").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+    if(b.dataset.tg==="g")$("#sgou").checked=!$("#sgou").checked;else if(b.dataset.tg)$("#sdes").value=b.dataset.tg;else if(b.dataset.ts)$("#ssn").value=b.dataset.ts;paintT()};
   const lk=$("#paste");
   const readLink=async()=>{const v=lk.value.trim(),m=$("#rlinkm");if(r||/\n/.test(v)||!/^https?:\/\//i.test(v))return false;
     const u=v.replace(/[?#].*$/,"");
