@@ -163,9 +163,12 @@ test("plusieurs accompagnements déjà faits avec une recette : un au hasard", (
   assert.deepEqual([...got].sort(), ["Courgettes farcies, Orzo", "Courgettes farcies, Riz", "Courgettes farcies, Semoule"]);
 });
 
-test("saison « décembre seulement »", () => {
+test("saison Noël : du 1er décembre au 31 janvier", () => {
   assert.ok(Data.inSeason("dec", 12));
-  for (const m of [1, 6, 11]) assert.ok(!Data.inSeason("dec", m));
+  assert.ok(Data.inSeason("dec", 1));
+  for (const m of [2, 6, 11]) assert.ok(!Data.inSeason("dec", m));
+  assert.equal(Data.recipeSeason({ name: "Galette des rois", season: "all" }), "dec");
+  assert.equal(Data.recipeSeason({ name: "Galette bretonne complète", season: "all" }), "all");
   const S = Data.cleanAll({ recipes: { a: { id: "a", name: "Dinde aux marrons", serves: 6, ingredients: [], season: "dec" } } });
   assert.equal(S.recipes.a.season, "dec");
   assert.ok(Data.suggest(S, "2026-12-01", 10, [], () => 0.5).some((x) => x.name === "Dinde aux marrons"));

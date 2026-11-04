@@ -11,9 +11,10 @@ const MEAL_TTL=180*DAY;      // repas : gardés 6 mois
 const HABIT_TTL=730*DAY;     // habitude oubliée après 24 mois sans être suivie
 
 // Saison d'une recette : "all" (toute l'année), "ete" (pas de novembre à mars), "hiver" (pas de mai à septembre).
-const SEASONS=["all","ete","hiver","dec"]; // dec : en décembre seulement (Noël)
+const SEASONS=["all","ete","hiver","dec"]; // dec : Noël et galette, du 1er décembre au 31 janvier
 // Expressions entières (sans accents), au singulier ; le pluriel en s/x est accepté.
 const SEASON_WORDS={
+  dec:["galette des rois","galette frangipane","buche","chapon"],
   hiver:["tartiflette","croziflette","raclette","fondue","pierrade","pot au feu","choucroute","potee","soupe","veloute","potage",
          "blanquette","bourguignon","daube","cassoulet","parmentier","aligot","carbonade","garbure","mont d or","vin chaud"],
   ete:["salade","gaspacho","gazpacho","taboule","barbecue","bbq","brochette","melon","carpaccio","ceviche","poke","pan bagnat",
@@ -62,8 +63,8 @@ function guessSeason(name){
     for(const p of list)if(new RegExp(" "+p.replace(/ /g,"[sx]? ")+"[sx]? ").test(n))return s;
   return "all";
 }
-const recipeSeason=r=>(r&&r.season)||guessSeason(r&&r.name);
-const inSeason=(season,month)=>season==="ete"?!(month>=11||month<=3):season==="hiver"?!(month>=5&&month<=9):season==="dec"?month===12:true;
+const recipeSeason=r=>{const g=guessSeason(r&&r.name);return g==="dec"&&(!r.season||r.season==="all")?"dec":(r&&r.season)||g};
+const inSeason=(season,month)=>season==="ete"?!(month>=11||month<=3):season==="hiver"?!(month>=5&&month<=9):season==="dec"?month===12||month===1:true;
 
 // Types de plats (pour les habitudes), reconnus dans le nom : l'expression la plus à gauche l'emporte
 // (« Salade de pâtes » → salade, « Gratin de pâtes » → gratin).
