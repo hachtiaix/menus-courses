@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v269"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v270"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1486,7 +1486,7 @@ function recipeEditor(r,pre,after,onCancel){
   const rowH=i=>`<div class="ed-row"><input type="text" class="ing" value="${esc(i.t)}" placeholder="400 g de pâtes"><select>${opts(i.store||"auchan")}</select><button type="button" class="pill pan ${i.t&&pantryOf(i.t)?"on":""}" aria-label="Toujours à la maison (placard)" title="Placard : toujours à la maison">🏠</button><button class="x">×</button></div>`;
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${r?"Modifier la recette":"Nouvelle recette"}</h2>
-   ${r?"":`<input type="url" id="rlink" class="rlink" placeholder="🔗 Coller le lien Marmiton ou CuisineAZ" inputmode="url" autocomplete="off" autocapitalize="off"><p class="mut rlinkm" id="rlinkm"></p>`}
+   <textarea id="paste" class="rlink" rows="3" placeholder="📋 Collez ici la recette : ${r?"":"le lien Marmiton ou CuisineAZ, ou "}le texte (tout, ou seulement les ingrédients, ou seulement les étapes)" autocomplete="off"></textarea><p class="mut rlinkm" id="rlinkm"></p>
    <input type="text" id="rn" placeholder="Nom du plat" value="${esc(r?r.name:"")}" style="width:100%;margin-bottom:10px">
    <div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${r?r.serves||BASE:BASE}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div>
    <div class="serv"><span>Type</span><select id="sdes"><option value="p">Plat</option><option value="d" ${Data.recipeDessert(r||{name:""})?"selected":""}>Dessert (jamais proposé dans les menus)</option></select></div>
@@ -1494,7 +1494,6 @@ function recipeEditor(r,pre,after,onCancel){
    <div class="serv"><span>Saison</span><select id="ssn">${[["all","Toute l'année"],["ete","Été (pas de novembre à mars)"],["hiver","Hiver (pas de mai à septembre)"],["dec","Décembre seulement (Noël)"]]
      .map(([v,l])=>`<option value="${v}" ${v===Data.recipeSeason(r||{name:""})?"selected":""}>${l}</option>`).join("")}</select></div>
    <p class="mut">Ingrédients pour ce nombre de personnes, avec la quantité en premier. Le magasin est celui proposé par défaut.</p>
-   <textarea id="paste" rows="3" placeholder="📋 Collez ici la recette : tout, ou seulement les ingrédients, ou seulement les étapes"></textarea>
    <div id="eds">${(r?r.ingredients:[{t:""},{t:""},{t:""}]).map(rowH).join("")}</div>
    <button class="addrow" id="more"><i>+</i>Ajouter un ingrédient</button>
    <h3 class="steps-h">Étapes</h3>
@@ -1508,13 +1507,15 @@ function recipeEditor(r,pre,after,onCancel){
     $("#sdes").value=Data.guessDessert(p.name||"")?"d":"p";$("#ssn").value=Data.recipeSeason({name:p.name||""});
     [...ov.querySelectorAll(".ed-row")].forEach(el=>el.remove());
     $("#eds").insertAdjacentHTML("beforeend",(p.ingredients||[]).map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})).join("")||rowH({t:""}))};
-  const lk=$("#rlink");
-  if(lk)lk.oninput=async()=>{const u=lk.value.trim().replace(/[?#].*$/,""),m=$("#rlinkm");if(!u)return m.textContent="";
-    if(!Data.SOURCE.test(u)){m.textContent="Collez le lien d'une recette Marmiton ou CuisineAZ.";return}
+  // une seule case : un lien Marmiton / CuisineAZ (nouvelle recette) est lu sur le site, un texte est trié (plus bas)
+  const lk=$("#paste");
+  const readLink=async()=>{const v=lk.value.trim(),m=$("#rlinkm");if(r||/\n/.test(v)||!/^https?:\/\//i.test(v))return false;
+    const u=v.replace(/[?#].*$/,"");
+    if(!Data.SOURCE.test(u)){m.textContent="Lien non reconnu : seuls Marmiton et CuisineAZ se lisent. Sinon, collez le texte de la recette.";return true}
     m.textContent="Lecture de la recette…";lk.disabled=true;
-    try{const p=await fetchRecipe(u);fill(p);m.textContent=readMsg(p)}catch(e){m.textContent="⚠ "+e.message}
-    lk.disabled=false};
-  if(pre){fill(pre);if(lk){lk.value=pre.source||"";$("#rlinkm").textContent=readMsg(pre)}}
+    try{const p=await fetchRecipe(u);fill(p);lk.value="";m.textContent=readMsg(p)}catch(e){m.textContent="⚠ "+e.message}
+    lk.disabled=false;return true};
+  if(pre){fill(pre);$("#rlinkm").textContent=readMsg(pre)}
   // toucher à côté de la fenêtre : on ferme seulement si rien n'a changé (sinon on demande)
   const snap=()=>[...ov.querySelectorAll("input,textarea,select,.pan")].map(e=>e.classList.contains("pan")?e.classList.contains("on"):e.type==="checkbox"?e.checked:e.value).join("\u0001");
   const start=pre?null:snap(); // recette importée : pas encore enregistrée, on demande toujours
@@ -1524,7 +1525,7 @@ function recipeEditor(r,pre,after,onCancel){
   $("#no").onclick=cancel;
   // Texte collé : la recette entière, ou seulement les ingrédients, ou seulement les étapes (tri dans Data.splitPaste) ;
   // le nom du plat (au-dessus de « Ingrédients ») remplit le nom s'il est vide, « pour 6 personnes » règle le nombre.
-  $("#paste").oninput=()=>{const v=$("#paste").value;if(!/\n/.test(v.trim()))return;
+  $("#paste").oninput=async()=>{if(await readLink())return;$("#rlinkm").textContent="";const v=$("#paste").value;if(!/\n/.test(v.trim()))return;
     const x=Data.splitPaste(v);let lines=x.ingredients;
     if(!lines.length&&!x.steps)return;
     // prévue pour 1 ou 2 : adaptée pour 3 ou 4 (le nombre qui tombe le plus juste), étapes comprises
