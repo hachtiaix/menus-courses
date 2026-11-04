@@ -67,11 +67,17 @@ function safeRender(){
 // une liste de suggestions ouverte par 💡 se referme si on touche ailleurs
 document.addEventListener("pointerdown",e=>{if(!e.target.closest(".sug,.bulb,[data-m]"))document.querySelectorAll(".slotw .sug").forEach(x=>x.remove())});
 document.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!document.activeElement.matches("input,textarea,select")){pendingRender=false;safeRender()}},250));
-// iPhone : après la fermeture du clavier, la barre du bas peut rester au milieu de l'écran → on recale la page
-function recale(){const vv=window.visualViewport;if(document.activeElement&&document.activeElement.matches("input,textarea,select"))return;
-  if(!vv||vv.offsetTop>0||Math.abs(vv.height-innerHeight)<2){const y=Math.min(scrollY,Math.max(0,document.documentElement.scrollHeight-innerHeight));scrollTo(0,y+1);scrollTo(0,y)}}
-document.addEventListener("focusout",()=>setTimeout(recale,350));
-if(window.visualViewport)visualViewport.addEventListener("resize",()=>setTimeout(recale,100));
+// iPhone : après la fermeture du clavier (ou d'une fenêtre), la barre du bas peut rester au milieu de l'écran →
+// on recale la page plusieurs fois, le temps que l'animation du clavier se termine
+function recale(){if(document.activeElement&&document.activeElement.matches("input,textarea,select"))return;
+  const vv=window.visualViewport;if(vv&&innerHeight-vv.height>120)return; // clavier encore ouvert
+  const y=Math.min(scrollY,Math.max(0,document.documentElement.scrollHeight-innerHeight));scrollTo(0,y+1);scrollTo(0,y)}
+let recT=[];const recaleSoon=()=>{recT.forEach(clearTimeout);recT=[120,400,800,1500].map(ms=>setTimeout(recale,ms))};
+document.addEventListener("focusout",recaleSoon);
+if(window.visualViewport)visualViewport.addEventListener("resize",recaleSoon);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)recaleSoon()});
+addEventListener("pageshow",recaleSoon);addEventListener("orientationchange",recaleSoon);
+new MutationObserver(ms=>{if(ms.some(m=>[...m.removedNodes].some(n=>n.classList&&n.classList.contains("ov"))))recaleSoon()}).observe(document.body,{childList:true}); // fenêtre refermée
 function setStatus(c){
   const changed=c!==status;status=c;
   $("#status").className=c;$("#status").title=STATE[c];
@@ -600,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v266"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v267"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
