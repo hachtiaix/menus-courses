@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v272"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v273"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -920,7 +920,8 @@ function ingredientsDialog(name,mealKey,startN,after,step){
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-st2]");if(b){tab=LS.tab=b.dataset.st2;render();scrollTo(0,0)}});
 $("#tabs").onclick=e=>{let t=(e.target.closest("[data-t]")||{dataset:{}}).dataset.t;if(t==="recettes")rview="rec";if(t==="courses")t=S.lists[LS.store]&&!S.lists[LS.store].deleted?LS.store:"auchan";if(t){tab=LS.tab=t;render();scrollTo(0,0);
-  if(t==="menus"){toToday();setTimeout(()=>{if(!maybeAvis())maybePropose()},600)}
+  if(t==="menus"){toToday();setTimeout(()=>{maybeAvis()},600)}
+  if(t==="recettes")setTimeout(dailyIdeas,600);
   if(window.syncSoon)syncSoon()}};
 // Menus : aujourd'hui en haut de l'écran (ouverture de l'app ou de l'onglet)
 const toToday=()=>{const d=document.querySelector(".day.today");if(d)scrollTo(0,Math.max(0,d.getBoundingClientRect().top+scrollY-(document.querySelector("header").offsetHeight+8)))};
@@ -1154,34 +1155,38 @@ async function fetchRecipe(url){
   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Lecture impossible.");
   return Data.fromSchema(j,j.url||url);
 }
-// Mercredi, jeudi, vendredi : si la période suivante (samedi → vendredi) est remplie à moitié ou moins, 15 nouveautés au plus,
+// Chaque jour, à l'ouverture de 📖 Recettes : 5 nouveautés (15 avec le bouton 🆕),
 // rapides (30 min de préparation au plus) de Marmiton et CuisineAZ (nouveautes.json, mis à jour chaque mardi soir).
-// Une fois par jour au plus ; « Non merci » : plus rien jusqu'à la période suivante.
-async function maybePropose(force,direct){
-  const t=todayKey(),wd=new Date(t+"T12:00").getDay(),slots=Data.planSlots(t),period=slots[0].slice(0,10);
-  const filled=slots.filter(k=>S.meals[k]&&!S.meals[k].deleted&&S.meals[k].text).length;
-  if(!force&&(wd<3||wd>5||LS.nvDay===t||LS.nvNo===period||filled>slots.length/2))return;
-  if(!canSync()||document.querySelector(".ov"))return;
-  let list=[];try{const r=await fetch("nouveautes.json",{cache:"no-cache"});list=((await r.json())||{}).recettes||[]}catch(_){return}
+// Une fois par jour au plus.
+// Nouveautés de la semaine (nouveautes.json) encore inconnues : pas déjà dans les recettes, pas refusées, des repas rapides.
+// max idées tirées au hasard, les deux sites à tour de rôle
+async function newIdeas(max){
+  let list=[];try{const r=await fetch("nouveautes.json",{cache:"no-cache"});list=((await r.json())||{}).recettes||[]}catch(_){return[]}
   const refus=new Set(live(S.combos||{}).filter(c=>c.kind==="refus").map(c=>c.text));
   const mine=new Set([...live(S.recipes).map(x=>x.source).filter(Boolean),...refus]),names=new Set(live(S.recipes).map(x=>Data.plain(x.name).trim()));
   // des repas : pas de toasts ni de recettes pour robot (Thermomix, Cookeo…), même si la liste en contient encore
   const NOT_MEAL=/toasts?\b|tartines?\b|bruschetta|crostini|canap[ée]s?\b|\bchips\b|thermomix|cookeo|companion|monsieur cuisine/i;
   const ok=list.filter(x=>x&&Data.SOURCE.test(x.url)&&!mine.has(x.url)&&!names.has(Data.plain(x.titre||"").trim())&&x.prep>0&&x.prep<=30&&!NOT_MEAL.test((x.titre||"")+" "+x.url));
   const mix=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]),a=mix(ok.filter(x=>x.site==="marmiton")),b=mix(ok.filter(x=>x.site!=="marmiton")),pick=[];
-  while((a.length||b.length)&&pick.length<15){if(a.length)pick.push(a.shift());if(b.length&&pick.length<15)pick.push(b.shift())} // les deux sites, à tour de rôle, 15 au plus
-  if(direct){if(pick.length)ideaFlow(pick);else toast("Pas d'autre idée pour l'instant");return}
-  if(!pick.length||tab!=="menus"||document.querySelector(".ov"))return;
+  while((a.length||b.length)&&pick.length<max){if(a.length)pick.push(a.shift());if(b.length&&pick.length<max)pick.push(b.shift())}
+  return pick}
+// Bouton 🆕 (Suggérer, avis) : les nouveautés repas par repas, 15 au plus
+async function maybePropose(force,direct){
+  if(!canSync()){toast("Il faut d'abord le code du foyer (⚙︎ → Synchro).");return}
+  const pick=await newIdeas(15);if(pick.length)ideaFlow(pick);else toast("Pas d'autre idée pour l'instant")}
+// 📖 Recettes, une fois par jour : la carte « Envie d'idées ? » avec 5 nouveautés, puis repas par repas
+async function dailyIdeas(){const t=todayKey();
+  if(LS.nvDay===t||!canSync()||tab!=="recettes"||document.querySelector(".ov"))return;
+  const pick=await newIdeas(5);if(!pick.length||tab!=="recettes"||document.querySelector(".ov"))return;
   LS.nvDay=t;
-  const day=new Date(period+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
+  const day=new Date(Data.planSlots(t)[0].slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>🆕 Envie d'idées ?</h2>
-   <p class="mut">Pour la semaine du samedi ${esc(day)}, ${filled?`${filled} repas sur ${slots.length} ${filled>1?"sont prévus":"est prévu"}`:"aucun repas n'est encore prévu"}. Des nouvelles recettes rapides (moins de 30 min de préparation) vous attendent, repas par repas.</p>
+   <p class="mut">${pick.length} nouvelle${pick.length>1?"s":""} recette${pick.length>1?"s":""} rapide${pick.length>1?"s":""} (moins de 30 min de préparation) pour la semaine du samedi ${esc(day)}, repas par repas.</p>
    <div class="acts"><button class="btn sec" id="nvlater">Plus tard</button><button class="btn" id="nvgo">Voir les idées</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#nvlater").onclick=close;
-  $("#nvgo").onclick=()=>{close();ideaFlow(pick)};
-}
+  $("#nvgo").onclick=()=>{close();ideaFlow(pick)}}
 // Repas de la semaine en préparation (samedi → vendredi), midis et soirs ; les repas déjà prévus sont signalés
 function weekOptions(sel){const sat=Data.planSlots(todayKey())[0].slice(0,10),out=[];
   for(let i=0;i<7;i++){const d=Data.addDays(sat,i),lb=new Date(d+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"short"});
@@ -1622,7 +1627,7 @@ function toast(msg,undo){document.querySelectorAll(".toast").forEach(x=>x.remove
   const t=document.createElement("div");t.className="toast"+(undo?" undo":"");const m=document.createElement("span");m.textContent=msg;t.appendChild(m);
   if(undo){const b=document.createElement("button");b.type="button";b.textContent="Annuler";b.onclick=()=>{t.remove();undo()};t.appendChild(b)}
   document.body.appendChild(t);setTimeout(()=>t.remove(),undo?5000:3500)}
-purgeDone();render();if(tab==="menus"){toToday();setTimeout(()=>{if(!maybeAvis())maybePropose()},1500)}sync();
+purgeDone();render();if(tab==="menus"){toToday();setTimeout(()=>{maybeAvis()},1500)}if(tab==="recettes")setTimeout(dailyIdeas,1500);sync();
 setInterval(purgeDone,5*60*1000);
 // pas encore de code (nouvel appareil) : directement sur l'onglet Foyer, où on le saisit
 if(!code&&cfg.SUPABASE_URL)setTimeout(()=>{tab=LS.tab="settings";stab="foyer";render()},300);
