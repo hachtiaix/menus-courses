@@ -532,7 +532,7 @@ function suggestDialog(){
 function sidesLearned(){
   const rec=live(S.recipes).filter(r=>!Data.recipeDessert(r)),key=s=>Data.plain(s).trim(),out=new Map();
   const isRec=x=>rec.find(r=>key(r.name)===key(x)),starch=x=>{const f=Data.foodFor(x,true);return!!(f&&f.cat==="fec")};
-  const texts=[...live(S.meals).map(m=>({t:m.text})),...live(S.combos||{}).filter(c=>c.kind!=="plaisir"&&c.kind!=="off").map(c=>({t:c.text,id:c.id}))].filter(x=>x.t);
+  const texts=[...live(S.meals).map(m=>({t:m.text})),...live(S.combos||{}).filter(c=>c.kind!=="plaisir"&&c.kind!=="off"&&c.kind!=="refus").map(c=>({t:c.text,id:c.id}))].filter(x=>x.t);
   const isMain=x=>{if(isRec(x))return true;const f=Data.foodFor(x,true);return!!f&&(f.cat==="prot"||f.cat==="pois")};
   for(const {t,id} of texts){const p=t.split(/\s*(?:,|\+|\bet\b)\s*/i).filter(Boolean);if(p.length<2||Data.isOut(t))continue;
     if(p.filter(isMain).length>=2)continue; // « Hachis parmentier, Chili con carne » : deux repas distincts, pas un accompagnement
@@ -600,7 +600,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v265"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v266"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);

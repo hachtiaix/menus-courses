@@ -332,3 +332,10 @@ test("associations : deux plats principaux ne sont pas un accompagnement ; une a
   assert.ok(Data.isGourmand(Data.cleanAll({ recipes: {} }), "Pizza"));
   assert.ok(!Data.isGourmand(Data.cleanAll({ recipes: {} }), "Poulet rôti"));
 });
+
+test("une nouvelle recette refusée (adresse web) n'est jamais proposée comme plat", () => {
+  const S = { meals: {}, recipes: { r1: { id: "r1", name: "Lasagnes", ingredients: [], ts: 1 } },
+    combos: { "n-1": { id: "n-1", kind: "refus", text: "https://www.marmiton.org/recettes/recette_saumon-gravelax_24589.aspx", label: "Saumon gravelax", ts: 1 } } };
+  const got = Data.suggest(S, "2026-11-04", 12, [], () => 0, "2026-11-07-s").map(x => x.name);
+  assert.ok(!got.some(n => /https?:/.test(n)), got.join(" | "));
+});
