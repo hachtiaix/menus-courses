@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v275"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v276"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1194,7 +1194,7 @@ function weekOptions(sel){const sat=Data.planSlots(todayKey())[0].slice(0,10),ou
   return out.join("")}
 // Les idées repas par repas (repas libres de la période samedi → vendredi, les soirs d'abord) : la recette s'affiche
 // (ingrédients, étapes) ; « Ajouter » la place sur ce repas (puis les ingrédients pour les listes) et passe au repas suivant ;
-// « Passer ce repas → » la refuse (liste des idées refusées, modifiable dans ⚙︎ → Habitudes) et va au repas suivant.
+// « Passer cette recette → » la refuse (liste des idées refusées, modifiable dans ⚙︎ → Habitudes) et montre la suivante, pour le même repas.
 // Fermée : on arrête là, retour sur Menus.
 function ideaFlow(pool){
   const sl=Data.planSlots(todayKey()).filter(k=>k.endsWith("-s")||[0,6].includes(new Date(k.slice(0,10)+"T12:00").getDay())),libre=k=>!(S.meals[k]&&S.meals[k].text);
@@ -1202,19 +1202,20 @@ function ideaFlow(pool){
   let si=0,ii=0;const done=()=>{tab=LS.tab="menus";render();toast("✓ Fini pour les idées")};
   const load=x=>x.rec||(x.rec=fetchRecipe(x.url).catch(e=>({error:e.message})));
   const show=async()=>{
-    if(si>=slots.length||ii>=pool.length){done();return}
-    const key=slots[si],x=pool[ii],site=x.site==="marmiton"?"Marmiton":"CuisineAZ";
+    if(ii>=pool.length){done();return}
+    // repas proposé : le prochain libre ; s'il n'y en a plus, le premier de la période (à choisir dans la liste, « remplace »)
+    const key=slots[si]||slots[0]||sl[0],x=pool[ii],site=x.site==="marmiton"?"Marmiton":"CuisineAZ";
     if(pool[ii+1])load(pool[ii+1]); // la suivante se prépare en avance
     const when=new Date(key.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+(key.endsWith("-m")?" midi":" soir");
     const ov=document.createElement("div");ov.className="ov";
     ov.innerHTML=`<div class="sheet"><div class="grab"></div><select id="nvwhen" class="nvwhen" aria-label="Repas">${weekOptions(key)}</select><h2>${esc(String(x.titre||""))}</h2>
      <p class="mut">⏱ ${+x.prep} min de préparation · ${site} · <a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Voir sur le site ↗</a></p>
      <div id="nvrec"><p class="mut">Lecture de la recette…</p></div>
-     <div class="nvfoot"><div class="acts"><button class="btn sec" id="nvref">Passer ce repas →</button><button class="btn" id="nvadd" disabled>Ajouter</button></div></div></div>`;
+     <div class="nvfoot"><div class="acts"><button class="btn sec" id="nvref">Passer cette recette →</button><button class="btn" id="nvadd" disabled>Ajouter</button></div></div></div>`;
     document.body.appendChild(ov);
     const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov){close();tab=LS.tab="menus";render()}};
-    // passer : l'idée est refusée (plus reproposée), on va au repas suivant avec une autre idée
-    $("#nvref").onclick=()=>{touch("combos",{id:"n-"+uid(),text:x.url,kind:"refus",label:String(x.titre||"").slice(0,100)});close();ii++;si++;show()};
+    // passer : l'idée est refusée (plus reproposée), la recette suivante est proposée pour le même repas
+    $("#nvref").onclick=()=>{touch("combos",{id:"n-"+uid(),text:x.url,kind:"refus",label:String(x.titre||"").slice(0,100)});close();ii++;show()};
     const rec=await load(x);if(!ov.isConnected)return;
     if(rec.error){$("#nvrec").innerHTML=`<p class="nverr">⚠ ${esc(rec.error)}</p>`;return}
     $("#nvrec").innerHTML=`<p class="mut">Pour ${rec.serves} personne${rec.serves>1?"s":""}${rec.from?` (adaptée, prévue pour ${rec.from})`:""}</p>
