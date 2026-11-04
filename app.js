@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v273"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v274"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1176,9 +1176,9 @@ async function maybePropose(force,direct){
   const pick=await newIdeas(15);if(pick.length)ideaFlow(pick);else toast("Pas d'autre idée pour l'instant")}
 // 📖 Recettes, une fois par jour : la carte « Envie d'idées ? » avec 5 nouveautés, puis repas par repas
 async function dailyIdeas(){const t=todayKey();
-  if(LS.nvDay===t||!canSync()||tab!=="recettes"||document.querySelector(".ov"))return;
+  if(LS.nvSeen===t||!canSync()||tab!=="recettes"||document.querySelector(".ov"))return;
   const pick=await newIdeas(5);if(!pick.length||tab!=="recettes"||document.querySelector(".ov"))return;
-  LS.nvDay=t;
+  LS.nvSeen=t;
   const day=new Date(Data.planSlots(t)[0].slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>🆕 Envie d'idées ?</h2>
