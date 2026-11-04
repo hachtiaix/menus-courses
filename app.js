@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v276"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v277"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1174,18 +1174,18 @@ async function newIdeas(max){
 async function maybePropose(force,direct){
   if(!canSync()){toast("Il faut d'abord le code du foyer (⚙︎ → Synchro).");return}
   const pick=await newIdeas(15);if(pick.length)ideaFlow(pick);else toast("Pas d'autre idée pour l'instant")}
-// 📖 Recettes, une fois par jour : la carte « Envie d'idées ? » avec 5 nouveautés, puis repas par repas
+// 📖 Recettes, une fois par jour : la carte « Envie d'idées ? » avec 5 nouveautés, une par une (gardée dans les recettes ou passée)
 async function dailyIdeas(){const t=todayKey();
   if(LS.nvSeen===t||!canSync()||tab!=="recettes"||document.querySelector(".ov"))return;
   const pick=await newIdeas(5);if(!pick.length||tab!=="recettes"||document.querySelector(".ov"))return;
   LS.nvSeen=t;
   const ov=document.createElement("div");ov.className="ov";
   ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>🆕 Envie d'idées ?</h2>
-   <p class="mut">${pick.length} nouvelle${pick.length>1?"s":""} recette${pick.length>1?"s":""} rapide${pick.length>1?"s":""} (moins de 30 min de préparation), repas par repas.</p>
+   <p class="mut">${pick.length} nouvelle${pick.length>1?"s":""} recette${pick.length>1?"s":""} rapide${pick.length>1?"s":""} (moins de 30 min de préparation), à découvrir une par une.</p>
    <div class="acts"><button class="btn sec" id="nvlater">Plus tard</button><button class="btn" id="nvgo">Voir les idées</button></div></div>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close()};$("#nvlater").onclick=close;
-  $("#nvgo").onclick=()=>{close();ideaFlow(pick)}}
+  $("#nvgo").onclick=()=>{close();ideaFlow(pick,true)}}
 // Repas de la semaine en préparation (samedi → vendredi), midis et soirs ; les repas déjà prévus sont signalés
 function weekOptions(sel){const sat=Data.planSlots(todayKey())[0].slice(0,10),out=[];
   for(let i=0;i<7;i++){const d=Data.addDays(sat,i),lb=new Date(d+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"short"});
@@ -1196,10 +1196,10 @@ function weekOptions(sel){const sat=Data.planSlots(todayKey())[0].slice(0,10),ou
 // (ingrédients, étapes) ; « Ajouter » la place sur ce repas (puis les ingrédients pour les listes) et passe au repas suivant ;
 // « Passer cette recette → » la refuse (liste des idées refusées, modifiable dans ⚙︎ → Habitudes) et montre la suivante, pour le même repas.
 // Fermée : on arrête là, retour sur Menus.
-function ideaFlow(pool){
+function ideaFlow(pool,toRecipes){ // toRecipes : depuis 📖 Recettes, on garde la recette sans choisir de repas
   const sl=Data.planSlots(todayKey()).filter(k=>k.endsWith("-s")||[0,6].includes(new Date(k.slice(0,10)+"T12:00").getDay())),libre=k=>!(S.meals[k]&&S.meals[k].text);
   const slots=[...sl.filter(k=>k.endsWith("-s")&&libre(k)),...sl.filter(k=>k.endsWith("-m")&&libre(k))];
-  let si=0,ii=0;const done=()=>{tab=LS.tab="menus";render();toast("✓ Fini pour les idées")};
+  let si=0,ii=0,kept=0;const done=()=>{if(!toRecipes)tab=LS.tab="menus";render();toast(toRecipes?`✓ Fini pour les idées${kept?` · ${kept} recette${kept>1?"s":""} ajoutée${kept>1?"s":""}`:""}`:"✓ Fini pour les idées")};
   const load=x=>x.rec||(x.rec=fetchRecipe(x.url).catch(e=>({error:e.message})));
   const show=async()=>{
     if(ii>=pool.length){done();return}
@@ -1208,12 +1208,12 @@ function ideaFlow(pool){
     if(pool[ii+1])load(pool[ii+1]); // la suivante se prépare en avance
     const when=new Date(key.slice(0,10)+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+(key.endsWith("-m")?" midi":" soir");
     const ov=document.createElement("div");ov.className="ov";
-    ov.innerHTML=`<div class="sheet"><div class="grab"></div><select id="nvwhen" class="nvwhen" aria-label="Repas">${weekOptions(key)}</select><h2>${esc(String(x.titre||""))}</h2>
+    ov.innerHTML=`<div class="sheet"><div class="grab"></div>${toRecipes?`<p class="mut step">Idée ${ii+1}/${pool.length}</p>`:`<select id="nvwhen" class="nvwhen" aria-label="Repas">${weekOptions(key)}</select>`}<h2>${esc(String(x.titre||""))}</h2>
      <p class="mut">⏱ ${+x.prep} min de préparation · ${site} · <a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Voir sur le site ↗</a></p>
      <div id="nvrec"><p class="mut">Lecture de la recette…</p></div>
-     <div class="nvfoot"><div class="acts"><button class="btn sec" id="nvref">Passer cette recette →</button><button class="btn" id="nvadd" disabled>Ajouter</button></div></div></div>`;
+     <div class="nvfoot"><div class="acts"><button class="btn sec" id="nvref">Passer →</button><button class="btn" id="nvadd" disabled>${toRecipes?"Garder la recette":"Ajouter"}</button></div></div></div>`;
     document.body.appendChild(ov);
-    const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov){close();tab=LS.tab="menus";render()}};
+    const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov){close();if(!toRecipes)tab=LS.tab="menus";render()}};
     // passer : l'idée est refusée (plus reproposée), la recette suivante est proposée pour le même repas
     $("#nvref").onclick=()=>{touch("combos",{id:"n-"+uid(),text:x.url,kind:"refus",label:String(x.titre||"").slice(0,100)});close();ii++;show()};
     const rec=await load(x);if(!ov.isConnected)return;
@@ -1222,13 +1222,24 @@ function ideaFlow(pool){
       <div class="card cook">${rec.ingredients.map(t=>`<div class="row"><span class="t">${esc(t)}</span></div>`).join("")}</div>
       ${rec.steps?`<details class="fold"><summary class="steps-h">Étapes</summary>${md(rec.steps)}</details>`:""}`;
     const add=$("#nvadd");add.disabled=false;
+    const recOf=()=>({id:uid(),name:rec.name,serves:rec.serves,ingredients:rec.ingredients.map(t=>({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})),
+        steps:rec.steps||"",source:rec.source,prep:rec.prep,season:Data.recipeSeason({name:rec.name}),dessert:false});
+    if(toRecipes){
+      // avant de la garder : gourmand, dessert, saison (proposés d'après le nom, modifiables d'un appui)
+      let g=false,d=Data.guessDessert(rec.name||""),se=Data.recipeSeason({name:rec.name});
+      const SE=[["all","Toute l'année"],["ete","☀️ Été"],["hiver","❄️ Hiver"],["dec","🎄 Noël"]];
+      const paintT=()=>{$("#nvtags").innerHTML=`<div class="rfil"><button type="button" data-tg="p" class="${!d?"on":""}">🍽️ Plat</button><button type="button" data-tg="d" class="${d?"on":""}">🍰 Dessert</button><button type="button" data-tg="g" class="${g?"on":""}">😋 Gourmand</button></div>
+        <div class="rfil">${SE.map(([v,l])=>`<button type="button" data-ts="${v}" class="${se===v?"on":""}">${l}</button>`).join("")}</div>`};
+      $("#nvrec").insertAdjacentHTML("afterbegin",`<div id="nvtags" class="nvtags"></div>`);paintT();
+      $("#nvtags").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+        if(b.dataset.tg==="g")g=!g;else if(b.dataset.tg==="d")d=true;else if(b.dataset.tg==="p")d=false;else if(b.dataset.ts)se=b.dataset.ts;paintT()};
+      add.onclick=()=>{touch("recipes",{...recOf(),gourmand:g||null,dessert:d,season:se});kept++;close();toast("✓ Ajoutée à vos recettes");ii++;render();show()};return}
     add.onclick=()=>{const key=$("#nvwhen").value,o=S.meals[key]; // le repas choisi (mardi plutôt que samedi…)
       if(o&&o.text){if(bought(o)){alert(`Les ingrédients de « ${o.text} » ont déjà été achetés : choisissez un autre repas.`);return}
         if(!confirm(`Remplacer « ${o.text} » ?`))return;dropChecks(key);
         if(o.added)o.added.items.forEach(g=>removeFromList(g.store,Qty.buy(g.t,o.added.n/(o.added.b||BASE),o.added.b||BASE)))}
       close();
-      const r={id:uid(),name:rec.name,serves:rec.serves,ingredients:rec.ingredients.map(t=>({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})),
-        steps:rec.steps||"",source:rec.source,prep:rec.prep,season:Data.recipeSeason({name:rec.name}),dessert:false};
+      const r=recOf();
       touch("recipes",r);touch("meals",{key,text:r.name,servings:DEFN});gourmandWarn(key);render();
       // ce repas n'est plus à remplir ; si on en a choisi un autre, celui proposé reste libre pour l'idée suivante
       ii++;const at=slots.indexOf(key);if(at>=0){slots.splice(at,1);if(at<si)si--}
