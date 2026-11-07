@@ -132,3 +132,8 @@ test("boîte moyenne : l'adjectif après le nom, petite et grosse avant", () => 
   assert.equal(Data.clean("items", "i1", { list: "auchan", text: "1 boîte moyenne de tomates pelées" }).text, "1 boîte moyenne de tomates pelées");
   assert.equal(Data.clean("recipes", "r1", { name: "X", ingredients: [{ t: "1 boîte de moyenne de tomates pelées" }] }).ingredients[0].t, "1 boîte moyenne de tomates pelées");
 });
+
+test("cc et cs restent invariables", () => {
+  assert.equal(Qty.cook("2 cc de margarine", 1), "2 cc de margarine");
+  assert.equal(Qty.cook("4 cs d'huile", 1), "4 cs d'huile");
+});

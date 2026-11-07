@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v279"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v280"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1477,18 +1477,17 @@ function md(text){const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").repl
 // Vue cuisine : la recette pour un autre nombre de personnes, à l'écran seulement (la recette enregistrée ne change pas).
 function cookView(r,start){const B=r.serves||BASE;let n=start||B;
   const got=cookGot[r.id]||(cookGot[r.id]=new Set()); // ingrédients déjà sortis / utilisés : barrés
-  const ov=document.createElement("div");ov.className="ov";
+  const ov=document.createElement("div");ov.className="ov cookov";
   const draw=()=>{$("#cn").textContent=n;$("#cb").textContent=n===B?"":`Recette écrite pour ${B} personne${B>1?"s":""}`;
     if($("#cs"))$("#cs").innerHTML=md(Qty.cookSteps(r.steps,n/B,r.ingredients.map(i=>i.t))); // les quantités des étapes suivent aussi
     $("#cl").innerHTML=r.ingredients.map((i,j)=>`<div class="row${got.has(j)?" got":""}" data-gi="${j}"><span class="t">${esc(Qty.cook(i.t,n/B))}</span></div>`).join("")};
   const site=r.source&&Data.SOURCE.test(r.source)?(/marmiton/.test(r.source)?"Marmiton":"CuisineAZ"):null;
-  ov.innerHTML=`<div class="sheet"><div class="grab"></div><h2>${esc(r.name)}</h2>
+  ov.innerHTML=`<div class="sheet"><div class="cooktop"><button class="pill" id="ced" aria-label="Modifier la recette" title="Modifier">✏️</button><button class="pill" id="cpl" aria-label="Mettre au menu" title="Au menu">📅</button><button class="pill cx" id="cx" aria-label="Fermer" title="Fermer">✕</button></div><h2>${esc(r.name)}</h2>
    ${site||r.prep?`<p class="mut srcl">${r.prep?`⏱ ${r.prep} min de préparation`:""}${site&&r.prep?" · ":""}${site?`<a href="${esc(r.source)}" target="_blank" rel="noopener noreferrer">Voir sur ${site} ↗</a>`:""}</p>`:""}
    <div class="serv"><span>Pour</span><button class="btn sec" id="cm">−</button><b id="cn"></b><button class="btn sec" id="cp">+</button><span>personnes</span></div>
    <p class="mut" id="cb"></p><p class="mut wl" id="wl" hidden>🔆 L'écran reste allumé</p>
-   <details class="fold" data-f="ing" ${LS.foldIng?"":"open"}><summary class="steps-h">Ingrédients <small class="mut">touchez pour barrer</small></summary><div id="cl" class="card cook"></div></details>
-   ${(r.steps||"").trim()?`<details class="fold" data-f="stp" ${LS.foldStp?"":"open"}><summary class="steps-h">Étapes</summary><div id="cs"></div></details>`:""}
-   <div class="acts"><button class="btn sec" id="ced">✏️ Modifier</button><button class="btn sec" id="cpl">📅 Au menu</button><button class="btn" id="cx">Fermer</button></div></div>`;
+   <div class="cookcols"><details class="fold" data-f="ing" ${LS.foldIng?"":"open"}><summary class="steps-h">Ingrédients <small class="mut">touchez pour barrer</small></summary><div id="cl" class="card cook"></div></details>
+   ${(r.steps||"").trim()?`<details class="fold" data-f="stp" ${LS.foldStp?"":"open"}><summary class="steps-h">Étapes</summary><div id="cs"></div></details>`:""}</div></div>`;
   document.body.appendChild(ov);draw();
   // plié / déplié : gardé sur cet appareil
   ov.querySelectorAll(".fold").forEach(d=>d.ontoggle=()=>{const k=d.dataset.f==="ing"?"foldIng":"foldStp";if(d.open)delete LS[k];else LS[k]=1});

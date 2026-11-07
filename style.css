@@ -512,3 +512,22 @@ select.fk{font:inherit;font-size:13px;color:var(--fg);padding:1px 4px;border:1px
 .rfil button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 .nvtags{margin:4px 0 10px}.nvtags .rfil{margin:6px 0}
 .eveil{position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:.01;pointer-events:none}
+/* aperçu de recette : plein écran partout (sans les barres de l'app) */
+.cookov{align-items:stretch;background:var(--bg)}
+.cookov .sheet{max-width:none;width:100%;height:100%;max-height:none;border-radius:0;margin:0;box-shadow:none;padding:calc(12px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom))}
+.cookov .grab{display:none}
+.cooktop{position:sticky;top:0;z-index:2;float:right;display:flex;gap:8px;margin:0 0 6px 10px}
+.cooktop .pill{width:44px;height:44px;border-radius:50%;font-size:20px;padding:0;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.cooktop .cx{background:var(--accent);color:#fff;font-weight:700}
+/* iPad (écran large) : ingrédients à gauche (restent visibles), étapes à droite */
+@media(min-width:700px){
+  .cookov .sheet{padding-left:28px;padding-right:28px}
+  .cookov h2{font-size:30px}
+  .cookcols{display:grid;grid-template-columns:minmax(260px,1fr) 1.6fr;gap:28px;align-items:start}
+  .cookcols>.fold[data-f="ing"]{position:sticky;top:0}
+  /* ingrédients repliés (toucher « Ingrédients ») : les étapes prennent toute la largeur */
+  .cookcols:has(>.fold[data-f="ing"]:not([open])){grid-template-columns:1fr;gap:6px}
+  .cookcols>.fold[data-f="ing"]:not([open]){position:static}
+  .cookcols .cook .row .t{font-size:19px}
+  .cookcols #cs,.cookcols #cs li,.cookcols #cs p{font-size:19px;line-height:1.55}
+}
