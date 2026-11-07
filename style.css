@@ -531,3 +531,4 @@ select.fk{font:inherit;font-size:13px;color:var(--fg);padding:1px 4px;border:1px
   .cookcols .cook .row .t{font-size:19px}
   .cookcols #cs,.cookcols #cs li,.cookcols #cs p{font-size:19px;line-height:1.55}
 }
+.prep{margin:4px 0 12px}.prep-h{font-weight:700;margin:2px 2px 6px}.prep-h small{font-weight:400;margin-left:6px}

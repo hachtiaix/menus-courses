@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v280"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v281"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1487,7 +1487,7 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
    <div class="serv"><span>Pour</span><button class="btn sec" id="cm">−</button><b id="cn"></b><button class="btn sec" id="cp">+</button><span>personnes</span></div>
    <p class="mut" id="cb"></p><p class="mut wl" id="wl" hidden>🔆 L'écran reste allumé</p>
    <div class="cookcols"><details class="fold" data-f="ing" ${LS.foldIng?"":"open"}><summary class="steps-h">Ingrédients <small class="mut">touchez pour barrer</small></summary><div id="cl" class="card cook"></div></details>
-   ${(r.steps||"").trim()?`<details class="fold" data-f="stp" ${LS.foldStp?"":"open"}><summary class="steps-h">Étapes</summary><div id="cs"></div></details>`:""}</div></div>`;
+   ${(r.steps||"").trim()?`<details class="fold" data-f="stp" ${LS.foldStp?"":"open"}><summary class="steps-h">Étapes</summary>${(()=>{const pl=Data.prepList(r.steps);return pl.length?`<div class="prep"><div class="prep-h">🔪 Préparation <small class="mut">tout préparer avant de commencer</small></div><div class="card cook" id="cprep">${pl.map(x=>`<div class="row"><span class="t">${esc(x)}</span></div>`).join("")}</div></div>`:""})()}<div id="cs"></div></details>`:""}</div></div>`;
   document.body.appendChild(ov);draw();
   // plié / déplié : gardé sur cet appareil
   ov.querySelectorAll(".fold").forEach(d=>d.ontoggle=()=>{const k=d.dataset.f==="ing"?"foldIng":"foldStp";if(d.open)delete LS[k];else LS[k]=1});
@@ -1503,6 +1503,7 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
   const onVis=()=>{if(!document.hidden)wake()};document.addEventListener("visibilitychange",onVis);wake();
   const close=()=>{ov.remove();document.removeEventListener("visibilitychange",onVis);if(lock)lock.release().catch(()=>{});if(vid){vid.pause();vid.removeAttribute("src");vid.load()}};
   ov.onclick=e=>{if(e.target===ov)close()};
+  if($("#cprep"))$("#cprep").onclick=e=>{const row=e.target.closest(".row");if(row)row.classList.toggle("got")}; // préparation : touchée = faite
   $("#cl").onclick=e=>{const row=e.target.closest("[data-gi]");if(!row)return;const j=+row.dataset.gi;if(got.has(j))got.delete(j);else got.add(j);row.classList.toggle("got",got.has(j))};
   $("#cm").onclick=()=>{if(n>1){n--;draw()}};$("#cp").onclick=()=>{if(n<30){n++;draw()}};
   $("#cx").onclick=close;$("#ced").onclick=()=>{close();recipeEditor(r)};$("#cpl").onclick=()=>{close();planRecipe(r)};

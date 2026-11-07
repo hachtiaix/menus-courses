@@ -548,6 +548,16 @@ function splitPaste(v){
     else if(l.length<=80)out.ingredients.push(l);
   }
   out.ingredients=splitSeasoning(out.ingredients);out.steps=out.steps.join("\n");return out}
+// Préparation (mise en place) : les découpes écrites dans les étapes, regroupées pour tout préparer avant de cuire.
+// « faites revenir le sauté de dinde coupé en gros morceaux avec l'ail écrasé » → « Sauté de dinde : coupé en gros morceaux », « Ail : écrasé »
+const PREP_PART="(?:coup[ée]e?s?|taill[ée]e?s?|[ée]minc[ée]e?s?|hach[ée]e?s?|[ée]cras[ée]e?s?|cisel[ée]e?s?|[ée]miett[ée]e?s?|r[âa]p[ée]e?s?|pel[ée]e?s?|[ée]pluch[ée]e?s?|[ée]pépin[ée]e?s?|d[ée]coup[ée]e?s?|tranch[ée]e?s?|press[ée]e?s?|concass[ée]e?s?|d[ée]sos[ée]e?s?|[ée]goutt[ée]e?s?|lav[ée]e?s?|rinc[ée]e?s?)";
+const PREP_RE=new RegExp("(?:^|[\\s(])(?:(?:les|le|la|des|du|vos|votre)\\s+|l['’]\\s*)((?:(?!(?:le|la|les|l|des|du|dans|avec|et|puis|au|aux|sur|en|à|a|ou|pour|de la)\\b)[\\p{L}'’-]+\\s+){0,3}?(?!(?:le|la|les|des|du|dans|avec|et|puis|en)\\b)[\\p{L}'’-]+)\\s+("+PREP_PART+"(?:\\s+(?:et|puis)\\s+"+PREP_PART+")?(?:\\s+(?:en|finement|grossi[èe]rement|très finement|à la main|au couteau)(?![\\p{L}])(?:\\s+(?:gros|petits?|fins?|grosses?|fines?|fines? lamelles|\\d+)?\\s*[\\p{L}\\d-]+(?:\\s+de\\s+\\d+\\s*(?:cm|mm))?)?)?|en\\s+(?:d[ée]s|rondelles|lani[èe]res|cubes|julienne|brunoise|quartiers|morceaux|lamelles|tron[çc]ons|fines tranches|tranches|bâtonnets|batonnets)(?:\\s+(?:de\\s+\\d+\\s*(?:cm|mm)|fins?|fines?|[ée]paisses?))?)","giu");
+function prepList(steps){const out=[],seen=new Set();
+  for(const m of String(steps||"").matchAll(PREP_RE)){let noun=m[1].trim(),how=m[2].trim();
+    if(/^(huile|eau|feu|four|po[êe]le|casserole|sauteuse|cocotte|plat|moule|mode|cuve|couvercle|bouillon$)/i.test(noun)&&!/cube/i.test(noun))continue;
+    const k=plain(noun);if(seen.has(k))continue;seen.add(k);
+    out.push(noun.charAt(0).toUpperCase()+noun.slice(1)+" : "+how)}
+  return out}
 function clean(k,id,r){
   if(!okId(id)||!r||typeof r!=="object")return null;
   const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;
@@ -623,6 +633,6 @@ function prune(S,now){
   for(const id of Object.keys(S.meals||{})){const d=Date.parse(id.slice(0,10));if(d&&now-d>MEAL_TTL){delete S.meals[id];n++}}
   return n;
 }
-root.Data={KINDS,splitPaste,hiddenFoods,baseLabel,baseWords,okId,str,clean,cleanAll,splitSeasoning,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
+root.Data={KINDS,prepList,splitPaste,hiddenFoods,baseLabel,baseWords,okId,str,clean,cleanAll,splitSeasoning,OUT,isOut,offPair,isGourmand,SOURCE,unent,isoMinutes,tidyIngredient,fromSchema,adaptServes,planSlots,mergeInto,prune,guessSeason,recipeSeason,inSeason,suggest,SEASONS,
   TYPES,typeOf,companionFor,plain,plaisirList,setPlaisir,isPantry,pantryKey,recipeDessert,guessDessert,FOODS,FOOD_CATS,CAT_ICON,emojiFor,unknownFoods,allFoods,setCustom,foodFor,foodLine,suite,suiteTags,isSecond,habitsFor,habitMatches,habitTypesFor,learnHabits,weekday,addDays,mondayOf,pick,TOMBSTONE_TTL,MEAL_TTL};
 })(typeof window!=="undefined"?window:globalThis);

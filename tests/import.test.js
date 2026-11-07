@@ -132,3 +132,10 @@ test("recette collée : seulement les étapes, ou seulement les ingrédients", (
   const i = Data.splitPaste("400 g de pâtes\n2 oeufs\n100 g de lardons");
   assert.deepEqual([i.ingredients.length, i.steps], [3, ""]);
 });
+
+test("préparation : les découpes retrouvées dans les étapes", () => {
+  const p = Data.prepList(require("fs").readFileSync(__dirname + "/dinde.txt", "utf8"));
+  assert.deepEqual(p, ["Sauté de dinde : coupé en gros morceaux", "Ail : écrasé", "Oignons : coupé en dés", "Champignons : émincés",
+    "Carottes : coupées en rondelles", "Bouillon cube : émietté", "Persil : ciselé"]);
+  assert.deepEqual(Data.prepList("Faire cuire les pâtes. Ajouter la crème et le jus de citron."), []);
+});
