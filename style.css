@@ -511,3 +511,4 @@ select.fk{font:inherit;font-size:13px;color:var(--fg);padding:1px 4px;border:1px
 .rfil button{flex:1 1 auto;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:7px 4px;font:inherit;font-size:13px;white-space:nowrap}
 .rfil button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 .nvtags{margin:4px 0 10px}.nvtags .rfil{margin:6px 0}
+.eveil{position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:.01;pointer-events:none}
