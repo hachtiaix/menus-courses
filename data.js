@@ -549,15 +549,33 @@ function splitPaste(v){
   }
   out.ingredients=splitSeasoning(out.ingredients);out.steps=out.steps.join("\n");return out}
 // Préparation (mise en place) : les découpes écrites dans les étapes, regroupées pour tout préparer avant de cuire.
-// « faites revenir le sauté de dinde coupé en gros morceaux avec l'ail écrasé » → « Sauté de dinde : coupé en gros morceaux », « Ail : écrasé »
-const PREP_PART="(?:coup[ée]e?s?|taill[ée]e?s?|[ée]minc[ée]e?s?|hach[ée]e?s?|[ée]cras[ée]e?s?|cisel[ée]e?s?|[ée]miett[ée]e?s?|r[âa]p[ée]e?s?|pel[ée]e?s?|[ée]pluch[ée]e?s?|[ée]pépin[ée]e?s?|d[ée]coup[ée]e?s?|tranch[ée]e?s?|press[ée]e?s?|concass[ée]e?s?|d[ée]sos[ée]e?s?|[ée]goutt[ée]e?s?|lav[ée]e?s?|rinc[ée]e?s?)";
-const PREP_RE=new RegExp("(?:^|[\\s(])(?:(?:les|le|la|des|du|vos|votre)\\s+|l['’]\\s*)((?:(?!(?:le|la|les|l|des|du|dans|avec|et|puis|au|aux|sur|en|à|a|ou|pour|de la)\\b)[\\p{L}'’-]+\\s+){0,3}?(?!(?:le|la|les|des|du|dans|avec|et|puis|en)\\b)[\\p{L}'’-]+)\\s+("+PREP_PART+"(?:\\s+(?:et|puis)\\s+"+PREP_PART+")?(?:\\s+(?:en|finement|grossi[èe]rement|très finement|à la main|au couteau)(?![\\p{L}])(?:\\s+(?:gros|petits?|fins?|grosses?|fines?|fines? lamelles|\\d+)?\\s*[\\p{L}\\d-]+(?:\\s+de\\s+\\d+\\s*(?:cm|mm))?)?)?|en\\s+(?:d[ée]s|rondelles|lani[èe]res|cubes|julienne|brunoise|quartiers|morceaux|lamelles|tron[çc]ons|fines tranches|tranches|bâtonnets|batonnets)(?:\\s+(?:de\\s+\\d+\\s*(?:cm|mm)|fins?|fines?|[ée]paisses?))?)","giu");
-function prepList(steps){const out=[],seen=new Set();
-  for(const m of String(steps||"").matchAll(PREP_RE)){let noun=m[1].trim(),how=m[2].trim();
-    if(/^(huile|eau|feu|four|po[êe]le|casserole|sauteuse|cocotte|plat|moule|mode|cuve|couvercle|bouillon$)/i.test(noun)&&!/cube/i.test(noun))continue;
-    const k=plain(noun);if(seen.has(k))continue;seen.add(k);
-    out.push(noun.charAt(0).toUpperCase()+noun.slice(1)+" : "+how)}
-  return out}
+// Trois tournures : « le sauté de dinde coupé en gros morceaux » → « Sauté de dinde : coupé en gros morceaux » ;
+// « Coupez les escalopes en cubes » / « Épluchez et coupez en dés les carottes » → « Carottes : éplucher et couper en dés ».
+// Les produits vendus tels quels (steak haché, tomates pelées, fromage râpé…) ne sont pas des découpes.
+const PP="(?:coup|d[ée]coup|taill|d[ée]taill|[ée]minc|hach|h[âa]ch|[ée]cras|cisel|r[âa]p|pel|[ée]pluch|[ée]p[ée]pin|tranch|concass|[ée]miett|d[ée]sos)";
+const PART=PP+"[ée]e?s?(?:\\(s\\))?(?![\\p{L}])";
+const VERB=PP+"(?:ez|er)(?![\\p{L}-])";
+const EN="(?:\\s+(?:tr[eè]s\\s+)?(?:finement|grossi[èe]rement))?(?:\\s+en\\s+(?:(?:tr[eè]s\\s+)?(?:petits?|petites?|gros|grosses?|fins?|fines?|fines?\\s+lamelles|gros\\s+morceaux)\\s+)?(?:\\d+|[\\p{L}]+)(?:\\s+de\\s+\\d+\\s*(?:cm|mm))?)?";
+const ART="(?:(?:les|le|la|des|du|vos|votre|vos)\\s+|l['’?]\\s*)";
+const NSTOP="(?:le|la|les|l|des|du|dans|avec|et|puis|au|aux|sur|sous|en|à|a|ou|pour|par|après|avant|avoir|une|un|pendant|selon|mode)";
+const NOUN="((?:(?!"+PART+")(?!"+NSTOP+"(?![\\p{L}]))(?![\\p{L}]+(?:er|ez|ant)(?![\\p{L}]))[\\p{L}'’-]+\\s+){0,3}(?!"+PART+")(?!"+NSTOP+"(?![\\p{L}]))(?![\\p{L}]+(?:er|ez)(?![\\p{L}]))[\\p{L}'’-]+)";
+const VCHAIN="("+VERB+"(?:\\s*(?:,|et|puis)\\s*"+VERB+")*)";
+const PREP_A=new RegExp("(?:^|[\\s(,])"+ART+NOUN+"\\s+("+PART+"(?:\\s+(?:et|puis)\\s+"+PART+")?"+EN+"|en\\s+(?:(?:petits?|gros|fines?|fins?)\\s+)?(?:d[ée]s|rondelles|lani[èe]res|cubes|julienne|brunoise|quartiers|morceaux|lamelles|tron[çc]ons|tranches|b[âa]tonnets)(?![\\p{L}])"+")","giu");
+const PREP_B=new RegExp("(?:^|[\\s(,.;])"+VCHAIN+"\\s+"+ART+NOUN+"("+EN+")","giu");
+const PREP_C=new RegExp("(?:^|[\\s(,.;])"+VCHAIN+"((?:\\s+(?:tr[eè]s\\s+)?finement)?\\s+en\\s+(?:(?:petits?|petites?|gros|grosses?|fins?|fines?)\\s+)?(?:\\d+|[\\p{L}]+))\\s+"+ART+NOUN+"(?=[\\s.,;!)]|$)","giu");
+const PRODUCT=/^(steak|steack|viande|boeuf|bœuf|porc|veau)s? hach|^tomates? (pel|concass)|^(fromage|gruy[eè]re|emmental|parmesan|comt[ée]|mozzarella)s? r[âa]p|^lardons/i;
+const NOT_FOOD=/^(plan|huile|eau|feu|four|po[êe]le|casserole|sauteuse|cocotte|plat|moule|mode|cuve|couvercle|torchon|cuill[eè]re|bol|saladier|planche)\b/i;
+const inf=v=>{v=v.toLowerCase().replace(/ez$/,"er");return v.replace(/^e(?=(plucher|mincer|craser|pepiner|mietter))/,"é").replace(/^h[âa]cher$/,"hacher")};
+function prepList(steps){const found=[],seen=new Set(),txt=String(steps||"").replace(/\n/g," . ");
+  const add=(i,noun,how)=>{noun=noun.trim().replace(/\s+/g," ");how=how.trim().replace(/\s+/g," ");
+    if(!noun||NOT_FOOD.test(noun)||PRODUCT.test(noun+" "+how))return;
+    const k=plain(noun).replace(/s\b/g,"");if(seen.has(k))return;seen.add(k);
+    found.push([i,noun.charAt(0).toUpperCase()+noun.slice(1)+" : "+how])};
+  const chain=c=>c.split(/\s*(?:,|et|puis)\s*/).filter(Boolean).map(inf).join(" et ");
+  for(const m of txt.matchAll(PREP_C))add(m.index,m[3],chain(m[1])+" "+m[2].trim());
+  for(const m of txt.matchAll(PREP_B))add(m.index,m[2],(chain(m[1])+" "+m[3].trim()).trim());
+  for(const m of txt.matchAll(PREP_A))add(m.index,m[1],m[2].replace(/\(s\)/,""));
+  return found.sort((x,y)=>x[0]-y[0]).map(x=>x[1])}
 function clean(k,id,r){
   if(!okId(id)||!r||typeof r!=="object")return null;
   const ts=Number.isFinite(r.ts)?r.ts:0,deleted=r.deleted===true;

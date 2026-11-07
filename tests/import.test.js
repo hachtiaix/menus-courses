@@ -139,3 +139,10 @@ test("préparation : les découpes retrouvées dans les étapes", () => {
     "Carottes : coupées en rondelles", "Bouillon cube : émietté", "Persil : ciselé"]);
   assert.deepEqual(Data.prepList("Faire cuire les pâtes. Ajouter la crème et le jus de citron."), []);
 });
+
+test("préparation : consignes à l'impératif, produits tout faits ignorés", () => {
+  assert.deepEqual(Data.prepList("Epluchez et coupez en dés les carottes. Coupez les escalopes de dinde en cubes."),
+    ["Carottes : éplucher et couper en dés", "Escalopes de dinde : couper en cubes"]);
+  assert.deepEqual(Data.prepList("Ajouter le steak haché et les tomates pelées, puis le gruyère râpé."), []);
+  assert.deepEqual(Data.prepList("Etaler la pâte sur le plan de travail fariné. Tailler-y des étoiles."), []);
+});
