@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v282"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v283"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1479,6 +1479,12 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
   const got=cookGot[r.id]||(cookGot[r.id]=new Set()); // ingrédients déjà sortis / utilisés : barrés
   const ov=document.createElement("div");ov.className="ov cookov";
   const draw=()=>{$("#cn").textContent=n;$("#cb").textContent=n===B?"":`Recette écrite pour ${B} personne${B>1?"s":""}`;
+    // préparation : l'ingrédient avec sa quantité (« 3 carottes : couper en rondelles »), pour le nombre de personnes choisi
+    if($("#cprep")){const done=new Set([...$("#cprep").querySelectorAll(".got")].map(x=>x.dataset.pi));
+      $("#cprep").innerHTML=Data.prepList(r.steps).map((x,j)=>{const [noun,...how]=x.split(" : "),k=Data.plain(noun).replace(/s\b/g,"").trim();
+        const g=r.ingredients.find(i=>Data.plain(i.t).replace(/s\b/g,"").includes(k));
+        const lab=g?Qty.cook(g.t,n/B):noun;
+        return `<div class="row${done.has(String(j))?" got":""}" data-pi="${j}"><span class="t"><b>${esc(lab)}</b> : ${esc(how.join(" : "))}</span></div>`}).join("")}
     if($("#cs"))$("#cs").innerHTML=md(Qty.cookSteps(r.steps,n/B,r.ingredients.map(i=>i.t))); // les quantités des étapes suivent aussi
     $("#cl").innerHTML=r.ingredients.map((i,j)=>`<div class="row${got.has(j)?" got":""}" data-gi="${j}"><span class="t">${esc(Qty.cook(i.t,n/B))}</span></div>`).join("")};
   const site=r.source&&Data.SOURCE.test(r.source)?(/marmiton/.test(r.source)?"Marmiton":"CuisineAZ"):null;
@@ -1487,7 +1493,7 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
    <div class="serv"><span>Pour</span><button class="btn sec" id="cm">−</button><b id="cn"></b><button class="btn sec" id="cp">+</button><span>personnes</span></div>
    <p class="mut" id="cb"></p><p class="mut wl" id="wl" hidden>🔆 L'écran reste allumé</p>
    <div class="cookcols"><details class="fold" data-f="ing" ${LS.foldIng?"":"open"}><summary class="steps-h">Ingrédients <small class="mut">touchez pour barrer</small></summary><div id="cl" class="card cook"></div></details>
-   ${(r.steps||"").trim()?`<details class="fold" data-f="stp" ${LS.foldStp?"":"open"}><summary class="steps-h">Étapes</summary>${(()=>{const pl=Data.prepList(r.steps);return pl.length?`<div class="prep"><div class="prep-h">🔪 Préparation <small class="mut">tout préparer avant de commencer</small></div><div class="card cook" id="cprep">${pl.map(x=>`<div class="row"><span class="t">${esc(x)}</span></div>`).join("")}</div></div>`:""})()}<div id="cs"></div></details>`:""}</div></div>`;
+   ${(r.steps||"").trim()?`<details class="fold" data-f="stp" ${LS.foldStp?"":"open"}><summary class="steps-h">Étapes</summary>${(()=>{const pl=Data.prepList(r.steps);return pl.length?`<div class="prep"><div class="prep-h">🔪 Préparation <small class="mut">tout préparer avant de commencer</small></div><div class="card cook" id="cprep"></div></div>`:""})()}<div id="cs"></div></details>`:""}</div></div>`;
   document.body.appendChild(ov);draw();
   // plié / déplié : gardé sur cet appareil
   ov.querySelectorAll(".fold").forEach(d=>d.ontoggle=()=>{const k=d.dataset.f==="ing"?"foldIng":"foldStp";if(d.open)delete LS[k];else LS[k]=1});
