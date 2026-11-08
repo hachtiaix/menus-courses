@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v287"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v288"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1498,9 +1498,12 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
   // plié / déplié : gardé sur cet appareil
   ov.querySelectorAll(".fold").forEach(d=>d.ontoggle=()=>{const k=d.dataset.f==="ing"?"foldIng":"foldStp";if(d.open)delete LS[k];else LS[k]=1});
   // l'écran reste allumé tant que la recette est ouverte (repris au retour dans l'app)
-  // Secours (iPad, anciens iOS, app sur l'écran d'accueil) : une mini-vidéo muette et invisible en boucle empêche la veille
+  // Secours (iPad, anciens iOS, app sur l'écran d'accueil) : une mini-vidéo (piste son muette) qui tourne sans fin empêche la veille, comme NoSleep.js
   let lock=null,vid=null;
-  const byVideo=()=>{if(!vid){vid=document.createElement("video");vid.src="eveil.mp4";vid.muted=true;vid.loop=true;vid.playsInline=true;
+  const byVideo=()=>{if(!vid){vid=document.createElement("video");vid.src="eveil.mp4";vid.muted=true;vid.playsInline=true;
+      // pas de « loop » : iOS ne garde pas l'écran allumé pour une vidéo en boucle ; on la relance juste avant la fin
+      vid.addEventListener("timeupdate",()=>{if(vid.duration&&vid.currentTime>vid.duration-1)vid.currentTime=0});
+      vid.addEventListener("ended",()=>{vid.currentTime=0;vid.play().catch(()=>{})});
       vid.setAttribute("playsinline","");vid.setAttribute("muted","");vid.setAttribute("aria-hidden","true");vid.className="eveil";ov.appendChild(vid)}
     vid.play().then(()=>{$("#wl").hidden=false}).catch(()=>{})};
   const wake=async()=>{if(!ov.isConnected||document.hidden)return;
