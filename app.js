@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v285"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v286"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1581,8 +1581,11 @@ function recipeEditor(r,pre,after,onCancel){
     const a=x.pour?Data.adaptServes(x.pour,lines,x.steps):{serves:0,ingredients:lines,steps:x.steps,from:null};lines=a.ingredients;
     if(x.pour)$("#sv").value=a.serves;
     if(x.name&&!$("#rn").value.trim())$("#rn").value=x.name;
-    if(a.steps){const cur=$("#stp").value.trim();$("#stp").value=cur?cur+"\n"+a.steps:a.steps}
-    if(lines.length){[...ov.querySelectorAll(".ed-row")].filter(el=>!el.querySelector(".ing").value.trim()).forEach(el=>el.remove());
+    // déjà rempli : on remplace (sinon tout serait en double) ; « Annuler » ajoute à la suite
+    const hasIng=lines.length&&[...ov.querySelectorAll(".ed-row .ing")].some(i=>i.value.trim()),hasStp=a.steps&&$("#stp").value.trim();
+    const repl=(hasIng||hasStp)?confirm(`Remplacer ${hasIng&&hasStp?"les ingrédients et les étapes":hasIng?"les ingrédients":"les étapes"} déjà écrits ?\n(Annuler : ajouter à la suite)`):false;
+    if(a.steps){const cur=repl?"":$("#stp").value.trim();$("#stp").value=cur?cur+"\n"+a.steps:a.steps}
+    if(lines.length){[...ov.querySelectorAll(".ed-row")].filter(el=>repl||!el.querySelector(".ing").value.trim()).forEach(el=>el.remove());
       $("#eds").insertAdjacentHTML("beforeend",lines.map(t=>rowH({t,store:defaultStore(t,(Data.foodFor(pantryName(t))||{}).store)})).join(""))}
     const ns=a.steps?a.steps.split("\n").length:0,pl=(n,w)=>n+" "+w+(n>1?"s":"");
     $("#paste").value="";toast("✓ "+[lines.length?pl(lines.length,"ingrédient"):"",ns?pl(ns,"étape"):""].filter(Boolean).join(" et ")+(a.from?` · prévue pour ${a.from}, adaptée pour ${a.serves}`:""))};
