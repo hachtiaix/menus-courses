@@ -66,3 +66,9 @@ test("2e plat appris : 2 des 3 dernières soupes avaient un 2e plat", () => {
   assert.deepEqual(Data.companionFor(S2, "Soupe", "2026-10-15"), { n: 1 }); // une soupe a toujours un 2e plat proposé
   assert.equal(Data.companionFor(S2, "Lasagnes", "2026-10-15"), null);
 });
+
+test("refus d'une nouvelle recette : adresse longue (CuisineAZ) gardée entière", () => {
+  const url = "https://www.cuisineaz.com/recettes/pintade-rotie-aux-girolles-et-boudin-blanc-aux-cepes-une-recette-d-automne-genereuse-126089.aspx";
+  const c = Data.clean("combos", "n-1", { kind: "refus", text: url, label: "Pintade rôtie" });
+  assert.equal(c && c.text, url);
+});

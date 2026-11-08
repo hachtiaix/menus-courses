@@ -616,7 +616,7 @@ function clean(k,id,r){
     if(base)return{id,q,kind,label:str(r.label,40)||null,syn:str(r.syn,200)||null,synq:synq(r.synq),off:r.off===true||undefined,ts,deleted};
     const label=str(r.label,40);if(!label||!FOOD_CATS.includes(r.cat))return null;
     return{id,label,cat:r.cat,kind:r.kind==="n"?"n":"g",q,store:okId(r.store)?r.store:"auchan",icon:str(r.icon,8)||null,syn:str(r.syn,200)||null,synq:synq(r.synq),ts,deleted}}
-  if(k==="combos"){const text=str(r.text,120);
+  if(k==="combos"){const text=str(r.text,r.kind==="refus"?300:120); // refus : adresse complète (CuisineAZ dépasse 120 caractères)
     if(r.kind==="plaisir")return text?{id,text:text.slice(0,40),kind:"plaisir",off:r.off===true,ts,deleted}:null; // mot de la liste des plats plaisir
     if(r.kind==="refus")return SOURCE.test(text)?{id,text,kind:"refus",label:str(r.label,100)||null,ts,deleted}:null; // nouvelle recette refusée : plus reproposée
     if(r.kind==="off")return text&&/[,+]/.test(text)?{id,text,kind:"off",ts,deleted}:null; // association retirée à la main
