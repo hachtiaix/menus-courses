@@ -606,7 +606,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v286"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v287"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1511,7 +1511,9 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
   ov.onclick=e=>{if(e.target===ov)close()};
   if($("#cprep"))$("#cprep").onclick=e=>{const row=e.target.closest(".row");if(row)row.classList.toggle("got")}; // préparation : touchée = faite
   $("#cl").onclick=e=>{const row=e.target.closest("[data-gi]");if(!row)return;const j=+row.dataset.gi;if(got.has(j))got.delete(j);else got.add(j);row.classList.toggle("got",got.has(j))};
-  $("#cm").onclick=()=>{if(n>1){n--;draw()}};$("#cp").onclick=()=>{if(n<30){n++;draw()}};
+  // « − » s'arrête quand une quantité deviendrait impossible à mesurer (moins d'½ cuillère, ¼ d'oignon…)
+  const tooSmall=k=>r.ingredients.some(i=>{const q=Qty.parse(i.t);return q&&q.kind==="count"&&q.n>=0.5&&q.n*k/B<0.5-1e-9});
+  $("#cm").onclick=()=>{if(n<=1)return;if(tooSmall(n-1)){toast(`Pas moins de ${n} personnes : certaines quantités deviendraient trop petites (moins d'½ cuillère…)`);return}n--;draw()};$("#cp").onclick=()=>{if(n<30){n++;draw()}};
   $("#cx").onclick=close;$("#ced").onclick=()=>{close();recipeEditor(r)};$("#cpl").onclick=()=>{close();planRecipe(r)};
 }
 const readMsg=p=>`✓ Recette lue${p.from?` (prévue pour ${p.from}, adaptée pour ${p.serves})`:""} : vérifiez, puis « Enregistrer ».`;
