@@ -9,7 +9,7 @@ import datetime, html, json, pathlib, re, sys, time, urllib.request
 
 UA = {"User-Agent": "MenusCourses/1.0 (application familiale ; +https://github.com/hachtiaix/menus-courses)",
       "Accept-Language": "fr-FR,fr"}
-MAX_PREP, PER_SITE, MAX_PAGES = 30, 8, 90
+MAX_PREP, PER_SITE, MAX_PAGES = 30, 25, 220
 OUT = pathlib.Path(__file__).resolve().parent.parent / "nouveautes.json"
 # pas des plats : sucré, boissons, apéritif, sauces, pains
 NOT_DISH = re.compile(r"sabl|bredele|bonbon|cr[eê]pe|g[aâ]teau|\bcake|tarte au suc|tartes? sucr|dessert|cookie|biscuit|muffin|"
@@ -117,9 +117,22 @@ def main():
                   lambda x: not NOT_DISH.search(category(x) + " " + str(x.get("name"))))
     if not mar and not caz:
         sys.exit("Aucune nouveauté lue : fichier inchangé.")
-    OUT.write_text(json.dumps({"maj": datetime.date.today().isoformat(), "recettes": mar + caz},
+    # on garde aussi les recettes des passages précédents (30 jours, 100 au plus) : plus de choix d'un jour à l'autre
+    today = datetime.date.today().isoformat()
+    fresh = [dict(r, vu=today) for r in mar + caz]
+    seen = {r["url"] for r in fresh}
+    try:
+        old = json.loads(OUT.read_text(encoding="utf-8")).get("recettes", [])
+    except Exception:
+        old = []
+    limit = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+    keep = [r for r in old if r.get("url") not in seen and (r.get("vu") or "") >= limit]
+    for r in keep:
+        r.setdefault("vu", today)
+    allr = (fresh + keep)[:100]
+    OUT.write_text(json.dumps({"maj": today, "recettes": allr},
                               ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    print(f"{OUT.name} : {len(mar) + len(caz)} recettes")
+    print(f"{OUT.name} : {len(allr)} recettes ({len(fresh)} lues aujourd'hui)")
 
 if __name__ == "__main__":
     main()

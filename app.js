@@ -1162,7 +1162,7 @@ async function fetchRecipe(url){
   return Data.fromSchema(j,j.url||url);
 }
 // Chaque jour, à l'ouverture de 📖 Recettes : 5 nouveautés (15 avec le bouton 🆕),
-// rapides (30 min de préparation au plus) de Marmiton et CuisineAZ (nouveautes.json, mis à jour chaque mardi soir).
+// rapides (30 min de préparation au plus) de Marmiton et CuisineAZ (nouveautes.json, mis à jour chaque soir).
 // Une fois par jour au plus.
 // Nouveautés de la semaine (nouveautes.json) encore inconnues : pas déjà dans les recettes, pas refusées, des repas rapides.
 // max idées tirées au hasard, les deux sites à tour de rôle
