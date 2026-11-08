@@ -610,7 +610,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v290"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v291"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -938,7 +938,7 @@ const STABS=[["habitudes","Habitudes"],["rayons","Rayons"],["foyer","Synchro"]];
 // filtres des recettes : Gourmand se cumule avec Été, Hiver ou Noël (les recettes de Noël sont aussi dans Hiver) ; « Toutes » enlève tout
 const rfOn=v=>v===""?!LS.rfg&&!LS.rfs:v==="g"?!!LS.rfg:LS.rfs===v;
 function recipesHtml(){const rs=live(S.recipes).sort((a,b)=>a.name.localeCompare(b.name));
-  return `${rs.length>3?`<input type="search" id="rq" class="rsearch" placeholder="🔍 Chercher une recette ou un ingrédient" autocomplete="off"><div class="rfil">${[["","Toutes"],["g","😋 Gourmand"],["ete","☀️ Été"],["hiver","❄️ Hiver"],["dec","🎄 Noël"]].map(([v,l])=>`<button type="button" data-rf="${v}" class="${rfOn(v)?"on":""}">${l}</button>`).join("")}</div>`:""}${rs.length?`<p class="mut count">${rs.length} recette${rs.length>1?"s":""}</p>`:""}${rs.length?(()=>{const g={};for(const r of rs){const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();(g[/[A-Z]/.test(L)?L:"#"]=g[/[A-Z]/.test(L)?L:"#"]||[]).push(r)}
+  return `<button type="button" class="btn sec nvbtn" id="nvrec">🆕 Découvrir de nouvelles recettes<small>Marmiton, CuisineAZ · moins de 30 min</small></button>${rs.length>3?`<input type="search" id="rq" class="rsearch" placeholder="🔍 Chercher une recette ou un ingrédient" autocomplete="off"><div class="rfil">${[["","Toutes"],["g","😋 Gourmand"],["ete","☀️ Été"],["hiver","❄️ Hiver"],["dec","🎄 Noël"]].map(([v,l])=>`<button type="button" data-rf="${v}" class="${rfOn(v)?"on":""}">${l}</button>`).join("")}</div>`:""}${rs.length?`<p class="mut count">${rs.length} recette${rs.length>1?"s":""}</p>`:""}${rs.length?(()=>{const g={};for(const r of rs){const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();(g[/[A-Z]/.test(L)?L:"#"]=g[/[A-Z]/.test(L)?L:"#"]||[]).push(r)}
      return Object.keys(g).sort().map(L=>`<h3 class="ray letter" data-l="${L}">${L}</h3><div class="card" data-lc="${L}">${g[L].map(r=>`<div class="row link" data-r="${r.id}" data-f="${(r.gourmand?"g ":"")+({dec:"hiver dec"}[Data.recipeSeason(r)]||Data.recipeSeason(r))}" data-q="${esc(Data.plain(r.name+" "+r.ingredients.map(i=>i.t).join(" ")))}"><span class="t">${esc(r.name)}<br><small class="mut">${r.ingredients.length} ingrédient${r.ingredients.length>1?"s":""} · pour ${r.serves||BASE} pers.${Data.recipeDessert(r)?" · 🍰 dessert":""}${r.gourmand?" · 😋 gourmand":""}${{ete:" · ☀️ été",hiver:" · ❄️ hiver",dec:" · 🎄 Noël"}[Data.recipeSeason(r)]||""}</small></span><span class="mut">›</span></div>`).join("")}</div>`).join("")})():`<div class="card"><div class="empty">Aucune recette pour l'instant</div></div>`}`+azHtml(rs)+`<button class="fab" id="fabr" aria-label="Nouvelle recette" title="Nouvelle recette">+</button>`}
 // Index A-Z sur le bord droit (comme les Contacts) : toucher une lettre, ou glisser le doigt dessus, saute à ses recettes
 const lettre=r=>{const L=(Data.plain(r.name).trim()[0]||"#").toUpperCase();return /[A-Z]/.test(L)?L:"#"};
@@ -958,6 +958,8 @@ function wireAz(){const az=$(".az"),bub=$(".azb");if(!az)return;document.body.cl
 function wireRecipes(){const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
   document.body.classList.remove("withaz");wireAz();
   on("#fabr","onclick",()=>recipeEditor(null));
+  on("#nvrec","onclick",async()=>{if(!canSync()){toast("Il faut d'abord le code du foyer (⚙︎ → Synchro).");return}
+    const pick=await newIdeas(15);if(pick.length)ideaFlow(pick,true);else toast("Pas d'autre idée pour l'instant")});
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>cookView(S.recipes[el.dataset.r])); // toucher = voir la recette
   // recherche : nom ou ingrédient, sans accents ; les lettres sans résultat disparaissent
   // + filtre Gourmand / Été / Hiver (gardé d'une fois sur l'autre)
