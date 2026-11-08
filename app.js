@@ -610,7 +610,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v292"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v293"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -958,7 +958,7 @@ function wireAz(){const az=$(".az"),bub=$(".azb");if(!az)return;document.body.cl
 function wireRecipes(){const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
   document.body.classList.remove("withaz");wireAz();
   on("#fabr","onclick",()=>recipeEditor(null));
-  on("#nvrec","onclick",async()=>{if(!canSync()){toast("Il faut d'abord le code du foyer (⚙︎ → Synchro).");return}
+  on("#hnew","onclick",async()=>{if(!canSync()){toast("Il faut d'abord le code du foyer (⚙︎ → Synchro).");return}
     const pick=await newIdeas(15);if(pick.length)ideaFlow(pick,true);else toast("Pas d'autre idée pour l'instant")});
   document.querySelectorAll("[data-r]").forEach(el=>el.onclick=()=>cookView(S.recipes[el.dataset.r])); // toucher = voir la recette
   // recherche : nom ou ingrédient, sans accents ; les lettres sans résultat disparaissent
@@ -977,7 +977,7 @@ function wireRecipes(){const on=(sel,ev,fn)=>{const el=$(sel);if(el)el[ev]=fn};
 const rseg=v=>`<div class="seg"><button data-rv="rec" class="${v==="rec"?"on":""}">Recettes</button><button data-rv="ing" class="${v==="ing"?"on":""}">Ingrédients</button></div>`;
 function renderRecipes(){
   if(rview==="ing"){stab="aliments";renderSettings(true)}
-  else{$("#title").innerHTML=`<span>Recettes <span class="hicon">📖</span></span><button class="hnew" id="nvrec" aria-label="Nouvelles recettes">🆕</button>`;$("#view").innerHTML=rseg("rec")+recipesHtml();wireRecipes()}
+  else{$("#title").innerHTML=`<span>Recettes <span class="hicon">📖</span></span><button class="hnew" id="hnew" aria-label="Nouvelles recettes">🆕</button>`;$("#view").innerHTML=rseg("rec")+recipesHtml();wireRecipes()}
   document.querySelectorAll("[data-rv]").forEach(b=>b.onclick=()=>{rview=b.dataset.rv;render();scrollTo(0,0)})}
 function renderSettings(inRecipes){
   if(!inRecipes&&stab==="aliments")stab="foyer";
