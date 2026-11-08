@@ -1,5 +1,5 @@
 {
- "maj": "2026-11-03",
+ "maj": "2026-11-08",
  "recettes": [
   {
    "site": "marmiton",
@@ -8,7 +8,8 @@
    "prep": 15,
    "total": 35,
    "pour": 4,
-   "publie": "2026-06-30"
+   "publie": "2026-06-30",
+   "vu": "2026-11-08"
   },
   {
    "site": "marmiton",
@@ -17,7 +18,8 @@
    "prep": 15,
    "total": 15,
    "pour": 4,
-   "publie": "2026-06-30"
+   "publie": "2026-06-30",
+   "vu": "2026-11-08"
   },
   {
    "site": "marmiton",
@@ -26,7 +28,8 @@
    "prep": 15,
    "total": 15,
    "pour": 6,
-   "publie": "2006-10-23"
+   "publie": "2006-10-23",
+   "vu": "2026-11-08"
   },
   {
    "site": "marmiton",
@@ -35,7 +38,8 @@
    "prep": 20,
    "total": 270,
    "pour": 4,
-   "publie": "2026-05-26"
+   "publie": "2026-05-26",
+   "vu": "2026-11-08"
   },
   {
    "site": "marmiton",
@@ -44,7 +48,8 @@
    "prep": 20,
    "total": 40,
    "pour": 4,
-   "publie": "2026-05-27"
+   "publie": "2026-05-27",
+   "vu": "2026-11-08"
   },
   {
    "site": "marmiton",
@@ -53,7 +58,298 @@
    "prep": 10,
    "total": 15,
    "pour": 4,
-   "publie": "2026-05-27"
+   "publie": "2026-05-27",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Brochette magret de canard",
+   "url": "https://www.marmiton.org/recettes/recette_brochette-magret-de-canard_539908.aspx",
+   "prep": 10,
+   "total": 205,
+   "pour": 4,
+   "publie": "2026-05-19",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Enchiladas poulet",
+   "url": "https://www.marmiton.org/recettes/recette_enchiladas-poulet_539537.aspx",
+   "prep": 30,
+   "total": 75,
+   "pour": 4,
+   "publie": "2026-01-16",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Pintade au four moelleuse cuisson lente",
+   "url": "https://www.marmiton.org/recettes/recette_pintade-au-four-moelleuse-cuisson-lente_539451.aspx",
+   "prep": 20,
+   "total": 210,
+   "pour": 0,
+   "publie": "2025-12-02",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Pintade en morceaux en cocotte",
+   "url": "https://www.marmiton.org/recettes/recette_recette-de-pintade-en-morceaux-en-cocotte_539450.aspx",
+   "prep": 15,
+   "total": 65,
+   "pour": 4,
+   "publie": "2025-12-02",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Raclette de Noël",
+   "url": "https://www.marmiton.org/recettes/recette_raclette-de-noel_539448.aspx",
+   "prep": 25,
+   "total": 50,
+   "pour": 4,
+   "publie": "2025-12-02",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Flet d'églefin au four",
+   "url": "https://www.marmiton.org/recettes/recette_recette-filet-d-eglefin-au-four_539429.aspx",
+   "prep": 20,
+   "total": 65,
+   "pour": 4,
+   "publie": "2025-12-02",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Pavé de saumon à la poêle",
+   "url": "https://www.marmiton.org/recettes/recette_recette-pave-de-saumon-a-la-poele_539428.aspx",
+   "prep": 5,
+   "total": 15,
+   "pour": 4,
+   "publie": "2025-12-02",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Bœuf bourguignon sans vin",
+   "url": "https://www.marmiton.org/recettes/recette_boeuf-bourguignon-sans-vin_539423.aspx",
+   "prep": 20,
+   "total": 125,
+   "pour": 4,
+   "publie": "2025-12-02",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "marmiton",
+   "titre": "Pâtes aux crevettes recette italienne",
+   "url": "https://www.marmiton.org/recettes/recette_pates-aux-crevettes-recette-italienne_539422.aspx",
+   "prep": 15,
+   "total": 45,
+   "pour": 4,
+   "publie": "2025-12-02",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Pot-au-feu à l'ancienne",
+   "url": "https://www.cuisineaz.com/recettes/pot-au-feu-a-l-ancienne-la-recette-traditionnelle-mijotee-126246.aspx",
+   "prep": 20,
+   "total": 200,
+   "pour": 6,
+   "publie": "2026-11-08",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Pommes de terre au four au saumon fumé et à l'aneth",
+   "url": "https://www.cuisineaz.com/recettes/pommes-de-terre-au-four-au-saumon-fume-et-a-l-aneth-la-recette-facile-126248.aspx",
+   "prep": 15,
+   "total": 75,
+   "pour": 4,
+   "publie": "2026-11-08",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Salade d’endives festive",
+   "url": "https://www.cuisineaz.com/recettes/salade-d-endives-festive-126210.aspx",
+   "prep": 20,
+   "total": 25,
+   "pour": 6,
+   "publie": "2026-11-08",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Œuf au plat vapeur au thon",
+   "url": "https://www.cuisineaz.com/recettes/oeuf-au-plat-vapeur-au-thon-la-recette-rapide-au-jaune-coulant-126172.aspx",
+   "prep": 5,
+   "total": 8,
+   "pour": 1,
+   "publie": "2026-11-08",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Cabillaud à la citrouille pour l'automne",
+   "url": "https://www.cuisineaz.com/recettes/cabillaud-et-citrouille-pour-l-automne-126164.aspx",
+   "prep": 25,
+   "total": 70,
+   "pour": 4,
+   "publie": "2026-11-07",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Röstis aux épices, poêlée de champignons et fromage frais aux herbes",
+   "url": "https://www.cuisineaz.com/recettes/rostis-aux-epices-poelee-de-champignons-et-fromage-frais-aux-herbes-126189.aspx",
+   "prep": 25,
+   "total": 45,
+   "pour": 4,
+   "publie": "2026-11-07",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Granola de Noël aux épices à faire avec les enfants",
+   "url": "https://www.cuisineaz.com/recettes/granola-de-noel-aux-epices-a-faire-avec-les-enfants-126142.aspx",
+   "prep": 20,
+   "total": 45,
+   "pour": 6,
+   "publie": "2026-11-07",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Bœuf bourguignon au miel",
+   "url": "https://www.cuisineaz.com/recettes/boeuf-bourguignon-au-miel-la-recette-mijotee-en-cocotte-126171.aspx",
+   "prep": 25,
+   "total": 205,
+   "pour": 6,
+   "publie": "2026-11-07",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Menu végétarien d'automne",
+   "url": "https://www.cuisineaz.com/recettes/menu-vegetarien-d-automne-steaks-de-chou-fleur-a-la-harissa-126162.aspx",
+   "prep": 25,
+   "total": 60,
+   "pour": 4,
+   "publie": "2026-11-06",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Tarte au citron meringuée maison",
+   "url": "https://www.cuisineaz.com/recettes/tarte-au-citron-meringuee-maison-126193.aspx",
+   "prep": 30,
+   "total": 60,
+   "pour": 8,
+   "publie": "2026-11-06",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Hachis parmentier maison",
+   "url": "https://www.cuisineaz.com/recettes/hachis-parmentier-maison-la-recette-gourmande-et-anti-gaspi-126174.aspx",
+   "prep": 25,
+   "total": 125,
+   "pour": 4,
+   "publie": "2026-11-06",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Œufs brouillés sans lait",
+   "url": "https://www.cuisineaz.com/recettes/oeufs-brouilles-sans-lait-la-recette-onctueuse-au-beurre-126170.aspx",
+   "prep": 5,
+   "total": 10,
+   "pour": 2,
+   "publie": "2026-11-06",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Fondue alpine aux quatre fromages",
+   "url": "https://www.cuisineaz.com/recettes/fondue-alpine-aux-quatre-fromages-la-recette-traditionnelle-126180.aspx",
+   "prep": 20,
+   "total": 40,
+   "pour": 4,
+   "publie": "2026-11-05",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Croque-monsieur aux sardines",
+   "url": "https://www.cuisineaz.com/recettes/croque-monsieur-aux-sardines-la-recette-rapide-avec-des-produits-du-placard-126192.aspx",
+   "prep": 15,
+   "total": 25,
+   "pour": 4,
+   "publie": "2026-11-05",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Truffade d'Auvergne",
+   "url": "https://www.cuisineaz.com/recettes/truffade-d-auvergne-120864.aspx",
+   "prep": 10,
+   "total": 35,
+   "pour": 6,
+   "publie": "2025-11-16",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Velouté de potimarron au miso et gingembre",
+   "url": "https://www.cuisineaz.com/recettes/veloute-de-potimarron-au-miso-et-gingembre-soupe-legere-de-saison-126160.aspx",
+   "prep": 15,
+   "total": 40,
+   "pour": 4,
+   "publie": "2026-11-04",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Choucroute maison au champagne",
+   "url": "https://www.cuisineaz.com/recettes/choucroute-maison-au-champagne-la-recette-traditionnelle-mijotee-126182.aspx",
+   "prep": 20,
+   "total": 185,
+   "pour": 6,
+   "publie": "2026-11-04",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Croquettes de patate douce à la viande hachée",
+   "url": "https://www.cuisineaz.com/recettes/croquettes-de-patate-douce-a-la-viande-hachee-la-recette-express-du-quotidien-126165.aspx",
+   "prep": 20,
+   "total": 30,
+   "pour": 4,
+   "publie": "2026-11-04",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Tarte aux champignons et fromage de chèvre vue sur Pinterest",
+   "url": "https://www.cuisineaz.com/recettes/tarte-aux-champignons-et-fromage-de-chevre-vue-sur-pinterest-118426.aspx",
+   "prep": 10,
+   "total": 40,
+   "pour": 4,
+   "publie": "2024-10-29",
+   "vu": "2026-11-08"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Tartelette forestière",
+   "url": "https://www.cuisineaz.com/recettes/tartelette-forestiere-les-champignons-de-saison-sublimes-126161.aspx",
+   "prep": 25,
+   "total": 55,
+   "pour": 4,
+   "publie": "2026-11-03",
+   "vu": "2026-11-08"
   },
   {
    "site": "cuisineaz",
@@ -62,7 +358,8 @@
    "prep": 20,
    "total": 40,
    "pour": 4,
-   "publie": "2026-11-03"
+   "publie": "2026-11-03",
+   "vu": "2026-11-08"
   },
   {
    "site": "cuisineaz",
@@ -71,7 +368,8 @@
    "prep": 30,
    "total": 45,
    "pour": 4,
-   "publie": "2026-11-03"
+   "publie": "2026-11-03",
+   "vu": "2026-11-08"
   },
   {
    "site": "cuisineaz",
@@ -80,7 +378,8 @@
    "prep": 25,
    "total": 55,
    "pour": 4,
-   "publie": "2026-11-03"
+   "publie": "2026-11-03",
+   "vu": "2026-11-08"
   },
   {
    "site": "cuisineaz",
@@ -89,7 +388,8 @@
    "prep": 25,
    "total": 65,
    "pour": 4,
-   "publie": "2026-11-02"
+   "publie": "2026-11-02",
+   "vu": "2026-11-08"
   },
   {
    "site": "cuisineaz",
@@ -98,34 +398,8 @@
    "prep": 15,
    "total": 40,
    "pour": 4,
-   "publie": "2026-11-01"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Pintade rôtie aux girolles et boudin blanc aux cèpes",
-   "url": "https://www.cuisineaz.com/recettes/pintade-rotie-aux-girolles-et-boudin-blanc-aux-cepes-une-recette-d-automne-genereuse-126089.aspx",
-   "prep": 20,
-   "total": 65,
-   "pour": 6,
-   "publie": "2026-10-31"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Soupe au caillou",
-   "url": "https://www.cuisineaz.com/recettes/soupe-au-caillou-la-recette-familiale-aux-legumes-d-automne-126083.aspx",
-   "prep": 20,
-   "total": 55,
-   "pour": 6,
-   "publie": "2026-10-31"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Poulet rôti au paprika et purée maison",
-   "url": "https://www.cuisineaz.com/recettes/poulet-roti-au-paprika-et-puree-maison-le-plat-reconfortant-a-partager-126093.aspx",
-   "prep": 20,
-   "total": 60,
-   "pour": 4,
-   "publie": "2026-10-30"
+   "publie": "2026-11-01",
+   "vu": "2026-11-08"
   }
  ]
 }
