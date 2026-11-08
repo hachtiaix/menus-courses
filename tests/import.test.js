@@ -146,3 +146,8 @@ test("préparation : consignes à l'impératif, produits tout faits ignorés", (
   assert.deepEqual(Data.prepList("Ajouter le steak haché et les tomates pelées, puis le gruyère râpé."), []);
   assert.deepEqual(Data.prepList("Etaler la pâte sur le plan de travail fariné. Tailler-y des étoiles."), []);
 });
+
+test("préparation : plusieurs ingrédients pour la même consigne", () => {
+  assert.deepEqual(Data.prepList("Émincer l'oignon et l'ail. Couper l'agneau en gros morceaux."),
+    ["Oignon : émincer", "Ail : émincer", "Agneau : couper en gros morceaux"]);
+});

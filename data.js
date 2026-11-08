@@ -573,7 +573,11 @@ function prepList(steps){const found=[],seen=new Set(),txt=String(steps||"").rep
     found.push([i,noun.charAt(0).toUpperCase()+noun.slice(1)+" : "+how])};
   const chain=c=>c.split(/\s*(?:,|et|puis)\s*/).filter(Boolean).map(inf).join(" et ");
   for(const m of txt.matchAll(PREP_C))add(m.index,m[3],chain(m[1])+" "+m[2].trim());
-  for(const m of txt.matchAll(PREP_B))add(m.index,m[2],(chain(m[1])+" "+m[3].trim()).trim());
+  // « Émincer l'oignon et l'ail », « Peler les carottes, les navets et l'oignon » : chaque ingrédient de la suite
+  const MORE=new RegExp("^\\s*(?:,|et)\\s*"+ART+NOUN+"("+EN+")","iu");
+  for(const m of txt.matchAll(PREP_B)){const how=(chain(m[1])+" "+m[3].trim()).trim();add(m.index,m[2],how);
+    let rest=txt.slice(m.index+m[0].length),k;
+    while((k=rest.match(MORE))&&!/^(faire|laisser|mettre|remettre|prendre|servir|cuire|revenir|dorer|r[ée]server|ajouter|verser)\b/i.test(k[1])){add(m.index+1,k[1],(chain(m[1])+" "+k[2].trim()).trim());rest=rest.slice(k[0].length)}}
   for(const m of txt.matchAll(PREP_A))add(m.index,m[1],m[2].replace(/\(s\)/,""));
   return found.sort((x,y)=>x[0]-y[0]).map(x=>x[1])}
 function clean(k,id,r){
