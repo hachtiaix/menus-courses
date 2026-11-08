@@ -448,10 +448,14 @@ function extraDialog(key,n){
     close();render();
   };
 }
+// Nombre de personnes minimum d'une recette : en dessous, une quantité passerait sous ½ cuillère / ½ pièce.
+// Les courses se font au moins pour ce nombre (1 personne prévue, minimum 2 : on achète pour 2).
+function minServ(r){const B=(r&&r.serves)||BASE,c=((r&&r.ingredients)||[]).map(i=>Qty.parse(i.t)).filter(q=>q&&q.kind==="count"&&q.n>=0.5);
+  for(let k=1;k<30;k++)if(c.every(q=>q.n*k/B>=0.5-1e-9))return k;return 30}
 // Ajoute d'un coup les ingrédients de la recette d'un repas (magasin habituel, cumul) et s'en souvient.
 function addMealIngredients(key){
   const m=S.meals[key],r=m&&recipeOf(m.text);if(!r)return;
-  const B=r.serves||BASE,n=m.servings||DEFN,ids=new Set(),items=[];
+  const B=r.serves||BASE,n=Math.max(m.servings||DEFN,minServ(r)),ids=new Set(),items=[];
   for(const g of r.ingredients){const store=defaultStore(g.t,g.store),t=Qty.buy(g.t,n/B,B);(pantryOf(g.t)?addCheck(store,t,key.slice(0,10),key):addToList(store,t)).forEach(x=>ids.add(x));items.push({t:g.t,store})}
   touch("meals",{...S.meals[key],added:{n,items,ids:[...ids],b:B}});
 }
@@ -606,7 +610,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v288"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v289"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -847,15 +851,16 @@ function ingredientsDialog(name,mealKey,startN,after,step){
   const B=(r&&r.serves)||BASE; // la recette est écrite pour B personnes
   const meal=mealKey&&S.meals[mealKey],prev=meal&&meal.text===name&&meal.added;
   let n=startN||(meal&&meal.servings)||DEFN;
+  const mn=r.virtual?1:minServ(r),eff=k=>Math.max(k,mn); // courses au moins pour le minimum de la recette
   const was=t=>prev&&prev.items.find(g=>g.t===t);
   const ov=document.createElement("div");ov.className="ov";
   const home=t=>prev&&t&&!was(t); // décoché lors de l'ajout : on l'avait à la maison
-  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}" ${home(i.t)?'data-home="1"':""}><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,n/B,B))}" data-shown="${esc(Qty.buy(i.t,n/B,B))}"><span class="stp sm"><button type="button" data-st="-1" aria-label="Moins">−</button><button type="button" data-st="1" aria-label="Plus">+</button></span><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select><p class="homewarn"></p></div>`;
+  const rowH=i=>`<div class="row ing-row" data-base="${esc(i.t)}" ${home(i.t)?'data-home="1"':""}><input type="checkbox" ${!prev||was(i.t)?"checked":""}><input type="text" class="ing" value="${esc(Qty.buy(i.t,eff(n)/B,B))}" data-shown="${esc(Qty.buy(i.t,eff(n)/B,B))}"><span class="stp sm"><button type="button" data-st="-1" aria-label="Moins">−</button><button type="button" data-st="1" aria-label="Plus">+</button></span><select>${opts(was(i.t)?was(i.t).store:defaultStore(i.t,i.store))}</select><p class="homewarn"></p></div>`;
   ov.innerHTML=`<div class="sheet"><div class="grab"></div>${step?`<p class="mut step">${esc(step)}</p>`:""}<h2>${esc(name)}</h2>
    ${r&&meal&&meal.text&&!prev&&meal.ts<LEGACY_TS?`<p class="homewarn" style="margin:6px 0">⚠ Ce repas date d'avant le suivi des ajouts : vérifiez qu'il n'est pas déjà dans vos listes avant d'ajouter.</p>`:""}
    ${prev?`<p class="okmsg">✓ Déjà dans les listes pour ${prev.n} personne${prev.n>1?"s":""}. Changer le nombre de personnes ou les cases met à jour les listes.</p>`:""}
-   ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div>
-   <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans 📖 Recettes → Ingrédients.":`Recette pour ${B} personne${B>1?"s":""}.`}</p>
+   ${r?`<div class="serv"><span>Pour</span><button class="btn sec" id="mn">−</button><b id="nn">${n}</b><button class="btn sec" id="pl">+</button><span>personnes</span></div><p class="mut" id="nmin" hidden></p>
+   <p class="mut">Cochez ce qu'il faut acheter et choisissez le magasin. ${r.virtual?"Quantités par personne, réglables dans 📖 Recettes → Ingrédients.":`Quantités recalculées (la recette d'origine est écrite pour ${B} personne${B>1?"s":""}).`}</p>
    <div id="ings" class="card">${r.ingredients.filter(i=>!pantryOf(i.t)).map(rowH).join("")}</div><button class="addrow" id="more"><i>+</i>Ajouter un ingrédient</button>`
    :`<p class="mut">Nouvelle recette : un ingrédient par ligne, quantité en premier (ex. « 400 g de pâtes »).</p><div class="serv"><span>Recette pour</span><input type="number" id="sv" value="${n}" min="1" max="30" inputmode="numeric" style="width:70px"><span>personnes</span></div><textarea id="ta" rows="7" placeholder="400 g de pâtes&#10;200 g de lardons&#10;2 oeufs&#10;crème fraîche"></textarea>`}
    <div class="acts"><button class="btn sec" id="no">Ne pas ajouter<br>aux listes</button><button class="btn" id="ok">${!r?"Continuer":prev?"Mettre à jour<br>les listes":"Ajouter<br>aux listes"}</button></div></div>`;
@@ -868,11 +873,12 @@ function ingredientsDialog(name,mealKey,startN,after,step){
   ov.onclick=e=>{if(e.target===ov)skip()};
   $("#no").onclick=skip;
   if(r){
-    const missing=t=>{const a=Qty.parse(Qty.buy(t,prev.n/B,B)),b=Qty.parse(Qty.buy(t,n/B,B));
-      if(a.n==null||b.n==null||Qty.key(a)!==Qty.key(b))return Qty.buy(t,n/B,B);
+    const missing=t=>{const a=Qty.parse(Qty.buy(t,prev.n/B,B)),b=Qty.parse(Qty.buy(t,eff(n)/B,B));
+      if(a.n==null||b.n==null||Qty.key(a)!==Qty.key(b))return Qty.buy(t,eff(n)/B,B);
       return b.n-a.n>0?Qty.format({...b,n:b.n-a.n}):null};
     const setN=v=>{
       n=Math.max(1,Math.min(30,v));$("#nn").textContent=n;
+      const nm=$("#nmin");if(nm){nm.hidden=eff(n)===n;nm.textContent=`Courses pour ${eff(n)} personnes : la recette ne se fait pas à moins (quantités trop petites).`}
       ov.querySelectorAll(".ing-row").forEach(el=>{
         const i=el.querySelector(".ing"),w=el.querySelector(".homewarn");
         if(el.dataset.home&&n>prev.n){
@@ -882,7 +888,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
           return;
         }
         el.classList.remove("warn");w.textContent="";delete el.dataset.diff;
-        if(i.value===i.dataset.shown)i.value=i.dataset.shown=Qty.buy(el.dataset.base,n/B,B);
+        if(i.value===i.dataset.shown)i.value=i.dataset.shown=Qty.buy(el.dataset.base,eff(n)/B,B);
       });
     };
     setN(n);
@@ -900,7 +906,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
       close();if(ings.length){touch("recipes",{id:uid(),name,serves:Math.max(1,Math.min(30,parseInt(sv,10)||4)),ingredients:ings});ingredientsDialog(name,mealKey)}return;
     }
     const rows=[...ov.querySelectorAll(".ing-row")].map(el=>{const i=el.querySelector(".ing"),edited=i.value!==i.dataset.shown;
-      return{orig:el.dataset.base,on:el.querySelector("[type=checkbox]").checked,shown:i.value.trim(),base:edited||el.dataset.diff?scaleText(i.value.trim(),B/n):el.dataset.base,store:el.querySelector("select").value}}).filter(x=>x.shown);
+      return{orig:el.dataset.base,on:el.querySelector("[type=checkbox]").checked,shown:i.value.trim(),base:edited||el.dataset.diff?scaleText(i.value.trim(),B/eff(n)):el.dataset.base,store:el.querySelector("select").value}}).filter(x=>x.shown);
     // ingrédients placard (non affichés) : toujours ajoutés en 🏠 « à vérifier »
     const pan=r.ingredients.filter(g=>pantryOf(g.t)).map(g=>({t:g.t,store:defaultStore(g.t,g.store)}));
     const now=[...rows.filter(x=>x.on).map(x=>({t:x.base,store:x.store})),...pan];
@@ -914,7 +920,7 @@ function ingredientsDialog(name,mealKey,startN,after,step){
     // la recette ne change pas avec les quantités achetées ; seuls les ingrédients ajoutés (+ Ingrédient) s'y ajoutent
     const extra=rows.filter(x=>!x.orig).map(x=>({t:x.base,store:x.store}));
     if(extra.length&&!r.virtual)touch("recipes",{...r,ingredients:[...r.ingredients,...extra]});
-    if(meal)touch("meals",{...S.meals[mealKey],servings:n,added:{n,items:now,ids:[...ids],b:B}});
+    if(meal)touch("meals",{...S.meals[mealKey],servings:n,added:{n:eff(n),items:now,ids:[...ids],b:B}});
     close();render();if(after)after();
   };
 }
