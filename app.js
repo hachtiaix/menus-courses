@@ -610,7 +610,7 @@ const wkOff=()=>{if(Date.now()-(+LS.wkAt||0)>6*3600e3)LS.wk=0;return +LS.wk||0};
 const setWk=v=>{LS.wk=v;LS.wkAt=Date.now()};
 function monday(){const d=new Date();d.setHours(12);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*wkOff());return d}
 const LEGACY_TS=1791714864000; // mise en ligne du suivi des ajouts (v29)
-const BASE=4,DEFN=3,VERSION="v293"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
+const BASE=4,DEFN=3,VERSION="v294"; // BASE : recette sans nombre de parts ; DEFN : personnes par défaut d'un repas
 function fmt(x){return String(Math.round(x*100)/100).replace(".",",")}
 function scaleText(t,f){
   const m=t.match(/^\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*(.*)$/);
@@ -1510,15 +1510,16 @@ function cookView(r,start){const B=r.serves||BASE;let n=start||B;
   // l'écran reste allumé tant que la recette est ouverte (repris au retour dans l'app)
   // Secours (iPad, anciens iOS, app sur l'écran d'accueil) : une mini-vidéo (piste son muette) qui tourne sans fin empêche la veille, comme NoSleep.js
   let lock=null,vid=null;
-  const byVideo=()=>{if(!vid){vid=document.createElement("video");vid.src="eveil.mp4";vid.muted=true;vid.playsInline=true;
+  const byVideo=()=>{if(!vid){vid=document.createElement("video");vid.src="eveil.mp4";vid.playsInline=true;vid.title="Écran allumé"; // non muette (piste son = silence) : iOS ignore les vidéos muettes pour la veille
       // pas de « loop » : iOS ne garde pas l'écran allumé pour une vidéo en boucle ; on la relance juste avant la fin
       vid.addEventListener("timeupdate",()=>{if(vid.duration&&vid.currentTime>vid.duration-1)vid.currentTime=0});
       vid.addEventListener("ended",()=>{vid.currentTime=0;vid.play().catch(()=>{})});
-      vid.setAttribute("playsinline","");vid.setAttribute("muted","");vid.setAttribute("aria-hidden","true");vid.className="eveil";ov.appendChild(vid)}
+      vid.setAttribute("playsinline","");vid.setAttribute("aria-hidden","true");vid.className="eveil";ov.appendChild(vid)}
     vid.play().then(()=>{$("#wl").hidden=false}).catch(()=>{})};
   const wake=async()=>{if(!ov.isConnected||document.hidden)return;
-    try{if("wakeLock" in navigator&&!lock){lock=await navigator.wakeLock.request("screen");lock.addEventListener("release",()=>{lock=null});$("#wl").hidden=false}}catch(_){}
-    byVideo()}; // les deux : la vidéo couvre les appareils où la demande est acceptée sans effet
+    byVideo(); // d'abord, tant que le toucher qui a ouvert la recette compte encore (iOS exige un geste pour lancer une vidéo avec son)
+    try{if("wakeLock" in navigator&&!lock){lock=await navigator.wakeLock.request("screen");lock.addEventListener("release",()=>{lock=null});$("#wl").hidden=false}}catch(_){}};
+  ov.addEventListener("click",()=>{if(vid&&vid.paused)byVideo()}); // au retour dans l'app : relancée au premier toucher // les deux : la vidéo couvre les appareils où la demande est acceptée sans effet
   const onVis=()=>{if(!document.hidden)wake()};document.addEventListener("visibilitychange",onVis);wake();
   const close=()=>{ov.remove();document.removeEventListener("visibilitychange",onVis);if(lock)lock.release().catch(()=>{});if(vid){vid.pause();vid.removeAttribute("src");vid.load()}};
   ov.onclick=e=>{if(e.target===ov)close()};
