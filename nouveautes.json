@@ -1,5 +1,5 @@
 {
- "maj": "2026-11-19",
+ "maj": "2026-11-20",
  "recettes": [
   {
    "site": "marmiton",
@@ -9,7 +9,7 @@
    "total": 35,
    "pour": 4,
    "publie": "2026-06-30",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -19,7 +19,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2026-06-30",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -29,7 +29,7 @@
    "total": 15,
    "pour": 6,
    "publie": "2006-10-23",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -39,7 +39,7 @@
    "total": 270,
    "pour": 4,
    "publie": "2026-05-26",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -49,7 +49,7 @@
    "total": 40,
    "pour": 4,
    "publie": "2026-05-27",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -59,7 +59,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2026-05-27",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -69,7 +69,7 @@
    "total": 205,
    "pour": 4,
    "publie": "2026-05-19",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -79,7 +79,7 @@
    "total": 75,
    "pour": 4,
    "publie": "2026-01-16",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -89,7 +89,7 @@
    "total": 210,
    "pour": 0,
    "publie": "2025-12-02",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -99,7 +99,7 @@
    "total": 65,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -109,7 +109,7 @@
    "total": 50,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -119,7 +119,7 @@
    "total": 65,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -129,7 +129,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -139,7 +139,7 @@
    "total": 125,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "marmiton",
@@ -149,7 +149,97 @@
    "total": 45,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Entrée de Noël gastronomique: carpaccio de Saint-Jacques aux agrumes",
+   "url": "https://www.cuisineaz.com/recettes/entree-de-noel-gastronomique-carpaccio-de-saint-jacques-aux-agrumes-126443.aspx",
+   "prep": 30,
+   "total": 30,
+   "pour": 4,
+   "publie": "2026-11-19",
+   "vu": "2026-11-20"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Sapin de Noël en pâte feuilletée au jambon et au fromage",
+   "url": "https://www.cuisineaz.com/recettes/sapin-de-noel-en-pate-feuilletee-au-jambon-et-au-fromage-126353.aspx",
+   "prep": 30,
+   "total": 60,
+   "pour": 6,
+   "publie": "2026-11-19",
+   "vu": "2026-11-20"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Couscousotto & Soupe d'Orient aux légumes U pour couscous surgelés",
+   "url": "https://www.cuisineaz.com/recettes/couscousotto-soupe-d-orient-aux-legumes-u-pour-couscous-surgeles-126440.aspx",
+   "prep": 20,
+   "total": 45,
+   "pour": 4,
+   "publie": "2026-11-19",
+   "vu": "2026-11-20"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Galettes de légumes U pour couscous à l'Air Fryer, emmental râpé U fondu",
+   "url": "https://www.cuisineaz.com/recettes/galettes-de-legumes-u-pour-couscous-a-l-air-fryer-emmental-rape-u-fondu-126349.aspx",
+   "prep": 15,
+   "total": 30,
+   "pour": 4,
+   "publie": "2026-11-19",
+   "vu": "2026-11-20"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Minestrone de légumes U pour potage aux haricots blancs, emmental U et croûtons ",
+   "url": "https://www.cuisineaz.com/recettes/minestrone-de-legumes-u-pour-potage-aux-haricots-blancs-emmental-u-et-croutons-u-126348.aspx",
+   "prep": 10,
+   "total": 35,
+   "pour": 4,
+   "publie": "2026-11-19",
+   "vu": "2026-11-20"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Choucroute facile et rapide",
+   "url": "https://www.cuisineaz.com/recettes/choucroute-facile-et-rapide-126324.aspx",
+   "prep": 20,
+   "total": 110,
+   "pour": 4,
+   "publie": "2026-11-19",
+   "vu": "2026-11-20"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Tourin blanchi à l'ail",
+   "url": "https://www.cuisineaz.com/recettes/tourin-blanchi-a-l-ail-la-soupe-traditionnelle-du-sud-ouest-126410.aspx",
+   "prep": 15,
+   "total": 40,
+   "pour": 6,
+   "publie": "2026-11-19",
+   "vu": "2026-11-20"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Infusion épicée de Noël",
+   "url": "https://www.cuisineaz.com/recettes/infusion-epicee-de-noel-121567.aspx",
+   "prep": 2,
+   "total": 7,
+   "pour": 1,
+   "publie": "2025-12-23",
+   "vu": "2026-11-20"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Gyozas ou Raviolis japonais",
+   "url": "https://www.cuisineaz.com/recettes/gyozas-ou-raviolis-japonais-81783.aspx",
+   "prep": 30,
+   "total": 45,
+   "pour": 6,
+   "publie": "2022-07-08",
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -159,7 +249,7 @@
    "total": 24,
    "pour": 2,
    "publie": "2026-11-18",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -169,7 +259,7 @@
    "total": 30,
    "pour": 4,
    "publie": "2026-11-18",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -179,7 +269,7 @@
    "total": 50,
    "pour": 4,
    "publie": "2026-11-18",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -189,7 +279,7 @@
    "total": 8,
    "pour": 1,
    "publie": "2026-11-08",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -199,7 +289,7 @@
    "total": 10,
    "pour": 4,
    "publie": "2026-06-20",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -209,7 +299,7 @@
    "total": 35,
    "pour": 4,
    "publie": "2026-04-06",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -219,7 +309,7 @@
    "total": 50,
    "pour": 4,
    "publie": "2026-11-17",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -229,7 +319,7 @@
    "total": 58,
    "pour": 6,
    "publie": "2026-11-17",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -239,7 +329,7 @@
    "total": 50,
    "pour": 4,
    "publie": "2026-11-17",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -249,7 +339,7 @@
    "total": 45,
    "pour": 3,
    "publie": "2023-06-27",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -259,7 +349,7 @@
    "total": 30,
    "pour": 4,
    "publie": "2026-11-16",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -269,7 +359,7 @@
    "total": 35,
    "pour": 5,
    "publie": "2026-11-16",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -279,7 +369,7 @@
    "total": 90,
    "pour": 4,
    "publie": "2026-11-16",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -289,7 +379,7 @@
    "total": 295,
    "pour": 4,
    "publie": "2026-11-15",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -299,7 +389,7 @@
    "total": 55,
    "pour": 4,
    "publie": "2026-11-15",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
@@ -309,7 +399,7 @@
    "total": 60,
    "pour": 4,
    "publie": "2026-11-14",
-   "vu": "2026-11-19"
+   "vu": "2026-11-20"
   },
   {
    "site": "cuisineaz",
