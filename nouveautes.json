@@ -1,5 +1,5 @@
 {
- "maj": "2026-11-25",
+ "maj": "2026-11-26",
  "recettes": [
   {
    "site": "marmiton",
@@ -9,7 +9,7 @@
    "total": 35,
    "pour": 4,
    "publie": "2026-06-30",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -19,7 +19,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2026-06-30",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -29,7 +29,7 @@
    "total": 15,
    "pour": 6,
    "publie": "2006-10-23",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -39,7 +39,7 @@
    "total": 270,
    "pour": 4,
    "publie": "2026-05-26",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -49,7 +49,7 @@
    "total": 40,
    "pour": 4,
    "publie": "2026-05-27",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -59,7 +59,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2026-05-27",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -69,7 +69,7 @@
    "total": 205,
    "pour": 4,
    "publie": "2026-05-19",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -79,7 +79,7 @@
    "total": 75,
    "pour": 4,
    "publie": "2026-01-16",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -89,7 +89,7 @@
    "total": 210,
    "pour": 0,
    "publie": "2025-12-02",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -99,7 +99,7 @@
    "total": 65,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -109,7 +109,7 @@
    "total": 50,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -119,7 +119,7 @@
    "total": 65,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -129,7 +129,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -139,7 +139,7 @@
    "total": 125,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
   },
   {
    "site": "marmiton",
@@ -149,7 +149,177 @@
    "total": 45,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-25"
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Dinde de Noël aux marrons à faire à l'Airfryer",
+   "url": "https://www.cuisineaz.com/recettes/dinde-de-noel-aux-marrons-a-faire-a-l-airfryer-126606.aspx",
+   "prep": 25,
+   "total": 75,
+   "pour": 4,
+   "publie": "2026-11-25",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Purée de céleri-rave",
+   "url": "https://www.cuisineaz.com/recettes/puree-de-celeri-rave-126344.aspx",
+   "prep": 10,
+   "total": 30,
+   "pour": 4,
+   "publie": "2026-11-25",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Tacos au saumon, chou rouge et avocat",
+   "url": "https://www.cuisineaz.com/recettes/tacos-au-saumon-chou-rouge-et-avocat-la-recette-a-garnir-en-famille-126553.aspx",
+   "prep": 20,
+   "total": 30,
+   "pour": 4,
+   "publie": "2026-11-25",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Velouté de potimarron et patate douce facile",
+   "url": "https://www.cuisineaz.com/recettes/veloute-de-potimarron-et-patate-douce-facile-126343.aspx",
+   "prep": 20,
+   "total": 50,
+   "pour": 4,
+   "publie": "2026-11-25",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Purée de pommes de terre cuites au four",
+   "url": "https://www.cuisineaz.com/recettes/puree-de-pommes-de-terre-cuites-au-four-la-recette-onctueuse-au-gout-grille-126552.aspx",
+   "prep": 15,
+   "total": 105,
+   "pour": 4,
+   "publie": "2026-11-24",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Cuisse de dinde au Airfryer pour Noël",
+   "url": "https://www.cuisineaz.com/recettes/cuisse-de-dinde-au-airfryer-pour-noel-126602.aspx",
+   "prep": 25,
+   "total": 110,
+   "pour": 4,
+   "publie": "2026-11-24",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Mendiants aux raisins secs et amandes",
+   "url": "https://www.cuisineaz.com/recettes/mendiants-aux-raisins-secs-et-amandes-la-recette-facile-126569.aspx",
+   "prep": 20,
+   "total": 25,
+   "pour": 20,
+   "publie": "2026-11-24",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Croque-purée anti-gaspi au four",
+   "url": "https://www.cuisineaz.com/recettes/croque-puree-anti-gaspi-au-four-mozzarella-anchois-et-basilic-126537.aspx",
+   "prep": 20,
+   "total": 40,
+   "pour": 4,
+   "publie": "2026-11-24",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Filet mignon de veau aux morilles",
+   "url": "https://www.cuisineaz.com/recettes/filet-mignon-de-veau-aux-morilles-121049.aspx",
+   "prep": 20,
+   "total": 85,
+   "pour": 4,
+   "publie": "2025-11-20",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Club sandwich aux poires grillées et au Gorgonzola AOP",
+   "url": "https://www.cuisineaz.com/recettes/club-sandwich-aux-poires-grillees-et-au-gorgonzola-116755.aspx",
+   "prep": 10,
+   "total": 15,
+   "pour": 4,
+   "publie": "2023-10-24",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Saumon fumé, aneth et gelée de citron vert",
+   "url": "https://www.cuisineaz.com/recettes/saumon-fume-aneth-et-gelee-de-citron-vert-115804.aspx",
+   "prep": 30,
+   "total": 35,
+   "pour": 4,
+   "publie": "2022-11-29",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Œufs cocotte aux champignons et au curcuma",
+   "url": "https://www.cuisineaz.com/recettes/oeufs-cocotte-aux-champignons-et-au-curcuma-la-recette-cremeuse-au-four-126548.aspx",
+   "prep": 25,
+   "total": 39,
+   "pour": 4,
+   "publie": "2026-11-23",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Parmentier de butternut facile",
+   "url": "https://www.cuisineaz.com/recettes/parmentier-de-butternut-facile-126341.aspx",
+   "prep": 15,
+   "total": 35,
+   "pour": 6,
+   "publie": "2026-11-23",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Gratin de chou-fleur aux lardons",
+   "url": "https://www.cuisineaz.com/recettes/gratin-de-chou-fleur-aux-lardons-la-recette-familiale-a-la-bechamel-126538.aspx",
+   "prep": 20,
+   "total": 50,
+   "pour": 4,
+   "publie": "2026-11-23",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Pommes Noisettes Croustillantes",
+   "url": "https://www.cuisineaz.com/recettes/pommes-noisettes-croustillantes-117982.aspx",
+   "prep": 20,
+   "total": 35,
+   "pour": 4,
+   "publie": "2024-10-04",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Crevettes grillées et sabayon à la clémentine et à la cannelle",
+   "url": "https://www.cuisineaz.com/recettes/crevettes-grillees-et-sabayon-a-la-clementine-et-a-la-cannelle-115838.aspx",
+   "prep": 20,
+   "total": 30,
+   "pour": 4,
+   "publie": "2022-12-01",
+   "vu": "2026-11-26"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Bûche de Noël salée au tarama, tzatziki et saumon fumé",
+   "url": "https://www.cuisineaz.com/recettes/buche-de-noel-salee-au-tarama-tzatziki-et-saumon-fume-115806.aspx",
+   "prep": 25,
+   "total": 35,
+   "pour": 8,
+   "publie": "2022-11-29",
+   "vu": "2026-11-26"
   },
   {
    "site": "cuisineaz",
@@ -159,7 +329,7 @@
    "total": 180,
    "pour": 6,
    "publie": "2026-11-22",
-   "vu": "2026-11-23"
+   "vu": "2026-11-26"
   },
   {
    "site": "cuisineaz",
@@ -169,7 +339,7 @@
    "total": 13,
    "pour": 2,
    "publie": "2026-11-22",
-   "vu": "2026-11-23"
+   "vu": "2026-11-26"
   },
   {
    "site": "cuisineaz",
@@ -179,7 +349,7 @@
    "total": 40,
    "pour": 6,
    "publie": "2023-07-31",
-   "vu": "2026-11-23"
+   "vu": "2026-11-26"
   },
   {
    "site": "cuisineaz",
@@ -189,7 +359,7 @@
    "total": 25,
    "pour": 4,
    "publie": "2022-11-08",
-   "vu": "2026-11-23"
+   "vu": "2026-11-26"
   },
   {
    "site": "cuisineaz",
@@ -199,7 +369,7 @@
    "total": 20,
    "pour": 4,
    "publie": "2022-10-07",
-   "vu": "2026-11-23"
+   "vu": "2026-11-26"
   },
   {
    "site": "cuisineaz",
@@ -209,7 +379,7 @@
    "total": 50,
    "pour": 6,
    "publie": "2026-11-21",
-   "vu": "2026-11-23"
+   "vu": "2026-11-26"
   },
   {
    "site": "cuisineaz",
@@ -219,7 +389,7 @@
    "total": 205,
    "pour": 4,
    "publie": "2026-11-21",
-   "vu": "2026-11-23"
+   "vu": "2026-11-26"
   },
   {
    "site": "cuisineaz",
@@ -229,7 +399,7 @@
    "total": 55,
    "pour": 6,
    "publie": "2026-11-20",
-   "vu": "2026-11-23"
+   "vu": "2026-11-26"
   },
   {
    "site": "cuisineaz",
@@ -830,126 +1000,6 @@
    "pour": 4,
    "publie": "2026-11-05",
    "vu": "2026-11-10"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Croque-monsieur aux sardines",
-   "url": "https://www.cuisineaz.com/recettes/croque-monsieur-aux-sardines-la-recette-rapide-avec-des-produits-du-placard-126192.aspx",
-   "prep": 15,
-   "total": 25,
-   "pour": 4,
-   "publie": "2026-11-05",
-   "vu": "2026-11-10"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Truffade d'Auvergne",
-   "url": "https://www.cuisineaz.com/recettes/truffade-d-auvergne-120864.aspx",
-   "prep": 10,
-   "total": 35,
-   "pour": 6,
-   "publie": "2025-11-16",
-   "vu": "2026-11-10"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Velouté de potimarron au miso et gingembre",
-   "url": "https://www.cuisineaz.com/recettes/veloute-de-potimarron-au-miso-et-gingembre-soupe-legere-de-saison-126160.aspx",
-   "prep": 15,
-   "total": 40,
-   "pour": 4,
-   "publie": "2026-11-04",
-   "vu": "2026-11-09"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Choucroute maison au champagne",
-   "url": "https://www.cuisineaz.com/recettes/choucroute-maison-au-champagne-la-recette-traditionnelle-mijotee-126182.aspx",
-   "prep": 20,
-   "total": 185,
-   "pour": 6,
-   "publie": "2026-11-04",
-   "vu": "2026-11-09"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Croquettes de patate douce à la viande hachée",
-   "url": "https://www.cuisineaz.com/recettes/croquettes-de-patate-douce-a-la-viande-hachee-la-recette-express-du-quotidien-126165.aspx",
-   "prep": 20,
-   "total": 30,
-   "pour": 4,
-   "publie": "2026-11-04",
-   "vu": "2026-11-09"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Tarte aux champignons et fromage de chèvre vue sur Pinterest",
-   "url": "https://www.cuisineaz.com/recettes/tarte-aux-champignons-et-fromage-de-chevre-vue-sur-pinterest-118426.aspx",
-   "prep": 10,
-   "total": 40,
-   "pour": 4,
-   "publie": "2024-10-29",
-   "vu": "2026-11-09"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Tartelette forestière",
-   "url": "https://www.cuisineaz.com/recettes/tartelette-forestiere-les-champignons-de-saison-sublimes-126161.aspx",
-   "prep": 25,
-   "total": 55,
-   "pour": 4,
-   "publie": "2026-11-03",
-   "vu": "2026-11-09"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Pâtes au curry coco, brocoli et bœuf",
-   "url": "https://www.cuisineaz.com/recettes/pates-au-curry-coco-brocoli-et-boeuf-recette-facile-a-la-poele-126183.aspx",
-   "prep": 20,
-   "total": 40,
-   "pour": 4,
-   "publie": "2026-11-03",
-   "vu": "2026-11-09"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Morue de Terre-Neuve",
-   "url": "https://www.cuisineaz.com/recettes/morue-de-terre-neuve-recette-facile-a-la-puree-de-pommes-de-terre-126178.aspx",
-   "prep": 30,
-   "total": 45,
-   "pour": 4,
-   "publie": "2026-11-03",
-   "vu": "2026-11-08"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Soupe minestrone familiale",
-   "url": "https://www.cuisineaz.com/recettes/soupe-minestrone-familiale-recette-rapide-et-equilibree-126168.aspx",
-   "prep": 25,
-   "total": 55,
-   "pour": 4,
-   "publie": "2026-11-03",
-   "vu": "2026-11-08"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Minestrone maison",
-   "url": "https://www.cuisineaz.com/recettes/minestrone-maison-la-soupe-complete-de-l-automne-126163.aspx",
-   "prep": 25,
-   "total": 65,
-   "pour": 4,
-   "publie": "2026-11-02",
-   "vu": "2026-11-08"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Soupe de citrouille aux oignons",
-   "url": "https://www.cuisineaz.com/recettes/soupe-de-citrouille-aux-oignons-recette-facile-en-3-ingredients-126191.aspx",
-   "prep": 15,
-   "total": 40,
-   "pour": 4,
-   "publie": "2026-11-01",
-   "vu": "2026-11-08"
   }
  ]
 }
