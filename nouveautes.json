@@ -1,5 +1,5 @@
 {
- "maj": "2026-11-27",
+ "maj": "2026-11-28",
  "recettes": [
   {
    "site": "marmiton",
@@ -9,7 +9,7 @@
    "total": 35,
    "pour": 4,
    "publie": "2026-06-30",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -19,7 +19,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2026-06-30",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -29,7 +29,7 @@
    "total": 15,
    "pour": 6,
    "publie": "2006-10-23",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -39,7 +39,7 @@
    "total": 270,
    "pour": 4,
    "publie": "2026-05-26",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -49,7 +49,7 @@
    "total": 40,
    "pour": 4,
    "publie": "2026-05-27",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -59,7 +59,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2026-05-27",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -69,7 +69,7 @@
    "total": 205,
    "pour": 4,
    "publie": "2026-05-19",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -79,7 +79,7 @@
    "total": 75,
    "pour": 4,
    "publie": "2026-01-16",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -89,7 +89,7 @@
    "total": 210,
    "pour": 0,
    "publie": "2025-12-02",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -99,7 +99,7 @@
    "total": 65,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -109,7 +109,7 @@
    "total": 50,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -119,7 +119,7 @@
    "total": 65,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -129,7 +129,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -139,7 +139,7 @@
    "total": 125,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
   },
   {
    "site": "marmiton",
@@ -149,7 +149,77 @@
    "total": 45,
    "pour": 4,
    "publie": "2025-12-02",
-   "vu": "2026-11-27"
+   "vu": "2026-11-28"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Cordon bleu de bœuf festif",
+   "url": "https://www.cuisineaz.com/recettes/cordon-bleu-de-boeuf-festif-126535.aspx",
+   "prep": 30,
+   "total": 60,
+   "pour": 4,
+   "publie": "2026-11-27",
+   "vu": "2026-11-28"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Pavé de saumon U Saveurs en papillote, courgettes U et carottes Filière U",
+   "url": "https://www.cuisineaz.com/recettes/pave-de-saumon-u-saveurs-en-papillote-courgettes-u-et-carottes-filiere-u-126614.aspx",
+   "prep": 10,
+   "total": 30,
+   "pour": 4,
+   "publie": "2026-11-27",
+   "vu": "2026-11-28"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Noix de Saint-Jacques U Saveurs poêlées, fondue de poireaux et carottes Filière ",
+   "url": "https://www.cuisineaz.com/recettes/noix-de-saint-jacques-u-saveurs-poelees-fondue-de-poireaux-et-carottes-filiere-u-126615.aspx",
+   "prep": 10,
+   "total": 30,
+   "pour": 4,
+   "publie": "2026-11-27",
+   "vu": "2026-11-28"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Tartiflette au Gorgonzola",
+   "url": "https://www.cuisineaz.com/recettes/tartiflette-au-gorgonzola-116862.aspx",
+   "prep": 30,
+   "total": 60,
+   "pour": 4,
+   "publie": "2023-11-27",
+   "vu": "2026-11-28"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Rôtis de boeuf facile pour Noël à faire au Airfryer",
+   "url": "https://www.cuisineaz.com/recettes/rotis-de-boeuf-facile-pour-noel-a-faire-au-airfryer-126607.aspx",
+   "prep": 30,
+   "total": 110,
+   "pour": 6,
+   "publie": "2026-11-26",
+   "vu": "2026-11-28"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Beurre d'escargots très rapide à faire le jour du Noël",
+   "url": "https://www.cuisineaz.com/recettes/beurre-d-escargots-tres-rapide-a-faire-le-jour-du-noel-126610.aspx",
+   "prep": 10,
+   "total": 10,
+   "pour": 4,
+   "publie": "2026-11-26",
+   "vu": "2026-11-28"
+  },
+  {
+   "site": "cuisineaz",
+   "titre": "Café et chou-fleur en deux services",
+   "url": "https://www.cuisineaz.com/recettes/cafe-et-chou-fleur-en-deux-services-116173.aspx",
+   "prep": 30,
+   "total": 50,
+   "pour": 2,
+   "publie": "2023-04-13",
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -159,7 +229,7 @@
    "total": 75,
    "pour": 4,
    "publie": "2026-11-25",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -169,7 +239,7 @@
    "total": 30,
    "pour": 4,
    "publie": "2026-11-25",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -179,7 +249,7 @@
    "total": 30,
    "pour": 4,
    "publie": "2026-11-25",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -189,7 +259,7 @@
    "total": 50,
    "pour": 4,
    "publie": "2026-11-25",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -199,7 +269,7 @@
    "total": 105,
    "pour": 4,
    "publie": "2026-11-24",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -209,7 +279,7 @@
    "total": 110,
    "pour": 4,
    "publie": "2026-11-24",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -219,7 +289,7 @@
    "total": 25,
    "pour": 20,
    "publie": "2026-11-24",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -229,7 +299,7 @@
    "total": 40,
    "pour": 4,
    "publie": "2026-11-24",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -239,7 +309,7 @@
    "total": 85,
    "pour": 4,
    "publie": "2025-11-20",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -249,7 +319,7 @@
    "total": 15,
    "pour": 4,
    "publie": "2023-10-24",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -259,7 +329,7 @@
    "total": 35,
    "pour": 4,
    "publie": "2022-11-29",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -269,7 +339,7 @@
    "total": 39,
    "pour": 4,
    "publie": "2026-11-23",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -279,7 +349,7 @@
    "total": 35,
    "pour": 6,
    "publie": "2026-11-23",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -289,7 +359,7 @@
    "total": 50,
    "pour": 4,
    "publie": "2026-11-23",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -299,7 +369,7 @@
    "total": 35,
    "pour": 4,
    "publie": "2024-10-04",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -309,7 +379,7 @@
    "total": 30,
    "pour": 4,
    "publie": "2022-12-01",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -319,7 +389,7 @@
    "total": 35,
    "pour": 8,
    "publie": "2022-11-29",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -329,7 +399,7 @@
    "total": 180,
    "pour": 6,
    "publie": "2026-11-22",
-   "vu": "2026-11-26"
+   "vu": "2026-11-28"
   },
   {
    "site": "cuisineaz",
@@ -930,76 +1000,6 @@
    "pour": 4,
    "publie": "2026-11-07",
    "vu": "2026-11-14"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Granola de Noël aux épices à faire avec les enfants",
-   "url": "https://www.cuisineaz.com/recettes/granola-de-noel-aux-epices-a-faire-avec-les-enfants-126142.aspx",
-   "prep": 20,
-   "total": 45,
-   "pour": 6,
-   "publie": "2026-11-07",
-   "vu": "2026-11-13"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Bœuf bourguignon au miel",
-   "url": "https://www.cuisineaz.com/recettes/boeuf-bourguignon-au-miel-la-recette-mijotee-en-cocotte-126171.aspx",
-   "prep": 25,
-   "total": 205,
-   "pour": 6,
-   "publie": "2026-11-07",
-   "vu": "2026-11-13"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Menu végétarien d'automne",
-   "url": "https://www.cuisineaz.com/recettes/menu-vegetarien-d-automne-steaks-de-chou-fleur-a-la-harissa-126162.aspx",
-   "prep": 25,
-   "total": 60,
-   "pour": 4,
-   "publie": "2026-11-06",
-   "vu": "2026-11-12"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Tarte au citron meringuée maison",
-   "url": "https://www.cuisineaz.com/recettes/tarte-au-citron-meringuee-maison-126193.aspx",
-   "prep": 30,
-   "total": 60,
-   "pour": 8,
-   "publie": "2026-11-06",
-   "vu": "2026-11-12"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Hachis parmentier maison",
-   "url": "https://www.cuisineaz.com/recettes/hachis-parmentier-maison-la-recette-gourmande-et-anti-gaspi-126174.aspx",
-   "prep": 25,
-   "total": 125,
-   "pour": 4,
-   "publie": "2026-11-06",
-   "vu": "2026-11-10"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Œufs brouillés sans lait",
-   "url": "https://www.cuisineaz.com/recettes/oeufs-brouilles-sans-lait-la-recette-onctueuse-au-beurre-126170.aspx",
-   "prep": 5,
-   "total": 10,
-   "pour": 2,
-   "publie": "2026-11-06",
-   "vu": "2026-11-10"
-  },
-  {
-   "site": "cuisineaz",
-   "titre": "Fondue alpine aux quatre fromages",
-   "url": "https://www.cuisineaz.com/recettes/fondue-alpine-aux-quatre-fromages-la-recette-traditionnelle-126180.aspx",
-   "prep": 20,
-   "total": 40,
-   "pour": 4,
-   "publie": "2026-11-05",
-   "vu": "2026-11-10"
   }
  ]
 }
